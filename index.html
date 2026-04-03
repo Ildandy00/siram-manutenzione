@@ -157,6 +157,10 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .toast.err{background:rgba(248,81,73,.15);border-color:rgba(248,81,73,.4);color:var(--red)}
 .loading-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--muted);font-size:16px;gap:16px}
 .chk-prev-btn{background:none;border:1.5px solid rgba(200,180,100,.35);color:var(--yellow);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;flex-shrink:0;line-height:1}
+.rda-tipo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.rda-tipo-btn{padding:16px 10px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg2);color:var(--muted);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;line-height:1.3}
+.rda-tipo-btn.sel{border-color:rgba(100,180,220,.5);background:rgba(100,180,220,.1);color:#7ab0d8}
+.rda-tipo-btn:active{background:var(--bg3)}
 .chk-prev-btn:active{background:rgba(200,180,100,.15)}
 .chk-prev-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;flex-shrink:0;line-height:1}
 .chk-prev-pill.richiesto{background:rgba(200,180,100,.15);color:var(--yellow);border:1px solid rgba(200,180,100,.3)}
@@ -312,6 +316,26 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
+  <!-- BOTTOM SHEET RDA/CAT -->
+  <div class="sheet-overlay" id="rdaSheet">
+    <div class="sheet">
+      <div class="sheet-title">🛒 RDA / CAT</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="rdaImpNome"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Tipologia richiesta *</div>
+      <div class="rda-tipo-grid">
+        <button class="rda-tipo-btn" id="rdaTipoSost" onclick="selRdaTipo('Sostituzione apparecchiatura')">🔧 Sostituzione<br>apparecchiatura</button>
+        <button class="rda-tipo-btn" id="rdaTipoTec"  onclick="selRdaTipo('Supporto tecnico')">👨‍🔧 Supporto<br>tecnico</button>
+        <button class="rda-tipo-btn" id="rdaTipoMat"  onclick="selRdaTipo('Materiali/Ricambi')">📦 Materiali<br>/ Ricambi</button>
+        <button class="rda-tipo-btn" id="rdaTipoAlt"  onclick="selRdaTipo('Altro')">📋 Altro</button>
+      </div>
+      <textarea class="sheet-inp" id="rdaNota" rows="3" placeholder="Descrivi cosa serve (es. bruciatore Riello mod. X, termostato zona 2...)"></textarea>
+      <div class="sheet-btns">
+        <button class="sheet-btn cancel" onclick="closeRdaSheet()">Annulla</button>
+        <button class="sheet-btn ok" onclick="inviaRda()" style="background:rgba(100,180,220,.85);color:#1a1a1a">Invia richiesta</button>
+      </div>
+    </div>
+  </div>
+
   <!-- BOTTOM SHEET PREVENTIVO -->
   <div class="sheet-overlay" id="prevSheet">
     <div class="sheet">
@@ -339,7 +363,7 @@ async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
 const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'}};
-let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[]},currentIntId=null,extraForId=null,expandedNota={};
+let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[]},currentIntId=null,extraForId=null,expandedNota={};
 document.getElementById('mainData').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
 
 async function gasCall(action,payload){
@@ -360,6 +384,9 @@ async function caricaDati(){
     const [d, dp] = await Promise.all([apiGet('/dati'), apiGet('/preventivi').catch(()=>({preventivi:[]}))]);
     S.impianti=d.impianti||[];S.interventi=d.interventi||[];S.checklist=d.checklist||[];
     S.preventivi = dp.preventivi || [];
+    // Carica RDA/CAT
+    const dr = await apiGet('/rdacat').catch(() => ({ richieste: [] }));
+    S.rdacat = dr.richieste || [];
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
@@ -380,7 +407,21 @@ function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find
       <button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button>
     </div>`;
   } else if (i.stato !== 'Chiuso') {
-    noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
+    noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
+  // RDA/CAT — controlla se già presente
+  const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
+  if (rdaCorrente) {
+    noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px">
+      <span style="font-size:18px">🛒</span>
+      <div style="flex:1;font-size:14px">
+        <div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div>
+        <div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div>
+      </div>
+      <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span>
+    </div>`;
+  } else if (i.stato !== 'Chiuso') {
+    noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
+  }
   }
   notaEl.innerHTML = noteHtml;
 
@@ -597,6 +638,49 @@ function urlBase64ToUint8Array(base64String) {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ---- RDA/CAT ----
+let rdaIntId = null, rdaTipoSel = '';
+const RDA_TIPI = ['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
+const RDA_IDS  = ['rdaTipoSost','rdaTipoTec','rdaTipoMat','rdaTipoAlt'];
+
+function openRdaSheet(intId) {
+  rdaIntId = intId; rdaTipoSel = '';
+  const i   = S.interventi.find(x => x.id === intId);
+  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
+  document.getElementById('rdaImpNome').textContent = imp ? imp.descrizione : (i ? i.codiceImpianto : '');
+  RDA_IDS.forEach(id => document.getElementById(id).classList.remove('sel'));
+  document.getElementById('rdaNota').value = '';
+  document.getElementById('rdaSheet').classList.add('open');
+}
+function closeRdaSheet() { document.getElementById('rdaSheet').classList.remove('open'); }
+function selRdaTipo(tipo) {
+  rdaTipoSel = tipo;
+  RDA_TIPI.forEach((t,idx) => document.getElementById(RDA_IDS[idx]).classList.toggle('sel', t === tipo));
+}
+
+async function inviaRda() {
+  if (!rdaTipoSel) { toast('Seleziona il tipo di richiesta','err'); return; }
+  const nota = document.getElementById('rdaNota').value.trim();
+  if (!nota)      { toast('Descrivi cosa serve','err'); return; }
+  const i   = S.interventi.find(x => x.id === rdaIntId);
+  closeRdaSheet();
+  try {
+    const r = await apiPost('/crea-rdacat', {
+      idIntervento:   rdaIntId,
+      codiceImpianto: i ? i.codiceImpianto : '',
+      tipologia:      rdaTipoSel,
+      nota,
+      operaio:        currentUser,
+    });
+    if (!r.ok) { toast('Errore invio','err'); return; }
+    if (!S.rdacat) S.rdacat = [];
+    S.rdacat.push({ id:r.id, idIntervento:rdaIntId, codiceImpianto:i?i.codiceImpianto:'',
+      tipologia:rdaTipoSel, nota, operaio:currentUser, stato:'Inviata', creatoIl:'', aggiornatoIl:'' });
+    openPanel(rdaIntId);
+    toast('Richiesta RDA/CAT inviata','ok');
+  } catch(e) { toast('Errore rete','err'); }
 }
 
 // ---- PREVENTIVO ----
