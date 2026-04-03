@@ -1281,28 +1281,35 @@ function renderPreventivi() {
   const lista = [...S.preventivi].sort((a,b) => ordine[a.stato]-ordine[b.stato] || b.creatoIl.localeCompare(a.creatoIl));
 
   el.innerHTML = lista.map(p => {
-    const imp = S.impianti.find(x => x.codice === p.codiceImpianto);
-    const int = S.interventi.find(x => x.id === p.idIntervento);
+    const imp     = S.impianti.find(x => x.codice === p.codiceImpianto);
+    const int     = S.interventi.find(x => x.id === p.idIntervento);
+    const chk     = int ? S.checklist.filter(c => c.idIntervento === int.id) : [];
+    const done    = chk.filter(c => c.eseguita === 'SI').length;
     const statoClass = 'stato-' + p.stato.toLowerCase();
     return `<div class="prev-card">
       <div class="prev-card-head">
         <div class="prev-card-info">
-          <div class="prev-imp">${imp ? imp.descrizione : p.codiceImpianto}</div>
-          <div class="prev-meta">
-            <span>${p.operaio}</span>
-            <span>${imp ? imp.comune : ''}</span>
-            <span>${p.creatoIl}</span>
-            ${int ? `<span>Intervento del ${int.dataPrevista}</span>` : ''}
+          <div class="prev-imp">${imp ? imp.descrizione : p.codiceImpianto}
+            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${p.codiceImpianto}</span>
           </div>
-          <div class="prev-attivita">📋 ${p.attivita}</div>
-          ${p.notaOperaio ? `<div class="prev-nota">"${p.notaOperaio}"</div>` : ''}
+          <div class="prev-meta">
+            <span>👤 ${p.operaio}</span>
+            ${imp&&imp.comune ? `<span>📍 ${imp.comune}</span>` : ''}
+            ${int ? `<span>📅 Intervento ${int.dataPrevista} · ${int.tipoVisita}</span>` : ''}
+            ${int && chk.length ? `<span>✓ ${done}/${chk.length} attività</span>` : ''}
+            <span style="color:var(--muted)">Richiesto il ${p.creatoIl}</span>
+          </div>
+          ${p.notaOperaio ? `<div class="prev-attivita">💬 "${p.notaOperaio}"</div>` : ''}
         </div>
-        <div class="prev-actions">
+        <div class="prev-actions" style="flex-direction:column;align-items:flex-end;gap:8px">
           <span class="${statoClass}" style="font-size:13px;font-weight:700">${p.stato}</span>
           <select class="prev-stato-select" onchange="aggiornaStatoPrev('${p.id}', this.value)">
             ${STATI_PREV.map(s => `<option value="${s}" ${s===p.stato?'selected':''}>${s}</option>`).join('')}
           </select>
-          <button class="btn btn-danger btn-sm" onclick="eliminaPrev('${p.id}')">✕</button>
+          <div style="display:flex;gap:6px">
+            ${int ? `<button class="btn btn-ghost btn-sm" onclick="openDettaglio('${int.id}')">Apri OdL</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="eliminaPrev('${p.id}')">✕</button>
+          </div>
         </div>
       </div>
     </div>`;
