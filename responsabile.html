@@ -231,6 +231,21 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .sec-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 
+/* PREVENTIVI */
+.prev-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
+.prev-card-head { display:flex; align-items:flex-start; gap:14px; margin-bottom:12px; }
+.prev-card-info { flex:1; min-width:0; }
+.prev-imp { font-size:15px; font-weight:700; margin-bottom:3px; }
+.prev-meta { font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; }
+.prev-attivita { font-size:13px; margin-top:6px; padding:8px 12px; background:var(--bg3); border-radius:8px; border-left:3px solid var(--yellow); }
+.prev-nota { font-size:13px; color:var(--muted); margin-top:6px; font-style:italic; }
+.prev-stato-select { background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; padding:6px 10px; cursor:pointer; }
+.prev-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.stato-richiesto { color:var(--yellow); }
+.stato-inviato   { color:#7ab0d8; }
+.stato-accettato { color:var(--green); }
+.stato-rifiutato { color:var(--red); }
+
 /* REPORT MANUTENZIONI */
 .report-filter.active { background:var(--bg4); color:var(--text); border-color:rgba(255,255,255,.2); }
 .stato-completato { color:var(--green); font-weight:700; }
@@ -391,6 +406,9 @@ tr.int-completato td * {
         ✓ Stato manutenzioni
       </div>
 
+      <div class="nav-item" onclick="nav('preventivi')" id="nav-preventivi">
+        💰 Preventivi <span class="nav-badge" id="badgePreventivi" style="background:var(--yellow);color:#1a1a1a;display:none">0</span>
+      </div>
       <div class="nav-sec">Anagrafica</div>
       <div class="nav-item" onclick="nav('impianti')"   id="nav-impianti">⊞ Impianti</div>
       <div class="nav-item" onclick="nav('catalogo')"   id="nav-catalogo">≡ Catalogo</div>
@@ -520,6 +538,15 @@ tr.int-completato td * {
         </div>
         <!-- Tabella -->
         <div class="table-wrap" id="tblReport"></div>
+      </div>
+
+      <!-- VIEW: PREVENTIVI -->
+      <div class="view" id="view-preventivi">
+        <div class="sec-header">
+          <div class="sec-title">Richieste preventivo</div>
+          <div id="prevSummary" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+        <div id="tblPreventivi"></div>
       </div>
 
       <!-- VIEW: IMPIANTI -->
@@ -797,7 +824,7 @@ const RESP_PIN   = '1234'; // cambia questo PIN
 // ============================================================
 //  STATO
 // ============================================================
-let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[] };
+let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], preventivi:[] };
 let calAnno = new Date().getFullYear();
 let calMese = new Date().getMonth();
 let currentDetId   = null;
@@ -857,6 +884,17 @@ async function caricaDati() {
       S.interventi.filter(i => i.stato === 'Aperto').length;
 
     popolaSelectImpianti();
+    // Carica preventivi
+    try {
+      const dp = await apiGet('/preventivi');
+      S.preventivi = dp.preventivi || [];
+      const nPrev = S.preventivi.filter(p => p.stato === 'Richiesto').length;
+      const badge = document.getElementById('badgePreventivi');
+      badge.textContent = nPrev;
+      badge.style.display = nPrev > 0 ? '' : 'none';
+      document.getElementById('prevSummary').textContent =
+        nPrev + ' nuove · ' + S.preventivi.filter(p=>p.stato==='Inviato').length + ' inviate';
+    } catch(e) { S.preventivi = []; }
     // Popola filtro comuni nel report
     const comuniSet = [...new Set(S.impianti.map(i => i.comune).filter(Boolean))].sort();
     const selComune = document.getElementById('reportComune');
@@ -1225,6 +1263,75 @@ function esportaReport() {
   const a     = document.createElement('a');
   a.href = url; a.download = `manutenzioni_${anno}.csv`; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  PREVENTIVI
+// ============================================================
+const STATI_PREV = ['Richiesto','Inviato','Accettato','Rifiutato'];
+
+function renderPreventivi() {
+  const el = document.getElementById('tblPreventivi');
+  if (!S.preventivi.length) {
+    el.innerHTML = '<div class="empty">Nessuna richiesta preventivo</div>';
+    return;
+  }
+  // Ordina: Richiesto → Inviato → Accettato → Rifiutato
+  const ordine = { Richiesto:0, Inviato:1, Accettato:2, Rifiutato:3 };
+  const lista = [...S.preventivi].sort((a,b) => ordine[a.stato]-ordine[b.stato] || b.creatoIl.localeCompare(a.creatoIl));
+
+  el.innerHTML = lista.map(p => {
+    const imp = S.impianti.find(x => x.codice === p.codiceImpianto);
+    const int = S.interventi.find(x => x.id === p.idIntervento);
+    const statoClass = 'stato-' + p.stato.toLowerCase();
+    return `<div class="prev-card">
+      <div class="prev-card-head">
+        <div class="prev-card-info">
+          <div class="prev-imp">${imp ? imp.descrizione : p.codiceImpianto}</div>
+          <div class="prev-meta">
+            <span>${p.operaio}</span>
+            <span>${imp ? imp.comune : ''}</span>
+            <span>${p.creatoIl}</span>
+            ${int ? `<span>Intervento del ${int.dataPrevista}</span>` : ''}
+          </div>
+          <div class="prev-attivita">📋 ${p.attivita}</div>
+          ${p.notaOperaio ? `<div class="prev-nota">"${p.notaOperaio}"</div>` : ''}
+        </div>
+        <div class="prev-actions">
+          <span class="${statoClass}" style="font-size:13px;font-weight:700">${p.stato}</span>
+          <select class="prev-stato-select" onchange="aggiornaStatoPrev('${p.id}', this.value)">
+            ${STATI_PREV.map(s => `<option value="${s}" ${s===p.stato?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="btn btn-danger btn-sm" onclick="eliminaPrev('${p.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function aggiornaStatoPrev(id, stato) {
+  try {
+    await apiPost('/aggiorna-preventivo', { id, stato });
+    const p = S.preventivi.find(x => x.id === id);
+    if (p) p.stato = stato;
+    renderPreventivi();
+    // Aggiorna badge
+    const nPrev = S.preventivi.filter(p => p.stato === 'Richiesto').length;
+    const badge = document.getElementById('badgePreventivi');
+    badge.textContent = nPrev;
+    badge.style.display = nPrev > 0 ? '' : 'none';
+    toast('Stato aggiornato', 'ok');
+  } catch(e) { toast('Errore', 'err'); }
+}
+
+async function eliminaPrev(id) {
+  if (!confirm('Eliminare questa richiesta preventivo?')) return;
+  try {
+    await apiPost('/elimina-preventivo', { id });
+    S.preventivi = S.preventivi.filter(p => p.id !== id);
+    renderPreventivi();
+    toast('Eliminata', 'ok');
+  } catch(e) { toast('Errore', 'err'); }
 }
 
 // ============================================================
