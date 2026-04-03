@@ -1044,7 +1044,8 @@ function renderCalendario() {
       const label  = (i.codiceImpianto + ' ' + (imp ? imp.descrizione.split(' ').slice(0,2).join(' ') : '')).trim();
       const chk    = S.checklist.filter(c => c.idIntervento === i.id);
       const done   = chk.filter(c => c.eseguita === 'SI').length;
-      const tuttiDone = chk.length > 0 && done === chk.length;
+      const isChiuso  = i.stato === 'Chiuso';
+      const tuttiDone = isChiuso || (chk.length > 0 && done === chk.length);
       const extraCls  = tuttiDone ? ' completato' : '';
       const coll = i.interventoCollegato ? S.interventi.find(x => x.id === i.interventoCollegato) : null;
       const opLabel = coll ? ` ${i.operaio}+${coll.operaio}` : ` ${i.operaio}`;
@@ -1446,7 +1447,7 @@ function renderInterventi() {
       const chk = S.checklist.filter(c => c.idIntervento === i.id);
       const done = chk.filter(c => c.eseguita === 'SI').length;
       const pct  = chk.length > 0 ? Math.round(done/chk.length*100) : 0;
-      const tuttiDoneTab = chk.length > 0 && done === chk.length;
+      const tuttiDoneTab = i.stato === 'Chiuso' || (chk.length > 0 && done === chk.length);
       return `<tr class="${tuttiDoneTab?'int-completato':''}">
         <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}</td>
         <td><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}</div><div style="font-size:11px;color:var(--muted)">${i.codiceImpianto}</div></td>
