@@ -315,12 +315,12 @@ select.nif-input option{background:var(--bg2)}
   <!-- BOTTOM SHEET PREVENTIVO -->
   <div class="sheet-overlay" id="prevSheet">
     <div class="sheet">
-      <div class="sheet-title">Richiedi preventivo</div>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:14px" id="prevAttivita"></p>
-      <textarea class="sheet-inp" id="prevNota" rows="3" placeholder="Descrivi cosa serve (es. sostituzione bruciatore, cambio valvola...)"></textarea>
+      <div class="sheet-title">💰 Richiedi preventivo</div>
+      <div style="font-size:14px;font-weight:600;color:var(--muted);margin-bottom:14px" id="prevAttivita"></div>
+      <textarea class="sheet-inp" id="prevNota" rows="4" placeholder="Descrivi il lavoro da preventivare (es. sostituzione bruciatore, cambio valvola, rifacimento coibentazione...)"></textarea>
       <div class="sheet-btns">
         <button class="sheet-btn cancel" onclick="closePrevSheet()">Annulla</button>
-        <button class="sheet-btn ok" onclick="inviaPrev()" style="background:rgba(200,180,100,.8);color:#1a1a1a">Invia richiesta</button>
+        <button class="sheet-btn ok" onclick="inviaPrev()" style="background:rgba(200,180,100,.85);color:#1a1a1a">Invia al responsabile</button>
       </div>
     </div>
   </div>
@@ -339,7 +339,7 @@ async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
 const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'}};
-let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[]},currentIntId=null,extraForId=null,expandedNota={};
+let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[]},currentIntId=null,extraForId=null,expandedNota={};
 document.getElementById('mainData').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
 
 async function gasCall(action,payload){
@@ -359,13 +359,7 @@ async function caricaDati(){
   try{
     const [d, dp] = await Promise.all([apiGet('/dati'), apiGet('/preventivi').catch(()=>({preventivi:[]}))]);
     S.impianti=d.impianti||[];S.interventi=d.interventi||[];S.checklist=d.checklist||[];
-    // Arricchisci checklist con stato preventivo
-    const preventivi = dp.preventivi || [];
-    S.checklist.forEach(c => {
-      const prev = preventivi.find(p => p.idChecklist === c.id);
-      c.preventivoStato = prev ? prev.stato : null;
-      c.preventivoId    = prev ? prev.id    : null;
-    });
+    S.preventivi = dp.preventivi || [];
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
@@ -392,28 +386,7 @@ function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find
 
   renderChk(id);aggFab(i);document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
 
-function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];const prevTag = c.preventivoStato ? c.preventivoStato : null;
-    const prevId  = c.preventivoId || null;
-    const isBloccato = prevTag && prevTag !== 'Accettato' && prevTag !== 'Rifiutato';
-    const pillClass = prevTag ? prevTag.toLowerCase() : '';
-    return`<div class="chk-item ${isDone?'done':''}">
-      <div class="chk-main" onclick="${isBloccato?'':"toggleChk('"+ c.id +"','"+ id +"')"}">
-        <div class="chk-box ${isDone?'done':''}" style="${isBloccato?'opacity:.4;cursor:default':''}"><span class="chk-icon">✓</span></div>
-        <div class="chk-txt" style="${isBloccato?'color:var(--yellow)':''}">
-          ${c.attivita}
-          ${isBloccato?'<span style="font-size:11px;margin-left:6px;opacity:.7">⏳ in attesa preventivo</span>':''}
-        </div>
-        ${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}
-        ${prevTag?`<span class="chk-prev-pill ${pillClass}">${prevTag}</span>`:''}
-        ${!isDone&&!prevTag?`<button class="chk-prev-btn" onclick="event.stopPropagation();openPrevSheet('${c.id}','${id}','${c.attivita.replace(/'/g,"\\'")}')" title="Richiedi preventivo">€</button>`:''}
-        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button>
-      </div>
-      ${c.note&&!c.note.includes('[PREVENTIVO]')?`<div class="nota-preview">⚠ ${c.note}</div>`:''}
-      <div class="nota-area ${isExp?'open':''}">
-        <textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${(c.note||'').replace('[PREVENTIVO]','').trim()}</textarea>
-        <button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button>
-      </div>
-    </div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
+function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
 
 function closePanel(){document.getElementById('panel').classList.remove('open');expandedNota={};renderLista()}
 function toggleNota(id){expandedNota[id]=!expandedNota[id];renderChk(currentIntId)}
@@ -627,11 +600,14 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 // ---- PREVENTIVO ----
-let prevChkId = null, prevIntId = null, prevAttivitaStr = '';
+let prevIntId = null;
 
-function openPrevSheet(chkId, intId, attivita) {
-  prevChkId = chkId; prevIntId = intId; prevAttivitaStr = attivita;
-  document.getElementById('prevAttivita').textContent = '📋 ' + attivita;
+function openPrevSheet(intId) {
+  prevIntId = intId;
+  const i = S.interventi.find(x => x.id === intId);
+  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
+  document.getElementById('prevAttivita').textContent =
+    imp ? imp.descrizione : (i ? i.codiceImpianto : '');
   document.getElementById('prevNota').value = '';
   document.getElementById('prevSheet').classList.add('open');
   setTimeout(() => document.getElementById('prevNota').focus(), 280);
@@ -642,21 +618,23 @@ async function inviaPrev() {
   const nota = document.getElementById('prevNota').value.trim();
   if (!nota) { toast('Descrivi cosa serve','err'); return; }
   const i = S.interventi.find(x => x.id === prevIntId);
+  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
   closePrevSheet();
   try {
     const r = await apiPost('/richiedi-preventivo', {
       idIntervento:   prevIntId,
-      idChecklist:    prevChkId,
+      idChecklist:    '',
       codiceImpianto: i ? i.codiceImpianto : '',
-      attivita:       prevAttivitaStr,
+      attivita:       imp ? imp.descrizione : (i ? i.codiceImpianto : ''),
       notaOperaio:    nota,
       operaio:        currentUser,
     });
     if (!r.ok) { toast('Errore invio','err'); return; }
-    // Aggiorna stato locale
-    const c = S.checklist.find(x => x.id === prevChkId);
-    if (c) { c.preventivoStato = 'Richiesto'; c.preventivoId = r.id; }
-    renderChk(prevIntId);
+    if (!S.preventivi) S.preventivi = [];
+    S.preventivi.push({ id:r.id, idIntervento:prevIntId, idChecklist:'',
+      codiceImpianto: i?i.codiceImpianto:'', attivita: imp?imp.descrizione:'',
+      notaOperaio:nota, operaio:currentUser, stato:'Richiesto', creatoIl:'', aggiornatoIl:'' });
+    openPanel(prevIntId); // ricarica il panel con il banner
     toast('Richiesta inviata al responsabile','ok');
   } catch(e) { toast('Errore rete','err'); }
 }
