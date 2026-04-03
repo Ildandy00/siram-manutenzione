@@ -156,6 +156,13 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .toast.ok{background:rgba(63,185,80,.2);border-color:rgba(63,185,80,.4);color:var(--green)}
 .toast.err{background:rgba(248,81,73,.15);border-color:rgba(248,81,73,.4);color:var(--red)}
 .loading-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--muted);font-size:16px;gap:16px}
+.chk-prev-btn{background:none;border:1.5px solid rgba(200,180,100,.35);color:var(--yellow);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;flex-shrink:0;line-height:1}
+.chk-prev-btn:active{background:rgba(200,180,100,.15)}
+.chk-prev-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;flex-shrink:0;line-height:1}
+.chk-prev-pill.richiesto{background:rgba(200,180,100,.15);color:var(--yellow);border:1px solid rgba(200,180,100,.3)}
+.chk-prev-pill.inviato{background:rgba(100,150,200,.15);color:#7ab0d8;border:1px solid rgba(100,150,200,.3)}
+.chk-prev-pill.accettato{background:rgba(143,190,122,.15);color:var(--green);border:1px solid rgba(143,190,122,.3)}
+.chk-prev-pill.rifiutato{background:rgba(200,120,120,.15);color:var(--red);border:1px solid rgba(200,120,120,.3)}
 .new-int-overlay{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:15}
 .new-int-overlay.open{display:flex}
 .new-int-top{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0}
@@ -305,6 +312,19 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
+  <!-- BOTTOM SHEET PREVENTIVO -->
+  <div class="sheet-overlay" id="prevSheet">
+    <div class="sheet">
+      <div class="sheet-title">Richiedi preventivo</div>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:14px" id="prevAttivita"></p>
+      <textarea class="sheet-inp" id="prevNota" rows="3" placeholder="Descrivi cosa serve (es. sostituzione bruciatore, cambio valvola...)"></textarea>
+      <div class="sheet-btns">
+        <button class="sheet-btn cancel" onclick="closePrevSheet()">Annulla</button>
+        <button class="sheet-btn ok" onclick="inviaPrev()" style="background:rgba(200,180,100,.8);color:#1a1a1a">Invia richiesta</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 </div>
 <script>
@@ -335,7 +355,19 @@ function verifica(){if(pinBuf===USERS[currentUser].pin){entra()}else{for(let i=0
 function entra(){const u=USERS[currentUser];const av=document.getElementById('mainAv');av.style.background=u.color;av.textContent=u.initial;document.getElementById('mainNome').textContent=currentUser;document.getElementById('mainZona').textContent=u.zona;document.getElementById('loginScreen').classList.remove('active');document.getElementById('mainScreen').classList.add('active');caricaDati();setTimeout(registraPush,1500)}
 function logout(){currentUser=null;pinBuf='';S={impianti:[],interventi:[],checklist:[]};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
 
-async function caricaDati(){try{const d=await apiGet('/dati');S.impianti=d.impianti||[];S.interventi=d.interventi||[];S.checklist=d.checklist||[];renderLista()}catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
+async function caricaDati(){
+  try{
+    const [d, dp] = await Promise.all([apiGet('/dati'), apiGet('/preventivi').catch(()=>({preventivi:[]}))]);
+    S.impianti=d.impianti||[];S.interventi=d.interventi||[];S.checklist=d.checklist||[];
+    // Arricchisci checklist con stato preventivo
+    const preventivi = dp.preventivi || [];
+    S.checklist.forEach(c => {
+      const prev = preventivi.find(p => p.idChecklist === c.id);
+      c.preventivoStato = prev ? prev.stato : null;
+      c.preventivoId    = prev ? prev.id    : null;
+    });
+    renderLista();
+  }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
 function renderLista(){const oggi=new Date().toISOString().slice(0,10);const miei=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&(i.dataPrevista===oggi||(i.dataPrevista<oggi&&i.stato==='Aperto'))).sort((a,b)=>{const aS=a.dataPrevista<oggi,bS=b.dataPrevista<oggi;return aS&&!bS?-1:!aS&&bS?1:0});const sospesi=miei.filter(i=>i.dataPrevista<oggi),diOggi=miei.filter(i=>i.dataPrevista===oggi),chiusi=miei.filter(i=>i.stato==='Chiuso').length;document.getElementById('cntTot').textContent=miei.length;document.getElementById('cntSosp').textContent=sospesi.length;document.getElementById('cntFatti').textContent=chiusi;let html='';if(sospesi.length){html+='<div class="sec-lbl">In sospeso</div>'+sospesi.map(i=>cardHTML(i,true)).join('')+'<div style="height:10px"></div>'}if(diOggi.length){html+='<div class="sec-lbl">Oggi</div>'+diOggi.map(i=>cardHTML(i,false)).join('')}if(!miei.length){html='<div class="empty"><div class="empty-ico">☀️</div><div class="empty-txt">Nessun intervento oggi</div><div class="empty-sub">Usa + per attività extra</div></div>'}document.getElementById('listaEl').innerHTML=html}
 
@@ -360,7 +392,28 @@ function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find
 
   renderChk(id);aggFab(i);document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
 
-function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
+function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];const prevTag = c.preventivoStato ? c.preventivoStato : null;
+    const prevId  = c.preventivoId || null;
+    const isBloccato = prevTag && prevTag !== 'Accettato' && prevTag !== 'Rifiutato';
+    const pillClass = prevTag ? prevTag.toLowerCase() : '';
+    return`<div class="chk-item ${isDone?'done':''}">
+      <div class="chk-main" onclick="${isBloccato?'':"toggleChk('"+ c.id +"','"+ id +"')"}">
+        <div class="chk-box ${isDone?'done':''}" style="${isBloccato?'opacity:.4;cursor:default':''}"><span class="chk-icon">✓</span></div>
+        <div class="chk-txt" style="${isBloccato?'color:var(--yellow)':''}">
+          ${c.attivita}
+          ${isBloccato?'<span style="font-size:11px;margin-left:6px;opacity:.7">⏳ in attesa preventivo</span>':''}
+        </div>
+        ${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}
+        ${prevTag?`<span class="chk-prev-pill ${pillClass}">${prevTag}</span>`:''}
+        ${!isDone&&!prevTag?`<button class="chk-prev-btn" onclick="event.stopPropagation();openPrevSheet('${c.id}','${id}','${c.attivita.replace(/'/g,"\\'")}')" title="Richiedi preventivo">€</button>`:''}
+        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button>
+      </div>
+      ${c.note&&!c.note.includes('[PREVENTIVO]')?`<div class="nota-preview">⚠ ${c.note}</div>`:''}
+      <div class="nota-area ${isExp?'open':''}">
+        <textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${(c.note||'').replace('[PREVENTIVO]','').trim()}</textarea>
+        <button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button>
+      </div>
+    </div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
 
 function closePanel(){document.getElementById('panel').classList.remove('open');expandedNota={};renderLista()}
 function toggleNota(id){expandedNota[id]=!expandedNota[id];renderChk(currentIntId)}
@@ -571,6 +624,41 @@ function urlBase64ToUint8Array(base64String) {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const raw = atob(base64);
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ---- PREVENTIVO ----
+let prevChkId = null, prevIntId = null, prevAttivitaStr = '';
+
+function openPrevSheet(chkId, intId, attivita) {
+  prevChkId = chkId; prevIntId = intId; prevAttivitaStr = attivita;
+  document.getElementById('prevAttivita').textContent = '📋 ' + attivita;
+  document.getElementById('prevNota').value = '';
+  document.getElementById('prevSheet').classList.add('open');
+  setTimeout(() => document.getElementById('prevNota').focus(), 280);
+}
+function closePrevSheet() { document.getElementById('prevSheet').classList.remove('open'); }
+
+async function inviaPrev() {
+  const nota = document.getElementById('prevNota').value.trim();
+  if (!nota) { toast('Descrivi cosa serve','err'); return; }
+  const i = S.interventi.find(x => x.id === prevIntId);
+  closePrevSheet();
+  try {
+    const r = await apiPost('/richiedi-preventivo', {
+      idIntervento:   prevIntId,
+      idChecklist:    prevChkId,
+      codiceImpianto: i ? i.codiceImpianto : '',
+      attivita:       prevAttivitaStr,
+      notaOperaio:    nota,
+      operaio:        currentUser,
+    });
+    if (!r.ok) { toast('Errore invio','err'); return; }
+    // Aggiorna stato locale
+    const c = S.checklist.find(x => x.id === prevChkId);
+    if (c) { c.preventivoStato = 'Richiesto'; c.preventivoId = r.id; }
+    renderChk(prevIntId);
+    toast('Richiesta inviata al responsabile','ok');
+  } catch(e) { toast('Errore rete','err'); }
 }
 
 // ---- SECONDO OPERAIO ----
