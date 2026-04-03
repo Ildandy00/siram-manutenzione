@@ -920,6 +920,13 @@ function nav(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('nav-' + id).classList.add('active');
   document.getElementById('view-' + id).classList.add('active');
+  if (id === 'calendario')  renderCalendario();
+  if (id === 'interventi')  { renderInterventi(); renderBacklog(); }
+  if (id === 'impianti')    renderImpianti();
+  if (id === 'catalogo')    renderCatalogo();
+  if (id === 'report')      renderReport();
+  if (id === 'preventivi')  renderPreventivi();
+  if (id === 'secondi')     renderSecondi();
 }
 
 // ============================================================
