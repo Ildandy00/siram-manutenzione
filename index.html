@@ -514,7 +514,38 @@ async function posticipa(tipo){
     toast('Posticipato a '+fmtData(nuovaData),'ok');
   }catch(e){toast('Errore rete','err');}
 }
-async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;const nv=i.stato==='Chiuso'?'Aperto':'Chiuso';if(nv==='Chiuso'){const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;if(done<chk.length&&!confirm(`Hai fatto ${done}/${chk.length}. Chiudere?`))return}i.stato=nv;aggFab(i);renderLista();toast(nv==='Chiuso'?'Completato ✓':'Riaperto','ok');await apiPost('/aggiorna-intervento',{id:currentIntId,stato:nv})}
+async async function toggleChiudi(){
+  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
+  if(i.stato==='Chiuso'){
+    i.stato='Aperto'; aggFab(i); renderLista();
+    await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});
+    if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}
+    toast('Riaperto','ok');
+    return;
+  }
+  const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);
+  const done=chk.filter(c=>c.eseguita==='SI').length;
+  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  document.getElementById('mcSub').textContent=
+    (imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';
+  document.getElementById('mcNota').value='';
+  document.getElementById('modalChiusura').classList.add('open');
+}
+
+function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
+
+async function confermaChiusura(){
+  const nota=document.getElementById('mcNota').value.trim();
+  closeModalChiusura();
+  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
+  i.stato='Chiuso'; aggFab(i); renderLista();
+  await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});
+  if(i.interventoCollegato){
+    const coll=S.interventi.find(x=>x.id===i.interventoCollegato);
+    if(coll){coll.stato='Chiuso';renderLista();}
+  }
+  toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');
+}
 // ---- NUOVO INTERVENTO DAL FAB ----
 let nifTipoSel = '';
 
