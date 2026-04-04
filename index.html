@@ -155,8 +155,8 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{background:rgba(63,185,80,.2);border-color:rgba(63,185,80,.4);color:var(--green)}
 .toast.err{background:rgba(248,81,73,.15);border-color:rgba(248,81,73,.4);color:var(--red)}
-.modal-chiusura-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:24px;z-index:25}
-.modal-chiusura-overlay.open{display:flex}
+.modal-chiusura-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;padding:24px;z-index:25;pointer-events:none}
+.modal-chiusura-overlay.open{display:flex;pointer-events:auto}
 .modal-chiusura{background:var(--bg2);border:1.5px solid var(--bg4);border-radius:22px;width:100%;max-width:400px;padding:28px 24px;animation:slideUp .22s cubic-bezier(.4,0,.2,1)}
 .mc-title{font-size:20px;font-weight:700;margin-bottom:6px}
 .mc-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
@@ -514,7 +514,7 @@ async function posticipa(tipo){
     toast('Posticipato a '+fmtData(nuovaData),'ok');
   }catch(e){toast('Errore rete','err');}
 }
-async async function toggleChiudi(){
+async function toggleChiudi(){
   const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
   if(i.stato==='Chiuso'){
     i.stato='Aperto'; aggFab(i); renderLista();
