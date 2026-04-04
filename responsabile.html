@@ -841,6 +841,7 @@ tr.int-completato td * {
       <div id="detNote"></div>
       <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Checklist</div>
       <div id="detChk"></div>
+      <div id="detNotaChiusura"></div>
       <div class="fc-row" style="margin-top:14px">
         <div class="fg"><label>Stato</label>
           <select class="fc" id="detStato"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
@@ -1856,14 +1857,48 @@ function openDettaglio(id) {
   document.getElementById('detTitle').textContent = imp ? imp.descrizione : i.codiceImpianto;
   document.getElementById('detStato').value = i.stato;
   document.getElementById('detNuovaData').value = '';
+  // Separa note normali da nota di chiusura (formato: "...| Chiusura: testo")
+  const tutteNote    = i.note || '';
+  const sepIdx       = tutteNote.indexOf('| Chiusura:');
+  const notaNormale  = sepIdx >= 0 ? tutteNote.slice(0, sepIdx).trim() : tutteNote.trim();
+  // Raccoglie tutte le note di chiusura
+  const chiusureRaw  = tutteNote.match(/\| Chiusura:\s*([^|]+)/g) || [];
+  const notaChiusura = chiusureRaw.map(s => s.replace(/^\|\s*Chiusura:\s*/, '').trim()).filter(Boolean).join(' · ');
+
   document.getElementById('detInfo').innerHTML = `
     <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
     <div><span style="color:var(--muted)">Data</span><br>${i.dataPrevista}</div>
     <div><span style="color:var(--muted)">Operaio</span><br>${i.operaio}</div>
     <div><span style="color:var(--muted)">Tipo</span><br>${i.tipoVisita}</div>
-    ${i.note?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${i.note}</div>`:''}`;
+    ${notaNormale?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${notaNormale}</div>`:''}
+    ${notaChiusura?`<div style="grid-column:1/-1;margin-top:4px;padding:14px 16px;background:rgba(63,185,80,.15);border:2px solid rgba(63,185,80,.45);border-left:5px solid #3fb950;border-radius:0 10px 10px 0">
+      <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">✓ Nota di chiusura operaio</div>
+      <div style="font-size:14px;color:#e6edf3;line-height:1.5">${notaChiusura}</div>
+    </div>`:''}`;
   document.getElementById('detNote').innerHTML = '';
   // Mostra secondo operaio se presente
+  // Nota di chiusura
+  const ncEl = document.getElementById('detNotaChiusura');
+  if (ncEl) {
+    if (notaChiusura) {
+      ncEl.innerHTML = `<div style="
+        margin:16px 0 0;
+        padding:16px 18px;
+        background:rgba(143,190,122,.15);
+        border:2px solid rgba(143,190,122,.5);
+        border-left:5px solid var(--green);
+        border-radius:0 12px 12px 0;
+      ">
+        <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">
+          ✓ Nota di chiusura operaio
+        </div>
+        <div style="font-size:15px;line-height:1.5;color:var(--text)">${notaChiusura}</div>
+      </div>`;
+    } else {
+      ncEl.innerHTML = '';
+    }
+  }
+
   const secEl = document.getElementById('detSecondo');
   if (i.secondoOperaio) {
     secEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(154,132,200,.1);border:1px solid rgba(154,132,200,.25);border-radius:10px;font-size:13px">
