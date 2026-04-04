@@ -1197,24 +1197,21 @@ function renderCalendario() {
       if (i.interventoCollegato) mostratiMese.add(i.interventoCollegato);
       return true;
     });
-    let evHtml = intDedup.slice(0,3).map(i => {
-      const color  = OPERAI_COLOR[i.operaio] || 'ev-matteo';
-      const imp    = S.impianti.find(x => x.codice === i.codiceImpianto);
-      const label  = (i.codiceImpianto + ' ' + (imp ? imp.descrizione.split(' ').slice(0,2).join(' ') : '')).trim();
-      const chk    = S.checklist.filter(c => c.idIntervento === i.id);
-      const done   = chk.filter(c => c.eseguita === 'SI').length;
-      const isChiuso  = i.stato === 'Chiuso';
+    // Pallini per gli interventi
+    let evHtml = '<div class="cal-dots">';
+    evHtml += intDedup.map(i => {
+      const imp      = S.impianti.find(x => x.codice === i.codiceImpianto);
+      const chk      = S.checklist.filter(c => c.idIntervento === i.id);
+      const done     = chk.filter(c => c.eseguita === 'SI').length;
+      const isChiuso = i.stato === 'Chiuso';
       const tuttiDone = isChiuso || (chk.length > 0 && done === chk.length);
-      const extraCls  = tuttiDone ? ' completato' : '';
-      const coll = i.interventoCollegato ? S.interventi.find(x => x.id === i.interventoCollegato) : null;
-      const opLabel = coll ? ` ${i.operaio}+${coll.operaio}` : ` ${i.operaio}`;
-      return `<div class="ev ${color}${extraCls}" onclick="event.stopPropagation();openDettaglio('${i.id}')"
-        title="${imp?imp.descrizione:i.codiceImpianto} — ${opLabel.trim()}">${label}</div>`;
+      const col      = OPERAI_HEX[i.operaio] || '#888';
+      const imp2     = S.impianti.find(x => x.codice === i.codiceImpianto);
+      const titolo   = `${imp2?imp2.descrizione:i.codiceImpianto} — ${i.operaio}${isChiuso?' ✓':''}`;
+      return `<div class="cal-dot${tuttiDone?' completato':''}" style="background:${col}"
+        onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}"></div>`;
     }).join('');
-    if (intDedup.length > 3) evHtml += `<div class="ev-more">+${intDedup.length-3} altri</div>`;
-
-    // Assenze che coprono questo giorno
-    const assGiorno = S.assenze.filter(a => a.dataInizio <= dateStr && a.dataFine >= dateStr);
+    evHtml += '</div>'
     const assHtml = assGiorno.slice(0,2).map(a => {
       const color = ASSENZA_COLOR[a.tipo] || 'ev-ferie';
       return `<div class="ev ${color}" onclick="event.stopPropagation()" title="${a.operaio} — ${a.tipo}">${a.operaio} · ${a.tipo}</div>`;
