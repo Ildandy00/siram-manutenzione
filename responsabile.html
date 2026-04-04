@@ -362,7 +362,7 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .vista-btn.active { background:var(--bg2); color:var(--text); border:1px solid var(--border); }
 
 /* CELLE MESE PIÙ ALTE */
-.cal-cell { min-height: 130px; }
+.cal-cell { min-height: 110px; }
 
 /* VISTA SETTIMANA */
 .week-grid { display:grid; grid-template-columns: 60px repeat(7,1fr); border-top:1px solid var(--border); }
@@ -1197,21 +1197,19 @@ function renderCalendario() {
       if (i.interventoCollegato) mostratiMese.add(i.interventoCollegato);
       return true;
     });
-    // Pallini per gli interventi
-    let evHtml = '<div class="cal-dots">';
-    evHtml += intDedup.map(i => {
+    // Chip compatti — tutte le righe visibili
+    let evHtml = intDedup.map(i => {
       const imp      = S.impianti.find(x => x.codice === i.codiceImpianto);
       const chk      = S.checklist.filter(c => c.idIntervento === i.id);
       const done     = chk.filter(c => c.eseguita === 'SI').length;
       const isChiuso = i.stato === 'Chiuso';
       const tuttiDone = isChiuso || (chk.length > 0 && done === chk.length);
       const col      = OPERAI_HEX[i.operaio] || '#888';
-      const imp2     = S.impianti.find(x => x.codice === i.codiceImpianto);
-      const titolo   = `${imp2?imp2.descrizione:i.codiceImpianto} — ${i.operaio}${isChiuso?' ✓':''}`;
-      return `<div class="cal-dot${tuttiDone?' completato':''}" style="background:${col}"
-        onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}"></div>`;
+      const nome     = imp ? imp.descrizione.split(' ').slice(0,3).join(' ') : i.codiceImpianto;
+      const titolo   = `${imp?imp.descrizione:i.codiceImpianto} — ${i.operaio}${isChiuso?' ✓':''}`;
+      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 4px 4px 0;${tuttiDone?'text-decoration:line-through;opacity:.45':''}"
+        onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}">${nome}</div>`;
     }).join('');
-    evHtml += '</div>'
     const assGiorno = S.assenze.filter(a => a.dataInizio <= dateStr && a.dataFine >= dateStr);
     const assHtml = assGiorno.map(a => {
       const color = ASSENZA_COLOR[a.tipo] || 'ev-ferie';
