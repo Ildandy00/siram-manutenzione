@@ -349,6 +349,13 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .login-btn:hover { background: #2563eb; }
 .login-err { font-size: 13px; color: var(--red); margin-top: 12px; min-height: 18px; text-align: center; }
 
+/* PALLINI CALENDARIO */
+.cal-dots { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.cal-dot  { width:9px; height:9px; border-radius:50%; flex-shrink:0; cursor:pointer; transition:transform .1s; }
+.cal-dot:hover { transform:scale(1.4); }
+.cal-dot.completato { opacity:.4; }
+.cal-ass-bar { height:4px; border-radius:2px; margin-bottom:3px; font-size:10px; color:rgba(255,255,255,.7); padding:0 4px; line-height:1.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
 /* SWITCH VISTA */
 .vista-switch { display:flex; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; }
 .vista-btn { padding:6px 18px; border-radius:8px; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); background:transparent; transition:all .15s; }
