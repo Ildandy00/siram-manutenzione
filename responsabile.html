@@ -231,6 +231,19 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .sec-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 
+/* REPERIBILITÀ */
+.rep-widget { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+.rep-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.rep-operaio { font-size:20px; font-weight:700; }
+.rep-orari { font-size:12px; color:var(--muted); margin-top:2px; }
+.rep-settimane { display:flex; gap:8px; flex-wrap:wrap; flex:1; }
+.rep-sett-btn { padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; font-family:'Outfit',sans-serif; font-size:12px; transition:all .12s; text-align:center; min-width:90px; }
+.rep-sett-btn:hover { border-color:rgba(255,255,255,.2); }
+.rep-sett-btn.corrente { border-color:rgba(122,176,216,.4); background:rgba(122,176,216,.1); }
+.rep-sett-btn .sett-data { color:var(--muted); font-size:11px; }
+.rep-sett-btn .sett-op { font-weight:700; font-size:13px; margin-top:2px; }
+.rep-sett-btn .sett-op.vuoto { color:var(--muted); font-weight:400; font-style:italic; }
+
 /* RDA/CAT */
 .rda-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
 .rda-card-head { display:flex; align-items:flex-start; gap:14px; }
@@ -441,6 +454,15 @@ tr.int-completato td * {
       <div class="view active" id="view-calendario">
         <div id="loadingCal" class="loading-full"><div class="spin"></div> Caricamento...</div>
         <div id="calContent" style="display:none">
+          <!-- WIDGET REPERIBILITÀ -->
+          <div class="rep-widget" id="repWidget">
+            <div style="flex-shrink:0">
+              <div class="rep-label">🔔 Reperibile questa settimana</div>
+              <div class="rep-operaio" id="repNome">—</div>
+              <div class="rep-orari">17:00 → 06:00 · weekend incluso</div>
+            </div>
+            <div class="rep-settimane" id="repSettimane"></div>
+          </div>
           <div class="cal-header">
             <div class="cal-title" id="calTitle">Aprile 2026</div>
             <div class="cal-controls">
@@ -679,6 +701,47 @@ tr.int-completato td * {
   </div>
 </div>
 
+<!-- MODAL REPERIBILITÀ -->
+<div class="overlay" id="modalRep">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div class="modal-title" id="repModalTitolo">Assegna reperibile</div>
+      <button class="modal-close" onclick="closeModal('modalRep')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="repDataHidden"/>
+      <div class="fg"><label>Operaio reperibile *</label>
+        <div class="op-chips">
+          <div class="op-chip" id="repchip-Matteo" onclick="toggleRepChip('Matteo')">
+            <div class="op-chip-av" style="background:#7a9ec8">M</div>
+            <div class="op-chip-name">Matteo</div><div class="op-chip-zona">Pesaro</div>
+          </div>
+          <div class="op-chip" id="repchip-Stefano" onclick="toggleRepChip('Stefano')">
+            <div class="op-chip-av" style="background:#9a84c8">S</div>
+            <div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div>
+          </div>
+          <div class="op-chip" id="repchip-Michele" onclick="toggleRepChip('Michele')">
+            <div class="op-chip-av" style="background:#7ab87a">Mi</div>
+            <div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div>
+          </div>
+          <div class="op-chip" id="repchip-Ezio" onclick="toggleRepChip('Ezio')">
+            <div class="op-chip-av" style="background:#c89060">E</div>
+            <div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">
+        🔔 In reperibilità dalle 17:00 alle 06:00 e nel weekend.<br>
+        Le segnalazioni FMP arriveranno automaticamente a questo operaio.
+      </p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalRep')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaReperibile()">Salva</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GIORNO (click su cella) -->
 <div class="overlay" id="modalGiorno">
   <div class="modal" style="max-width:480px">
@@ -850,7 +913,7 @@ const RESP_PIN   = '1234'; // cambia questo PIN
 // ============================================================
 //  STATO
 // ============================================================
-let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], preventivi:[], rdacat:[] };
+let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], preventivi:[], rdacat:[], reperibilita:null };
 let calAnno = new Date().getFullYear();
 let calMese = new Date().getMonth();
 let currentDetId   = null;
@@ -932,6 +995,12 @@ async function caricaDati() {
       document.getElementById('rdaSummary').textContent =
         nRda + ' nuove · ' + S.rdacat.filter(r=>r.stato==='In lavorazione').length + ' in lavorazione';
     } catch(e) { S.rdacat = []; }
+    // Carica reperibilità
+    try {
+      const rep = await apiGet('/reperibile');
+      S.reperibilita = rep;
+      renderRepWidget();
+    } catch(e) { S.reperibilita = null; }
     // Popola filtro comuni nel report
     const comuniSet = [...new Set(S.impianti.map(i => i.comune).filter(Boolean))].sort();
     const selComune = document.getElementById('reportComune');
@@ -1387,6 +1456,77 @@ async function eliminaPrev(id) {
 }
 
 // ============================================================
+//  REPERIBILITÀ
+// ============================================================
+const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+function renderRepWidget() {
+  const rep = S.reperibilita;
+  if (!rep) return;
+
+  // Operaio corrente
+  const nome = rep.corrente && rep.corrente.operaio ? rep.corrente.operaio : '—';
+  document.getElementById('repNome').textContent = nome;
+
+  // Settimane
+  const oggi = new Date();
+  const dow  = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
+  const lunCorrente = new Date(oggi);
+  lunCorrente.setDate(oggi.getDate() - dow);
+  lunCorrente.setHours(0,0,0,0);
+  const lunStr = toLocaleDateStr(lunCorrente);
+
+  document.getElementById('repSettimane').innerHTML = rep.settimane.map(s => {
+    const d   = new Date(s.data + 'T00:00:00');
+    const dom = new Date(d); dom.setDate(d.getDate() + 6);
+    const label = d.getDate() + ' ' + MESI_SHORT[d.getMonth()] + ' – ' + dom.getDate() + ' ' + MESI_SHORT[dom.getMonth()];
+    const isCorrFn = s.data === lunStr;
+    return `<div class="rep-sett-btn ${isCorrFn?'corrente':''}" onclick="openRepModal('${s.data}','${s.operaio||''}')">
+      <div class="sett-data">${label}</div>
+      <div class="sett-op ${s.operaio?'':'vuoto'}">${s.operaio||'non assegnato'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openRepModal(data, operaioAttuale) {
+  const d   = new Date(data + 'T00:00:00');
+  const dom = new Date(d); dom.setDate(d.getDate() + 6);
+  document.getElementById('repModalTitolo').textContent =
+    'Settimana ' + d.getDate() + ' ' + MESI_SHORT[d.getMonth()] + ' – ' + dom.getDate() + ' ' + MESI_SHORT[dom.getMonth()];
+  document.getElementById('repDataHidden').value = data;
+  // Resetta chip
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n => {
+    const el = document.getElementById('repchip-'+n);
+    if (el) el.classList.toggle('selected', n === operaioAttuale);
+  });
+  document.getElementById('modalRep').classList.add('open');
+}
+
+async function salvaReperibile() {
+  const data    = document.getElementById('repDataHidden').value;
+  const operaio = ['Matteo','Stefano','Michele','Ezio']
+    .find(n => document.getElementById('repchip-'+n).classList.contains('selected'));
+  if (!operaio) { toast('Seleziona un operaio','err'); return; }
+  try {
+    await apiPost('/salva-reperibile', { data, operaio });
+    // Aggiorna localmente
+    if (S.reperibilita) {
+      const s = S.reperibilita.settimane.find(x => x.data === data);
+      if (s) s.operaio = operaio;
+      const oggi = new Date();
+      const dow  = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
+      const lun  = new Date(oggi); lun.setDate(oggi.getDate() - dow); lun.setHours(0,0,0,0);
+      if (toLocaleDateStr(lun) === data) {
+        S.reperibilita.corrente.operaio = operaio;
+      }
+      renderRepWidget();
+    }
+    closeModal('modalRep');
+    toast('Reperibile salvato: ' + operaio,'ok');
+  } catch(e) { toast('Errore','err'); }
+}
+
+// ============================================================
 //  RDA/CAT
 // ============================================================
 const STATI_RDA = ['Inviata','In lavorazione','Completata','Annullata'];
@@ -1548,6 +1688,13 @@ function openAssegna(id) {
     document.getElementById('achip-'+n).classList.remove('selected'));
   document.getElementById('assegnaData').value = toLocaleDateStr(new Date());
   document.getElementById('modalAssegna').classList.add('open');
+}
+
+function toggleRepChip(nome) {
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n => {
+    document.getElementById('repchip-'+n).classList.remove('selected');
+  });
+  document.getElementById('repchip-'+nome).classList.add('selected');
 }
 
 function toggleAssegnaChip(nome) {
