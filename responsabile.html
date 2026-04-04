@@ -1212,7 +1212,8 @@ function renderCalendario() {
         onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}"></div>`;
     }).join('');
     evHtml += '</div>'
-    const assHtml = assGiorno.slice(0,2).map(a => {
+    const assGiorno = S.assenze.filter(a => a.dataInizio <= dateStr && a.dataFine >= dateStr);
+    const assHtml = assGiorno.map(a => {
       const color = ASSENZA_COLOR[a.tipo] || 'ev-ferie';
       return `<div class="ev ${color}" onclick="event.stopPropagation()" title="${a.operaio} — ${a.tipo}">${a.operaio} · ${a.tipo}</div>`;
     }).join('');
