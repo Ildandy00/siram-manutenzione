@@ -855,6 +855,15 @@ tr.int-completato td * {
           <input class="fc" type="date" id="detNuovaData" title="Lascia vuoto per non spostare"/></div>
       </div>
       <div id="detSecondo" style="margin-top:8px"></div>
+      <!-- Link Drive -->
+      <div id="detDriveBox" style="margin-top:10px;display:none">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📁 Cartella Drive</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="fc" id="detLinkDrive" type="url" placeholder="Incolla URL cartella Drive..." style="flex:1;font-size:13px"/>
+          <button class="btn btn-ghost btn-sm" onclick="salvaLinkDrive()" style="flex-shrink:0">Salva</button>
+          <a id="detDriveBtn" href="#" target="_blank" class="btn btn-ghost btn-sm" style="flex-shrink:0;display:none;color:#7ab0d8;border-color:rgba(122,176,216,.3)">📁 Apri</a>
+        </div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-danger btn-sm" onclick="eliminaIntervento()">Elimina</button>
@@ -1383,6 +1392,37 @@ function esportaReport() {
 }
 
 // ============================================================
+//  LINK DRIVE
+// ============================================================
+async function salvaLinkDrive() {
+  const link = document.getElementById('detLinkDrive').value.trim();
+  const id   = currentDetId;
+  if (!id) return;
+  try {
+    await apiPost('/salva-link-drive', { id, tipo: 'intervento', linkDrive: link });
+    const i = S.interventi.find(x => x.id === id);
+    if (i) i.linkDrive = link;
+    const driveBtn = document.getElementById('detDriveBtn');
+    if (link) { driveBtn.href = link; driveBtn.style.display = ''; }
+    else { driveBtn.style.display = 'none'; }
+    toast('Link Drive salvato', 'ok');
+  } catch(e) { toast('Errore', 'err'); }
+}
+
+async function salvaLinkDrivePrev(id) {
+  const input = document.getElementById('driveInput-' + id);
+  if (!input) return;
+  const link = input.value.trim();
+  try {
+    await apiPost('/salva-link-drive', { id, tipo: 'preventivo', linkDrive: link });
+    const p = S.preventivi.find(x => x.id === id);
+    if (p) p.linkDrive = link;
+    renderPreventivi();
+    toast('Link Drive salvato', 'ok');
+  } catch(e) { toast('Errore', 'err'); }
+}
+
+// ============================================================
 //  PREVENTIVI
 // ============================================================
 const STATI_PREV = ['Richiesto','Inviato','Accettato','Rifiutato'];
@@ -1428,6 +1468,13 @@ function renderPreventivi() {
             <button class="btn btn-danger btn-sm" onclick="eliminaPrev('${p.id}')">✕</button>
           </div>
         </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;padding-top:10px;border-top:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--muted);flex-shrink:0">📁 Drive</span>
+        <input class="fc" id="driveInput-${p.id}" type="url" value="${p.linkDrive||''}"
+          placeholder="Incolla URL cartella Drive..." style="flex:1;font-size:12px;padding:6px 10px"/>
+        <button class="btn btn-ghost btn-sm" onclick="salvaLinkDrivePrev('${p.id}')" style="flex-shrink:0">Salva</button>
+        ${p.linkDrive ? `<a href="${p.linkDrive}" target="_blank" class="btn btn-ghost btn-sm" style="color:#7ab0d8;border-color:rgba(122,176,216,.3)">📁 Apri</a>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1879,6 +1926,21 @@ function openDettaglio(id) {
     </div>`:''}`;
   document.getElementById('detNote').innerHTML = '';
   // Mostra secondo operaio se presente
+  // Link Drive
+  const driveBox = document.getElementById('detDriveBox');
+  const driveLinkInput = document.getElementById('detLinkDrive');
+  const driveBtn = document.getElementById('detDriveBtn');
+  if (driveBox) {
+    driveBox.style.display = 'block';
+    driveLinkInput.value = i.linkDrive || '';
+    if (i.linkDrive) {
+      driveBtn.href = i.linkDrive;
+      driveBtn.style.display = '';
+    } else {
+      driveBtn.style.display = 'none';
+    }
+  }
+
   const secEl = document.getElementById('detSecondo');
   if (i.secondoOperaio) {
     secEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(154,132,200,.1);border:1px solid rgba(154,132,200,.25);border-radius:10px;font-size:13px">
