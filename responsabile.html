@@ -2068,17 +2068,15 @@ function openDettaglio(id) {
   document.getElementById('detStato').value = i.stato;
   document.getElementById('detNuovaData').value = '';
   // Separa nota normale dagli eventi cronologici
-  // Formato: "nota originale | Chiusura: testo | 🔄 Riaperto il ... | Chiusura: testo2"
-  const tutteNote = i.note || '';
-  // Trova il primo separatore cronologico
-  const primoSep = Math.min(
-    tutteNote.indexOf(' | Chiusura:') >= 0 ? tutteNote.indexOf(' | Chiusura:') : Infinity,
-    tutteNote.indexOf(' | 🔄') >= 0 ? tutteNote.indexOf(' | 🔄') : Infinity
-  );
-  const notaNormale  = primoSep < Infinity ? tutteNote.slice(0, primoSep).trim() : tutteNote.trim();
+  // Formato: "nota originale | Chiusura: testo | Riaperto il ... | Chiusura: testo2"
+  const tutteNote    = i.note || '';
+  const primoSep     = tutteNote.indexOf(' | Chiusura:');
+  const notaNormale  = primoSep >= 0 ? tutteNote.slice(0, primoSep).trim() : tutteNote.trim();
   // Estrae tutti gli eventi cronologici splitting su " | "
   const tuttiPezzi   = tutteNote.split(' | ');
-  const eventiCrono  = tuttiPezzi.filter(p => p.startsWith('Chiusura:') || p.startsWith('🔄'));
+  const eventiCrono  = tuttiPezzi.filter(function(p) {
+    return p.indexOf('Chiusura:') === 0 || p.indexOf('Riaperto') === 0;
+  });
   const notaChiusura = eventiCrono.join('\n');
 
   document.getElementById('detInfo').innerHTML = `
