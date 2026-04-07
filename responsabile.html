@@ -2289,9 +2289,9 @@ async function salvaIntervento() {
 
     if (operai.length === 1) {
       // Un solo operaio — semplice
-      const r = const nDataFine2      = document.getElementById('nDataFine')?.value || '';
+      const nDataFine2      = document.getElementById('nDataFine')?.value || '';
       const nOpSecondario22 = document.getElementById('nOpSecondario2')?.value || '';
-      await apiPost('/crea-intervento', {
+      const r = await apiPost('/crea-intervento', {
         codiceImpianto: imp, tipoVisita: tipo, operaio: operai[0],
         dataPrevista: data, note: nota, attivitaExtra: nExtraItems,
         dataFine: nDataFine2, operaioSecondario2: nOpSecondario22,
