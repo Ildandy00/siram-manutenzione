@@ -2041,7 +2041,11 @@ function openDettaglio(id) {
   document.getElementById('detInfo').innerHTML = `
     <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
     <div><span style="color:var(--muted)">Data</span><br>${i.dataPrevista}</div>
-    <div><span style="color:var(--muted)">Operaio</span><br>${i.operaio}</div>
+    <div><span style="color:var(--muted)">Operaio</span><br>
+      <select id="detOperaio" class="fc" style="margin-top:4px;padding:4px 8px;font-size:13px">
+        ${['Matteo','Stefano','Michele','Ezio'].map(n=>`<option value="${n}" ${i.operaio===n?'selected':''}>${n}</option>`).join('')}
+      </select>
+    </div>
     <div><span style="color:var(--muted)">Tipo</span><br>${i.tipoVisita}</div>
     ${notaNormale?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${notaNormale}</div>`:''}
     ${notaChiusura?`<div style="grid-column:1/-1;margin-top:4px;padding:14px 16px;background:rgba(63,185,80,.15);border:2px solid rgba(63,185,80,.45);border-left:5px solid #3fb950;border-radius:0 10px 10px 0">
@@ -2092,10 +2096,11 @@ function openDettaglio(id) {
 async function salvaDettaglio() {
   const stato     = document.getElementById('detStato').value;
   const nuovaData = document.getElementById('detNuovaData').value;
+  const operaio   = document.getElementById('detOperaio')?.value;
   try {
-    await apiPost('/aggiorna-intervento', { id: currentDetId, stato });
+    await apiPost('/aggiorna-intervento', { id: currentDetId, stato, operaio });
     const i = S.interventi.find(x => x.id === currentDetId);
-    if (i) i.stato = stato;
+    if (i) { i.stato = stato; if (operaio) i.operaio = operaio; }
     if (nuovaData) {
       await apiPost('/posticipa-intervento', { id: currentDetId, nuovaData });
       if (i) i.dataPrevista = nuovaData;
