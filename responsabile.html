@@ -2079,8 +2079,7 @@ function openDettaglio(id) {
   // Estrae tutti gli eventi cronologici splitting su " | "
   const tuttiPezzi   = tutteNote.split(' | ');
   const eventiCrono  = tuttiPezzi.filter(p => p.startsWith('Chiusura:') || p.startsWith('🔄'));
-  const notaChiusura = eventiCrono.join('
-');
+  const notaChiusura = eventiCrono.join('\n');
 
   document.getElementById('detInfo').innerHTML = `
     <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
