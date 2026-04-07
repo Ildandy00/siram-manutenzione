@@ -2067,15 +2067,20 @@ function openDettaglio(id) {
   document.getElementById('detTitle').textContent = imp ? imp.descrizione : i.codiceImpianto;
   document.getElementById('detStato').value = i.stato;
   document.getElementById('detNuovaData').value = '';
-  // Separa note normali da cronologia (chiusure + riaperture)
-  const tutteNote    = i.note || '';
-  const sepIdx       = tutteNote.indexOf('| Chiusura:') >= 0
-    ? tutteNote.indexOf('| Chiusura:')
-    : tutteNote.indexOf('| \uD83D\uDD04'); // emoji 🔄
-  const notaNormale  = sepIdx >= 0 ? tutteNote.slice(0, sepIdx).trim() : tutteNote.trim();
-  // Raccoglie tutti gli eventi cronologici
-  const eventiRaw    = tutteNote.match(/\| (?:Chiusura:|🔄[^|]+)/g) || [];
-  const notaChiusura = eventiRaw.map(s => s.replace(/^\| /, '').trim()).filter(Boolean).join('\n');
+  // Separa nota normale dagli eventi cronologici
+  // Formato: "nota originale | Chiusura: testo | 🔄 Riaperto il ... | Chiusura: testo2"
+  const tutteNote = i.note || '';
+  // Trova il primo separatore cronologico
+  const primoSep = Math.min(
+    tutteNote.indexOf(' | Chiusura:') >= 0 ? tutteNote.indexOf(' | Chiusura:') : Infinity,
+    tutteNote.indexOf(' | 🔄') >= 0 ? tutteNote.indexOf(' | 🔄') : Infinity
+  );
+  const notaNormale  = primoSep < Infinity ? tutteNote.slice(0, primoSep).trim() : tutteNote.trim();
+  // Estrae tutti gli eventi cronologici splitting su " | "
+  const tuttiPezzi   = tutteNote.split(' | ');
+  const eventiCrono  = tuttiPezzi.filter(p => p.startsWith('Chiusura:') || p.startsWith('🔄'));
+  const notaChiusura = eventiCrono.join('
+');
 
   document.getElementById('detInfo').innerHTML = `
     <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
