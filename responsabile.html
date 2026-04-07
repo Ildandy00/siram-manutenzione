@@ -865,7 +865,18 @@ tr.int-completato td * {
             </div>
           </div>
         </div>
-        <div class="fg"><label>Data prevista *</label><input class="fc" type="date" id="nData"/></div>
+        <div class="fg"><label>Data inizio *</label><input class="fc" type="date" id="nData"/></div>
+      </div>
+      <div class="fc-row">
+        <div class="fg"><label>Data fine (multi-giorno)</label>
+          <input class="fc" type="date" id="nDataFine"/></div>
+        <div class="fg"><label>2° operaio (multi-giorno)</label>
+          <select class="fc" id="nOpSecondario2">
+            <option value="">Nessuno</option>
+            <option>Matteo</option><option>Stefano</option>
+            <option>Michele</option><option>Ezio</option>
+          </select>
+        </div>
       </div>
       <div class="fg"><label>Note per l'operaio</label>
         <textarea class="fc" id="nNote" placeholder="Es. Portare ricambi filtro..."></textarea></div>
@@ -909,6 +920,17 @@ tr.int-completato td * {
           <select class="fc" id="detStato"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
         <div class="fg"><label>Posticipa al</label>
           <input class="fc" type="date" id="detNuovaData" title="Lascia vuoto per non spostare"/></div>
+      </div>
+      <div class="fc-row" style="margin-top:10px">
+        <div class="fg"><label>Data fine lavori</label>
+          <input class="fc" type="date" id="detDataFine" title="Solo per lavori multi-giorno"/></div>
+        <div class="fg"><label>2° operaio (multi-giorno)</label>
+          <select class="fc" id="detOpSecondario2">
+            <option value="">Nessuno</option>
+            <option>Matteo</option><option>Stefano</option>
+            <option>Michele</option><option>Ezio</option>
+          </select>
+        </div>
       </div>
       <div id="detSecondo" style="margin-top:8px"></div>
       <!-- Link Drive -->
@@ -1252,8 +1274,11 @@ function renderCalendario() {
     if (isWeekend) cls += ' weekend';
     if (isOggi)    cls += ' today';
 
-    // Interventi del giorno
-    const intGiorno = S.interventi.filter(i => i.dataPrevista === dateStr);
+    // Interventi del giorno — include multi-giorno
+    const intGiorno = S.interventi.filter(i => {
+      if (!i.dataFine || i.dataFine <= i.dataPrevista) return i.dataPrevista === dateStr;
+      return dateStr >= i.dataPrevista && dateStr <= i.dataFine;
+    });
     // Deduplicazione: non mostrare un intervento se il suo collegato è già mostrato
     const mostratiMese = new Set();
     const intDedup = intGiorno.filter(i => {
@@ -1263,7 +1288,16 @@ function renderCalendario() {
       return true;
     });
     // Chip compatti — tutte le righe visibili
-    let evHtml = intDedup.map(i => {
+    // Per interventi multi-giorno con secondo operaio, aggiungi chip separato
+    const intConSecondario = intGiorno.flatMap(i => {
+      const chips = [i];
+      if (i.dataFine && i.operaioSecondario2 &&
+          dateStr >= i.dataPrevista && dateStr <= i.dataFine) {
+        chips.push({ ...i, operaio: i.operaioSecondario2, _isSecondario: true });
+      }
+      return chips;
+    });
+    let evHtml = intConSecondario.map(i => {
       const imp      = S.impianti.find(x => x.codice === i.codiceImpianto);
       const chk      = S.checklist.filter(c => c.idIntervento === i.id);
       const done     = chk.filter(c => c.eseguita === 'SI').length;
@@ -1271,9 +1305,12 @@ function renderCalendario() {
       const tuttiDone = isChiuso || (chk.length > 0 && done === chk.length);
       const col      = OPERAI_HEX[i.operaio] || '#888';
       const nome     = imp ? imp.descrizione.split(' ').slice(0,3).join(' ') : i.codiceImpianto;
-      const titolo   = `${imp?imp.descrizione:i.codiceImpianto} — ${i.operaio}${isChiuso?' ✓':''}`;
-      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 4px 4px 0;${tuttiDone?'text-decoration:line-through;opacity:.45':''}"
-        onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}">${nome}</div>`;
+      const isMulti  = i.dataFine && i.dataFine > i.dataPrevista;
+      const multiTag = isMulti ? ' 📅' : '';
+      const op2Tag   = i._isSecondario ? ' (2°)' : '';
+      const titolo   = `${imp?imp.descrizione:i.codiceImpianto} — ${i.operaio}${op2Tag}${isMulti?' [multi-giorno]':''}${isChiuso?' ✓':''}`;
+      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 4px 4px 0;${isMulti?'border-right:2px solid '+col+';':''} ${tuttiDone?'text-decoration:line-through;opacity:.45':''}"
+        onclick="event.stopPropagation();openDettaglio('${i.id}')" title="${titolo}">${nome}${multiTag}</div>`;
     }).join('');
     const assGiorno = S.assenze.filter(a => a.dataInizio <= dateStr && a.dataFine >= dateStr);
     const assHtml = assGiorno.map(a => {
@@ -2055,6 +2092,12 @@ function openDettaglio(id) {
   document.getElementById('detNote').innerHTML = '';
   // Mostra secondo operaio se presente
   // Link Drive
+  // Campi multi-giorno
+  const detDataFineEl = document.getElementById('detDataFine');
+  const detOp2El      = document.getElementById('detOpSecondario2');
+  if (detDataFineEl) detDataFineEl.value = i.dataFine || '';
+  if (detOp2El)      detOp2El.value      = i.operaioSecondario2 || '';
+
   const driveBox = document.getElementById('detDriveBox');
   const driveLinkInput = document.getElementById('detLinkDrive');
   const driveBtn = document.getElementById('detDriveBtn');
@@ -2104,6 +2147,14 @@ async function salvaDettaglio() {
     if (nuovaData) {
       await apiPost('/posticipa-intervento', { id: currentDetId, nuovaData });
       if (i) i.dataPrevista = nuovaData;
+    }
+    // Salva dataFine e secondo operaio multi-giorno
+    const dataFine        = document.getElementById('detDataFine')?.value || '';
+    const opSecondario2   = document.getElementById('detOpSecondario2')?.value || '';
+    const hadMulti = i && (i.dataFine || i.operaioSecondario2);
+    if (dataFine || opSecondario2 || hadMulti) {
+      await apiPost('/aggiorna-multigiorno', { id: currentDetId, dataFine, operaioSecondario2: opSecondario2 });
+      if (i) { i.dataFine = dataFine; i.operaioSecondario2 = opSecondario2; }
     }
     closeModal('modalDettaglio');
     toast('Salvato', 'ok');
@@ -2238,9 +2289,12 @@ async function salvaIntervento() {
 
     if (operai.length === 1) {
       // Un solo operaio — semplice
-      const r = await apiPost('/crea-intervento', {
+      const r = const nDataFine2      = document.getElementById('nDataFine')?.value || '';
+      const nOpSecondario22 = document.getElementById('nOpSecondario2')?.value || '';
+      await apiPost('/crea-intervento', {
         codiceImpianto: imp, tipoVisita: tipo, operaio: operai[0],
         dataPrevista: data, note: nota, attivitaExtra: nExtraItems,
+        dataFine: nDataFine2, operaioSecondario2: nOpSecondario22,
       });
       if (!r.ok) { toast('Errore','err'); return; }
     } else {
