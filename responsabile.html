@@ -590,7 +590,10 @@ tr.int-completato td * {
       <div class="view" id="view-preventivi">
         <div class="sec-header">
           <div class="sec-title">Richieste preventivo</div>
-          <div id="prevSummary" style="font-size:12px;color:var(--muted)"></div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="prevSummary" style="font-size:12px;color:var(--muted)"></div>
+            <button class="btn btn-primary btn-sm" onclick="openModalNuovoPrev()">+ Nuovo</button>
+          </div>
         </div>
         <div id="tblPreventivi"></div>
       </div>
@@ -704,6 +707,59 @@ tr.int-completato td * {
       <button class="btn btn-danger btn-sm" onclick="eliminaBacklog()">Elimina</button>
       <button class="btn btn-ghost" onclick="closeModal('modalAssegna')">Annulla</button>
       <button class="btn btn-primary" onclick="confermaAssegna()">Assegna</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUOVO PREVENTIVO -->
+<div class="overlay" id="modalNuovoPrev">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title">💰 Nuovo preventivo</div>
+      <button class="modal-close" onclick="closeModal('modalNuovoPrev')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Impianto *</label>
+        <select class="fc" id="npImp" onchange="onNpImpChange()">
+          <option value="">Seleziona impianto...</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Descrizione lavoro *</label>
+        <textarea class="fc" id="npAttivita" rows="3" placeholder="Descrivi il lavoro da preventivare..."></textarea>
+      </div>
+      <div class="fg">
+        <label>Note aggiuntive</label>
+        <textarea class="fc" id="npNota" rows="2" placeholder="Dettagli, materiali, urgenza..."></textarea>
+      </div>
+      <div class="fc-row">
+        <div class="fg">
+          <label>Operaio di riferimento</label>
+          <select class="fc" id="npOperaio">
+            <option value="">Nessuno</option>
+            <option>Matteo</option>
+            <option>Stefano</option>
+            <option>Michele</option>
+            <option>Ezio</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Stato iniziale</label>
+          <select class="fc" id="npStato">
+            <option value="Richiesto">Richiesto</option>
+            <option value="Inviato">Inviato</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg">
+        <label>📁 Cartella Drive (opzionale)</label>
+        <input class="fc" type="url" id="npLinkDrive" placeholder="Incolla URL cartella Drive..."/>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalNuovoPrev')">Annulla</button>
+      <button class="btn btn-primary" onclick="creaNuovoPrev()">Crea preventivo</button>
     </div>
   </div>
 </div>
@@ -1389,6 +1445,74 @@ function esportaReport() {
   const a     = document.createElement('a');
   a.href = url; a.download = `manutenzioni_${anno}.csv`; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  NUOVO PREVENTIVO DA RESPONSABILE
+// ============================================================
+function openModalNuovoPrev() {
+  // Popola select impianti
+  const sel = document.getElementById('npImp');
+  sel.innerHTML = '<option value="">Seleziona impianto...</option>' +
+    S.impianti.map(i => `<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
+  document.getElementById('npAttivita').value = '';
+  document.getElementById('npNota').value = '';
+  document.getElementById('npOperaio').value = '';
+  document.getElementById('npStato').value = 'Richiesto';
+  document.getElementById('npLinkDrive').value = '';
+  document.getElementById('modalNuovoPrev').classList.add('open');
+}
+
+async function creaNuovoPrev() {
+  const codice   = document.getElementById('npImp').value;
+  const attivita = document.getElementById('npAttivita').value.trim();
+  const nota     = document.getElementById('npNota').value.trim();
+  const operaio  = document.getElementById('npOperaio').value;
+  const stato    = document.getElementById('npStato').value;
+  const link     = document.getElementById('npLinkDrive').value.trim();
+
+  if (!codice)   { toast('Seleziona un impianto','err'); return; }
+  if (!attivita) { toast('Descrivi il lavoro','err'); return; }
+
+  try {
+    const r = await apiPost('/richiedi-preventivo', {
+      idIntervento:   '',
+      idChecklist:    '',
+      codiceImpianto: codice,
+      attivita,
+      notaOperaio:    nota,
+      operaio:        operaio || 'Responsabile',
+    });
+    if (!r.ok) { toast('Errore creazione','err'); return; }
+
+    // Aggiorna stato e link Drive se necessari
+    if (stato !== 'Richiesto') {
+      await apiPost('/aggiorna-preventivo', { id: r.id, stato });
+    }
+    if (link) {
+      await apiPost('/salva-link-drive', { id: r.id, tipo: 'preventivo', linkDrive: link });
+    }
+
+    // Aggiorna lista locale
+    const imp = S.impianti.find(x => x.codice === codice);
+    S.preventivi.push({
+      id: r.id, idIntervento: '', idChecklist: '',
+      codiceImpianto: codice, attivita, notaOperaio: nota,
+      operaio: operaio || 'Responsabile', stato,
+      creatoIl: new Date().toLocaleDateString('it-IT'),
+      aggiornatoIl: '', linkDrive: link,
+    });
+
+    // Aggiorna badge
+    const nPrev = S.preventivi.filter(p => p.stato === 'Richiesto').length;
+    const badge = document.getElementById('badgePreventivi');
+    badge.textContent = nPrev;
+    badge.style.display = nPrev > 0 ? '' : 'none';
+
+    closeModal('modalNuovoPrev');
+    renderPreventivi();
+    toast('Preventivo creato', 'ok');
+  } catch(e) { toast('Errore rete','err'); }
 }
 
 // ============================================================
