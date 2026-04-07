@@ -2067,13 +2067,15 @@ function openDettaglio(id) {
   document.getElementById('detTitle').textContent = imp ? imp.descrizione : i.codiceImpianto;
   document.getElementById('detStato').value = i.stato;
   document.getElementById('detNuovaData').value = '';
-  // Separa note normali da nota di chiusura (formato: "...| Chiusura: testo")
+  // Separa note normali da cronologia (chiusure + riaperture)
   const tutteNote    = i.note || '';
-  const sepIdx       = tutteNote.indexOf('| Chiusura:');
+  const sepIdx       = tutteNote.indexOf('| Chiusura:') >= 0
+    ? tutteNote.indexOf('| Chiusura:')
+    : tutteNote.indexOf('| \uD83D\uDD04'); // emoji 🔄
   const notaNormale  = sepIdx >= 0 ? tutteNote.slice(0, sepIdx).trim() : tutteNote.trim();
-  // Raccoglie tutte le note di chiusura
-  const chiusureRaw  = tutteNote.match(/\| Chiusura:\s*([^|]+)/g) || [];
-  const notaChiusura = chiusureRaw.map(s => s.replace(/^\|\s*Chiusura:\s*/, '').trim()).filter(Boolean).join(' · ');
+  // Raccoglie tutti gli eventi cronologici
+  const eventiRaw    = tutteNote.match(/\| (?:Chiusura:|🔄[^|]+)/g) || [];
+  const notaChiusura = eventiRaw.map(s => s.replace(/^\| /, '').trim()).filter(Boolean).join('\n');
 
   document.getElementById('detInfo').innerHTML = `
     <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
@@ -2086,8 +2088,8 @@ function openDettaglio(id) {
     <div><span style="color:var(--muted)">Tipo</span><br>${i.tipoVisita}</div>
     ${notaNormale?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${notaNormale}</div>`:''}
     ${notaChiusura?`<div style="grid-column:1/-1;margin-top:4px;padding:14px 16px;background:rgba(63,185,80,.15);border:2px solid rgba(63,185,80,.45);border-left:5px solid #3fb950;border-radius:0 10px 10px 0">
-      <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">✓ Nota di chiusura operaio</div>
-      <div style="font-size:14px;color:#e6edf3;line-height:1.5">${notaChiusura}</div>
+      <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Cronologia intervento</div>
+      <div style="font-size:13px;color:#e6edf3;line-height:1.8;white-space:pre-line">${notaChiusura}</div>
     </div>`:''}`;
   document.getElementById('detNote').innerHTML = '';
   // Mostra secondo operaio se presente
