@@ -732,6 +732,9 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- Mini timeline visiva -->
       <div id="praticaTimeline" class="timeline" style="margin-bottom:20px;padding:0 10px"></div>
 
+      <!-- Toggle Lavoro in gestione — sempre visibile -->
+      <div id="praticaGestioneToggle" style="margin-bottom:14px"></div>
+
       <!-- Step panels -->
       <div id="praticaSteps"></div>
 
@@ -1396,6 +1399,32 @@ function openPratica(id) {
     </div>`;
   }).join('');
 
+  // Toggle Lavoro in gestione — sempre visibile sotto la timeline
+  document.getElementById('praticaGestioneToggle').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
+      background:${p.inGestione?'rgba(122,176,216,.1)':'var(--bg3)'};
+      border:1px solid ${p.inGestione?'rgba(122,176,216,.35)':'var(--border)'};
+      border-radius:10px;cursor:pointer;user-select:none"
+      onclick="toggleGestione('${p.id}')">
+      <div>
+        <div style="font-weight:700;font-size:13px;${p.inGestione?'color:#7ab0d8':''}">
+          🔧 Lavoro in gestione
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px">
+          ${p.inGestione
+            ? 'Attivo — preventivo saltato, si procede direttamente al BdO'
+            : 'Attiva per bypassare il preventivo (lavoro in gestione diretta)'}
+        </div>
+      </div>
+      <div style="width:40px;height:22px;border-radius:11px;
+        background:${p.inGestione?'#7ab0d8':'var(--bg4)'};
+        position:relative;transition:background .2s;flex-shrink:0;margin-left:14px">
+        <div style="width:18px;height:18px;border-radius:50%;background:#fff;
+          position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};
+          transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+      </div>
+    </div>`;
+
   // Step panels
   document.getElementById('praticaSteps').innerHTML=PRATICA_STEPS.map((s,i)=>{
     const isDone=i<stepCorrente, isCurr=i===stepCorrente;
@@ -1470,51 +1499,24 @@ function openPratica(id) {
         </div>`;
     } else if(s.key==='preventivo') {
       const offSel = S.offerte.find(o=>o.idPratica===p.id&&o.selezionata);
-      bodyHtml=`
-        ${offSel?`<div style="padding:8px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.2);border-radius:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">
-          ✓ Offerta selezionata: <strong style="color:var(--text)">${offSel.fornitore}</strong>
-          ${offSel.importo?` — € <strong>${parseFloat(offSel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</strong>`:''}
-        </div>`:''}
-
-        <!-- Toggle Lavoro in gestione -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
-          background:${p.inGestione?'rgba(122,176,216,.1)':'var(--bg3)'};
-          border:1px solid ${p.inGestione?'rgba(122,176,216,.35)':'var(--border)'};
-          border-radius:10px;margin-bottom:16px;cursor:pointer;user-select:none"
-          onclick="toggleGestione('${p.id}')">
-          <div>
-            <div style="font-weight:700;font-size:13px;${p.inGestione?'color:#7ab0d8':''}">
-              🔧 Lavoro in gestione
-            </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">
-              ${p.inGestione
-                ? 'Attivo — il preventivo viene saltato, si procede direttamente al BdO'
-                : 'Attivalo se il lavoro è in gestione diretta e non richiede preventivo'}
-            </div>
-          </div>
-          <div style="width:44px;height:24px;border-radius:12px;background:${p.inGestione?'#7ab0d8':'var(--bg4)'};
-            position:relative;transition:background .2s;flex-shrink:0">
-            <div style="width:20px;height:20px;border-radius:50%;background:#fff;
-              position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};
-              transition:left .2s,right .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
-          </div>
-        </div>
-
-        ${p.inGestione
-          ? `<div style="text-align:center;padding:20px;color:#7ab0d8;font-size:13px">
-               ✓ Preventivo saltato — lavoro in gestione diretta<br>
-               <span style="font-size:11px;color:var(--muted)">Procedi direttamente con il BdO</span>
-             </div>`
-          : `<div class="fc-row">
-               <div class="fg"><label>Data ricezione preventivo</label><input class="fc" type="date" id="ps_dataPreventivo" value="${p.dataPreventivo||''}"/></div>
-               <div class="fg"><label>Importo preventivo €</label><input class="fc" type="number" step="0.01" id="ps_importoPreventivo" value="${p.importoPreventivo||''}" placeholder="0.00"/></div>
-             </div>
-             ${p.importoPreventivo?`<div class="step-imp-amount">€ ${parseFloat(p.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
-             <div class="fg"><label>📁 Link Drive (preventivo)</label><input class="fc" type="url" id="ps_linkPreventivo" value="${p.linkPreventivo||''}" placeholder="URL file preventivo..."/>
-               ${p.linkPreventivo?`<a href="${p.linkPreventivo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-             </div>
-             <button class="btn btn-primary btn-sm" onclick="salvaStep('preventivo')">Salva step</button>`
-        }`;
+      bodyHtml = p.inGestione
+        ? `<div style="text-align:center;padding:20px;color:#7ab0d8;font-size:13px">
+             🔧 Preventivo saltato — lavoro in gestione diretta<br>
+             <span style="font-size:11px;color:var(--muted)">Procedi con il BdO</span>
+           </div>`
+        : `${offSel?`<div style="padding:8px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.2);border-radius:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+             ✓ Offerta selezionata: <strong style="color:var(--text)">${offSel.fornitore}</strong>
+             ${offSel.importo?` — € <strong>${parseFloat(offSel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</strong>`:''}
+           </div>`:''}
+           <div class="fc-row">
+             <div class="fg"><label>Data ricezione preventivo</label><input class="fc" type="date" id="ps_dataPreventivo" value="${p.dataPreventivo||''}"/></div>
+             <div class="fg"><label>Importo preventivo €</label><input class="fc" type="number" step="0.01" id="ps_importoPreventivo" value="${p.importoPreventivo||''}" placeholder="0.00"/></div>
+           </div>
+           ${p.importoPreventivo?`<div class="step-imp-amount">€ ${parseFloat(p.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
+           <div class="fg"><label>📁 Link Drive (preventivo)</label><input class="fc" type="url" id="ps_linkPreventivo" value="${p.linkPreventivo||''}" placeholder="URL file preventivo..."/>
+             ${p.linkPreventivo?`<a href="${p.linkPreventivo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
+           </div>
+           <button class="btn btn-primary btn-sm" onclick="salvaStep('preventivo')">Salva step</button>`;
     } else if(s.key==='bdo') {
       bodyHtml=`
         <div class="fc-row">
