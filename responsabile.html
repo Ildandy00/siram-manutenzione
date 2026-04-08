@@ -1459,7 +1459,7 @@ function openPratica(id) {
               </div>
               <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
                 ${o.selezionata
-                  ? `<span style="font-size:11px;font-weight:700;color:var(--green);padding:3px 8px;border:1px solid rgba(143,190,122,.3);border-radius:6px">✓ Selezionata</span>`
+                  ? `<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:rgba(143,190,122,.3)" onclick="selezionaOfferta('${o.id}','${p.id}')">✓ Selezionata</button>`
                   : `<button class="btn btn-ghost btn-sm" onclick="selezionaOfferta('${o.id}','${p.id}')">Seleziona</button>`
                 }
                 <button class="btn btn-danger btn-sm" onclick="eliminaOfferta('${o.id}','${p.id}')">✕</button>
@@ -1631,13 +1631,15 @@ async function aggiungiOfferta(idPratica) {
 
 async function selezionaOfferta(idOfferta, idPratica) {
   try {
-    const r = await apiPost('/seleziona-offerta',{id:idOfferta,idPratica});
+    const offerta = S.offerte.find(o=>o.id===idOfferta);
+    // Se già selezionata → deseleziona (toggle)
+    const nuovaSelezionata = offerta && offerta.selezionata ? null : idOfferta;
+    const r = await apiPost('/seleziona-offerta',{id:nuovaSelezionata, idPratica});
     if(!r.ok){toast('Errore','err');return;}
-    // Aggiorna localmente
     S.offerte.forEach(o=>{
-      if(o.idPratica===idPratica) o.selezionata=(o.id===idOfferta);
+      if(o.idPratica===idPratica) o.selezionata = (nuovaSelezionata && o.id===nuovaSelezionata);
     });
-    toast('Offerta selezionata','ok');
+    toast(nuovaSelezionata?'Offerta selezionata':'Offerta deselezionata','ok');
     openPratica(idPratica);
   } catch(e){toast('Errore','err');}
 }
