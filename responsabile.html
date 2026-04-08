@@ -557,6 +557,7 @@ tr.int-completato td * { text-decoration: line-through; }
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta" onclick="setPraticaFilter('Richiesta')">📝 Richiesta</button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerta" onclick="setPraticaFilter('Offerta')">🏷️ Offerta</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Preventivo" onclick="setPraticaFilter('Preventivo')">💰 Preventivo</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="BdO" onclick="setPraticaFilter('BdO')">📋 BdO</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="DDT" onclick="setPraticaFilter('DDT')">🚚 DDT</button>
@@ -1274,13 +1275,14 @@ function esportaReport() {
 //  PRATICHE
 // ============================================================
 const PRATICA_STEPS = [
-  { key:'richiesta',  label:'Richiesta',  icon:'📝', fields:['dataRichiesta','noteRichiesta','linkRichiesta'] },
-  { key:'preventivo', label:'Preventivo', icon:'💰', fields:['dataPreventivo','importoPreventivo','linkPreventivo'] },
-  { key:'bdo',        label:'BdO',        icon:'📋', fields:['dataBdo','numeroBdo','linkBdo'] },
-  { key:'ddt',        label:'DDT',        icon:'🚚', fields:['dataDdt','numeroDdt','linkDdt'] },
-  { key:'chiuso',     label:'Chiusa',     icon:'✓',  fields:['dataChiusura','noteChiusura'] },
+  { key:'richiesta',  label:'Richiesta',         icon:'📝', fields:['dataRichiesta','noteRichiesta','linkRichiesta'] },
+  { key:'offerta',    label:'Offerta fornitore',  icon:'🏷️', fields:['dataOfferta','fornitoreOfferta','importoOfferta','linkOfferta'] },
+  { key:'preventivo', label:'Preventivo',         icon:'💰', fields:['dataPreventivo','importoPreventivo','linkPreventivo'] },
+  { key:'bdo',        label:'BdO',                icon:'📋', fields:['dataBdo','numeroBdo','linkBdo'] },
+  { key:'ddt',        label:'DDT',                icon:'🚚', fields:['dataDdt','numeroDdt','linkDdt'] },
+  { key:'chiuso',     label:'Chiusa',             icon:'✓',  fields:['dataChiusura','noteChiusura'] },
 ];
-const PRATICA_STATI = ['Richiesta','Preventivo','BdO','DDT','Chiusa'];
+const PRATICA_STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
 
 function praticaStepIdx(stato) { return PRATICA_STATI.indexOf(stato); }
 
@@ -1316,6 +1318,7 @@ function renderPratiche() {
       const isCurr=i===stepCorrente;
       let dataStep='';
       if(s.key==='richiesta'&&p.dataRichiesta) dataStep=p.dataRichiesta;
+      else if(s.key==='offerta'&&p.dataOfferta) dataStep=p.dataOfferta;
       else if(s.key==='preventivo'&&p.dataPreventivo) dataStep=p.dataPreventivo;
       else if(s.key==='bdo'&&p.dataBdo) dataStep=p.dataBdo;
       else if(s.key==='ddt'&&p.dataDdt) dataStep=p.dataDdt;
@@ -1370,6 +1373,7 @@ function openPratica(id) {
     const isDone=i<stepCorrente, isCurr=i===stepCorrente;
     let dataStep='';
     if(s.key==='richiesta'&&p.dataRichiesta)dataStep=p.dataRichiesta;
+    else if(s.key==='offerta'&&p.dataOfferta)dataStep=p.dataOfferta;
     else if(s.key==='preventivo'&&p.dataPreventivo)dataStep=p.dataPreventivo;
     else if(s.key==='bdo'&&p.dataBdo)dataStep=p.dataBdo;
     else if(s.key==='ddt'&&p.dataDdt)dataStep=p.dataDdt;
@@ -1395,6 +1399,18 @@ function openPratica(id) {
           ${p.linkRichiesta?`<a href="${p.linkRichiesta}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
         </div>
         <button class="btn btn-primary btn-sm" onclick="salvaStep('richiesta')">Salva step</button>`;
+    } else if(s.key==='offerta') {
+      bodyHtml=`
+        <div class="fc-row">
+          <div class="fg"><label>Data ricezione offerta</label><input class="fc" type="date" id="ps_dataOfferta" value="${p.dataOfferta||''}"/></div>
+          <div class="fg"><label>Importo offerta €</label><input class="fc" type="number" step="0.01" id="ps_importoOfferta" value="${p.importoOfferta||''}" placeholder="0.00"/></div>
+        </div>
+        ${p.importoOfferta?`<div class="step-imp-amount" style="color:#c4b5fd">€ ${parseFloat(p.importoOfferta).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
+        <div class="fg"><label>Fornitore</label><input class="fc" type="text" id="ps_fornitoreOfferta" value="${p.fornitoreOfferta||''}" placeholder="Nome fornitore..."/></div>
+        <div class="fg"><label>📁 Link Drive (offerta)</label><input class="fc" type="url" id="ps_linkOfferta" value="${p.linkOfferta||''}" placeholder="URL file offerta..."/>
+          ${p.linkOfferta?`<a href="${p.linkOfferta}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="salvaStep('offerta')">Salva step</button>`;
     } else if(s.key==='preventivo') {
       bodyHtml=`
         <div class="fc-row">
@@ -1462,6 +1478,11 @@ async function salvaStep(step) {
     dati.dataRichiesta=document.getElementById('ps_dataRichiesta').value;
     dati.noteRichiesta=document.getElementById('ps_noteRichiesta').value;
     dati.linkRichiesta=document.getElementById('ps_linkRichiesta').value;
+  } else if(step==='offerta') {
+    dati.dataOfferta=document.getElementById('ps_dataOfferta').value;
+    dati.fornitoreOfferta=document.getElementById('ps_fornitoreOfferta').value;
+    dati.importoOfferta=document.getElementById('ps_importoOfferta').value;
+    dati.linkOfferta=document.getElementById('ps_linkOfferta').value;
   } else if(step==='preventivo') {
     dati.dataPreventivo=document.getElementById('ps_dataPreventivo').value;
     dati.importoPreventivo=document.getElementById('ps_importoPreventivo').value;
@@ -1484,7 +1505,7 @@ async function salvaStep(step) {
     // Aggiorna localmente
     Object.assign(p,dati);
     // Avanza stato se necessario
-    const statiMap={richiesta:'Richiesta',preventivo:'Preventivo',bdo:'BdO',ddt:'DDT',chiuso:'Chiusa'};
+    const statiMap={richiesta:'Richiesta',offerta:'Offerta',preventivo:'Preventivo',bdo:'BdO',ddt:'DDT',chiuso:'Chiusa'};
     const statoNuovo=statiMap[step];
     if(praticaStepIdx(statoNuovo)>praticaStepIdx(p.stato)) p.stato=statoNuovo;
     // Aggiorna badge
@@ -1790,8 +1811,8 @@ function openDettaglio(id) {
         <div>
           <div style="font-size:13px;font-weight:700">Pratica in corso</div>
           <div style="font-size:11px;color:var(--muted)">Step: <span class="pra-stato ${pratica.stato}" style="font-size:10px;padding:1px 6px">${pratica.stato}</span>
-          ${pratica.importoPreventivo?` · € ${parseFloat(pratica.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
-          </div>
+          ${pratica.importoOfferta?` · Offerta € ${parseFloat(pratica.importoOfferta).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
+          ${pratica.importoPreventivo?` · Prev. € ${parseFloat(pratica.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
         </div>
       </div>
       <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="closeModal('modalDettaglio');openPratica('${pratica.id}')">Apri pratica →</button>
