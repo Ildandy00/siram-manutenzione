@@ -1412,6 +1412,7 @@ function openPratica(id) {
         <button class="btn btn-primary btn-sm" onclick="salvaStep('richiesta')">Salva step</button>`;
     } else if(s.key==='offerta') {
       const offerteP = S.offerte.filter(o=>o.idPratica===p.id);
+      const offSelezionata = offerteP.find(o=>o.selezionata);
       const offerteHtml = offerteP.length===0
         ? `<div style="font-size:13px;color:var(--muted);padding:10px 0">Nessuna offerta ancora ricevuta.</div>`
         : offerteP.map(o=>`
@@ -1436,7 +1437,22 @@ function openPratica(id) {
               </div>
             </div>
           </div>`).join('');
+      // Pulsante "Procedi" visibile solo se c'è almeno un'offerta selezionata
+      const btnProcedi = offSelezionata
+        ? `<div style="margin-bottom:14px;padding:10px 14px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:13px">
+              ✓ Offerta selezionata: <strong>${offSelezionata.fornitore}</strong>
+              ${offSelezionata.importo?` — <span style="font-family:'DM Mono',monospace;color:var(--green)">€ ${parseFloat(offSelezionata.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="avanzaAPreventivo('${p.id}')">Procedi al preventivo →</button>
+          </div>`
+        : offerteP.length > 0
+          ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:8px">
+              💡 Seleziona l'offerta scelta per procedere al preventivo
+            </div>`
+          : '';
       bodyHtml=`
+        ${btnProcedi}
         <div id="listaOfferte_${p.id}" style="margin-bottom:14px">${offerteHtml}</div>
         <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">+ Aggiungi offerta</div>
@@ -1599,6 +1615,18 @@ async function eliminaOfferta(idOfferta, idPratica) {
     await apiPost('/elimina-offerta',{id:idOfferta});
     S.offerte=S.offerte.filter(o=>o.id!==idOfferta);
     toast('Offerta eliminata','ok');
+    openPratica(idPratica);
+  } catch(e){toast('Errore','err');}
+}
+
+async function avanzaAPreventivo(idPratica) {
+  // Avanza lo stato della pratica da Offerta a Preventivo
+  try {
+    const r = await apiPost('/aggiorna-pratica',{id:idPratica, step:'preventivo', dati:{}});
+    if(!r.ok){toast('Errore','err');return;}
+    const p = S.pratiche.find(x=>x.id===idPratica);
+    if(p && praticaStepIdx('Preventivo') > praticaStepIdx(p.stato)) p.stato='Preventivo';
+    toast('Avanzato a Preventivo','ok');
     openPratica(idPratica);
   } catch(e){toast('Errore','err');}
 }
