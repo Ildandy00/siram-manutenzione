@@ -1,2144 +1,755 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Siram — Responsabile</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<style>
-:root {
-  --bg:     #282828;
-  --bg2:    #444444;
-  --bg3:    #4e4e4e;
-  --bg4:    #585858;
-  --bg5:    #626262;
-  --border: rgba(255,255,255,.1);
-  --text:   #eeeeee;
-  --muted:  #999999;
-  --accent: #cccccc;
-  --green:  #8fbe7a;
-  --yellow: #c8b464;
-  --red:    #c87878;
-  --orange: #c89060;
-  --matteo:  #7a9ec8;
-  --stefano: #9a84c8;
-  --michele: #7ab87a;
-  --ezio:    #c89060;
-  --ferie:    #6aaec8;
-  --permesso: #9a80c8;
-  --malattia: #c87878;
+const express    = require('express');
+const cors       = require('cors');
+const { google } = require('googleapis');
+
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+const SHEET_ID = process.env.SHEET_ID || '1JsQz8FiUMFGjFQ5tuodgjexxe1hE8UE87ORFDi_geWE';
+
+const SH = {
+  IMPIANTI:    'Impianti',
+  CATALOGO:    'CatalogoAttivita',
+  INTERVENTI:  'Interventi',
+  CHECKLIST:   'ChecklistEsecuzione',
+  ASSENZE:     'Assenze',
+  PUSHTOKENS:  'PushTokens',
+  PRATICHE:    'Pratiche',
+  OFFERTE:     'Offerte',
+  RDACAT:      'RdaCat',
+  REPERIBILITA:'Reperibilita',
+};
+
+const webpush = require('web-push');
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL || 'mailto:admin@siram.it',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; }
-body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || '';
 
-/* TOPBAR */
-.topbar { background: #2a2a2a; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; position: sticky; top: 0; z-index: 100; }
-.brand { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
-.brand span { color: var(--muted); font-weight: 400; }
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-.logout-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .15s; }
-.logout-btn:hover { color: var(--red); border-color: rgba(239,68,68,.4); }
-
-/* SHELL */
-.shell { display: flex; flex: 1; overflow: hidden; }
-
-/* SIDEBAR */
-.sidebar { width: 220px; background: #2a2a2a; border-right: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
-.nav-sec { padding: 16px 12px 6px; font-size: 10px; letter-spacing: 1.5px; color: #777; text-transform: uppercase; font-weight: 600; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; margin: 1px 8px; border-radius: 8px; cursor: pointer; color: #888; font-size: 13px; font-weight: 500; transition: all .15s; }
-.nav-item:hover { background: #383838; color: #f0f0f0; }
-.nav-item.active { background: rgba(200,200,200,.15); color: #f0f0f0; }
-.nav-badge { margin-left: auto; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
-.sidebar-foot { margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,.08); }
-.refresh-btn { width: 100%; padding: 8px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .15s; }
-.refresh-btn:hover { color: var(--text); }
-
-/* MAIN */
-.main { flex: 1; overflow-y: auto; background: var(--bg); }
-.view { display: none; padding: 24px; }
-.view.active { display: block; }
-
-/* STATS */
-.stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
-.stat-val { font-family: 'DM Mono', monospace; font-size: 30px; font-weight: 500; line-height: 1; }
-.stat-lbl { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; }
-
-/* CALENDARIO */
-.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.cal-title { font-size: 18px; font-weight: 700; }
-.cal-controls { display: flex; align-items: center; gap: 8px; }
-.cal-btn { background: var(--bg2); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .15s; }
-.cal-btn:hover { color: var(--text); border-color: rgba(255,255,255,.15); }
-.cal-btn.primary { background: #666; color: #fff; border-color: #666; }
-.cal-btn.primary:hover { background: #555; }
-.cal-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.cal-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.cal-days-hdr { display: grid; grid-template-columns: repeat(7,1fr); border-bottom: 1px solid var(--border); }
-.day-hdr { padding: 10px 8px; text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; border-right: 1px solid var(--border); }
-.day-hdr:last-child { border-right: none; }
-.day-hdr.weekend { color: rgba(100,116,139,.6); }
-.cal-grid { display: grid; grid-template-columns: repeat(7,1fr); }
-.cal-cell { min-height: 110px; padding: 8px; border-right: 1px solid var(--border); border-top: 1px solid var(--border); vertical-align: top; cursor: pointer; transition: background .1s; }
-.cal-cell:last-child { border-right: none; }
-.cal-cell:hover { background: var(--bg3); }
-.cal-cell.other-month { background: rgba(0,0,0,.15); }
-.cal-cell.other-month:hover { background: rgba(0,0,0,.2); }
-.cal-cell.today { background: rgba(200,200,200,.12); }
-.cal-cell.weekend { background: rgba(0,0,0,.1); }
-.day-num { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; }
-.cal-cell.today .day-num { color: var(--accent); font-weight:700; }
-.day-add { opacity: 0; font-size: 16px; color: var(--muted); line-height: 1; transition: opacity .1s; }
-.cal-cell:hover .day-add { opacity: 1; }
-.ev { font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: opacity .1s; }
-.ev:hover { opacity: .8; }
-.ev-matteo  { background: rgba(59,130,246,.2);  color: #93c5fd; }
-.ev-stefano { background: rgba(139,92,246,.2);  color: #c4b5fd; }
-.ev-michele { background: rgba(34,197,94,.2);   color: #86efac; }
-.ev-ezio    { background: rgba(249,115,22,.2);  color: #fdba74; }
-.ev-ferie   { background: rgba(14,165,233,.15); color: #7dd3fc; border-left: 2px solid #0ea5e9; border-radius: 0 5px 5px 0; }
-.ev-permesso{ background: rgba(168,85,247,.15); color: #d8b4fe; border-left: 2px solid #a855f7; border-radius: 0 5px 5px 0; }
-.ev-malattia{ background: rgba(239,68,68,.15);  color: #fca5a5; border-left: 2px solid #ef4444; border-radius: 0 5px 5px 0; }
-.ev.completato { text-decoration: line-through; opacity: .45; }
-
-/* TABELLA */
-.table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
-table { width: 100%; border-collapse: collapse; }
-th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); background: var(--bg3); }
-td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,.02); }
-.prog-wrap { display: flex; align-items: center; gap: 8px; }
-.prog-bar { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
-.prog-fill { height: 100%; border-radius: 2px; }
-.prog-fill.wip  { background: var(--accent); }
-.prog-fill.done { background: var(--green); }
-.prog-txt { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; min-width: 28px; text-align: right; }
-
-/* BADGES */
-.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
-.badge-aperto   { background: rgba(208,208,208,.12); color: #c8c8c8; }
-.badge-chiuso   { background: rgba(143,190,122,.12); color: #8fbe7a; }
-.badge-ord      { background: rgba(100,116,139,.15); color: #94a3b8; }
-.badge-str      { background: rgba(249,115,22,.12);  color: #fdba74; }
-
-/* MODALI */
-.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
-.overlay.open { display: flex; }
-.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; animation: fadeUp .2s ease; }
-@keyframes fadeUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.modal-head { padding: 20px 20px 0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.modal-title { font-size: 17px; font-weight: 700; }
-.modal-close { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
-.modal-close:hover { color: var(--red); }
-.modal-body { padding: 0 20px 20px; }
-.modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
-
-/* FORM */
-.fg { margin-bottom: 14px; }
-.fg label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-.fc { width: 100%; padding: 9px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; transition: border-color .15s; }
-.fc:focus { outline: none; border-color: var(--accent); }
-select.fc option { background: var(--bg3); }
-textarea.fc { resize: vertical; min-height: 72px; }
-.fc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* CHECKLIST ANTEPRIMA */
-.chk-prev { margin-top: 12px; }
-.chk-prev-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg3); border-radius: 7px; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
-.chk-prev-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
-.extra-row { display: flex; gap: 8px; margin-top: 8px; }
-.extra-row .fc { flex: 1; }
-
-/* BTN */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
-.btn-primary { background: #666; color: #fff; }
-.btn-primary:hover { background: #555; }
-.btn-ghost { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
-.btn-ghost:hover { color: var(--text); }
-.btn-danger { background: rgba(239,68,68,.1); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
-.btn-danger:hover { background: var(--red); color: #fff; }
-.btn-sm { padding: 5px 10px; font-size: 12px; }
-
-/* IMPIANTI */
-.imp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 12px; }
-.imp-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.imp-code { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 4px; }
-.imp-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-.imp-meta { font-size: 12px; color: var(--muted); }
-.imp-actions { display: flex; gap: 6px; margin-top: 10px; }
-
-/* SEARCH */
-.search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
-.search-bar .fc { flex: 1; }
-
-/* SECTION HEADER */
-.sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.sec-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
-
-/* REPERIBILITÀ */
-.rep-widget { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
-.rep-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
-.rep-operaio { font-size:20px; font-weight:700; }
-.rep-orari { font-size:12px; color:var(--muted); margin-top:2px; }
-.rep-settimane { display:flex; gap:8px; flex-wrap:wrap; flex:1; }
-.rep-sett-btn { padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); cursor:pointer; font-family:'Outfit',sans-serif; font-size:12px; transition:all .12s; text-align:center; min-width:90px; }
-.rep-sett-btn:hover { border-color:rgba(255,255,255,.2); }
-.rep-sett-btn.corrente { border-color:rgba(122,176,216,.4); background:rgba(122,176,216,.1); }
-.rep-sett-btn .sett-data { color:var(--muted); font-size:11px; }
-.rep-sett-btn .sett-op { font-weight:700; font-size:13px; margin-top:2px; }
-.rep-sett-btn .sett-op.vuoto { color:var(--muted); font-weight:400; font-style:italic; }
-
-/* RDA/CAT */
-.rda-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
-.rda-card-head { display:flex; align-items:flex-start; gap:14px; }
-.rda-card-info { flex:1; min-width:0; }
-.rda-imp  { font-size:15px; font-weight:700; margin-bottom:3px; }
-.rda-meta { font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
-.rda-nota { font-size:13px; margin-top:8px; padding:8px 12px; background:var(--bg3); border-radius:8px; border-left:3px solid #7ab0d8; }
-.rda-tipo-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; background:rgba(100,180,220,.12); color:#7ab0d8; border:1px solid rgba(100,180,220,.25); margin-top:6px; }
-.rda-stato-select { background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; padding:6px 10px; cursor:pointer; }
-.stato-inviata      { color:#7ab0d8; }
-.stato-in-lavorazione { color:var(--yellow); }
-.stato-completata   { color:var(--green); }
-.stato-annullata    { color:var(--muted); }
-
-/* REPORT MANUTENZIONI */
-.report-filter.active { background:var(--bg4); color:var(--text); border-color:rgba(255,255,255,.2); }
-.stato-completato { color:var(--green); font-weight:700; }
-.stato-assegnato  { color:var(--yellow); font-weight:700; }
-.stato-dafare     { color:var(--red); font-weight:700; }
-.stato-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; flex-shrink:0; }
-.stato-dot.completato { background:var(--green); }
-.stato-dot.assegnato  { background:var(--yellow); }
-.stato-dot.dafare     { background:var(--red); }
-
-/* BACKLOG CARD */
-.backlog-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; display:flex; align-items:center; gap:16px; }
-.backlog-card:hover { border-color:rgba(255,255,255,.15); }
-.backlog-info { flex:1; min-width:0; }
-.backlog-imp  { font-size:15px; font-weight:700; margin-bottom:4px; }
-.backlog-meta { font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.backlog-note { font-size:13px; color:var(--muted); margin-top:6px; font-style:italic; }
-.backlog-actions { display:flex; gap:8px; flex-shrink:0; }
-
-/* OPERAI CHIP */
-.op-chips { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-.op-chip { padding: 10px 8px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); cursor: pointer; text-align: center; transition: all .15s; user-select: none; }
-.op-chip:hover { border-color: rgba(255,255,255,.2); background: var(--bg4); }
-.op-chip.selected { border-color: var(--accent); background: rgba(208,208,208,.1); }
-.op-chip-av { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #1a1a1a; margin: 0 auto 6px; }
-.op-chip-name { font-size: 13px; font-weight: 600; color: var(--text); }
-.op-chip-zona { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.op-chip.selected .op-chip-name { color: var(--accent); }
-
-/* STORICO */
-.stor-entry { background: var(--bg3); border-radius: 8px; padding: 12px; margin-bottom: 8px; border-left: 3px solid var(--border); }
-.stor-entry.chiuso { border-left-color: var(--green); }
-.stor-entry.aperto { border-left-color: var(--accent); }
-.stor-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-.stor-chk { display: flex; flex-wrap: wrap; gap: 5px; }
-.stor-chip { font-size: 11px; padding: 2px 7px; border-radius: 4px; background: var(--bg4); }
-.stor-chip.done { color: var(--green); }
-.stor-chip.skip { color: var(--red); }
-
-/* EMPTY */
-.empty { text-align: center; padding: 48px; color: var(--muted); font-size: 13px; }
-
-/* TOAST */
-.toast { position: fixed; bottom: 24px; right: 24px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; opacity: 0; transform: translateY(8px); transition: all .25s; pointer-events: none; }
-.toast.show { opacity: 1; transform: translateY(0); }
-.toast.ok  { background: var(--green); color: #fff; }
-.toast.err { background: var(--red); color: #fff; }
-
-/* SPINNER */
-.spin { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.loading-full { display: flex; align-items: center; justify-content: center; height: 300px; gap: 12px; color: var(--muted); }
-
-/* LOGIN */
-#loginWrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 48px; width: 400px; }
-.login-logo { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
-.login-title { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-.login-sub { font-size: 14px; color: var(--muted); margin-bottom: 36px; }
-.login-lbl { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-.login-inp { width: 100%; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: 6px; margin-bottom: 20px; }
-.login-inp:focus { outline: none; border-color: var(--accent); }
-.login-btn { width: 100%; padding: 13px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s; }
-.login-err { font-size: 13px; color: var(--red); margin-top: 12px; min-height: 18px; text-align: center; }
-
-/* VISTA SWITCH */
-.vista-switch { display:flex; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; }
-.vista-btn { padding:6px 18px; border-radius:8px; border:none; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); background:transparent; transition:all .15s; }
-.vista-btn.active { background:var(--bg2); color:var(--text); border:1px solid var(--border); }
-
-/* SETTIMANA */
-.week-day-hdr { padding:10px 8px; text-align:center; border-bottom:1px solid var(--border); border-top:1px solid var(--border); position:sticky; top:0; background:var(--bg2); z-index:2; }
-.week-day-hdr-nome { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
-.week-day-hdr-num { font-size:22px; font-weight:700; line-height:1.2; }
-.week-day-hdr.oggi .week-day-hdr-num { color:var(--accent); }
-.week-all-day-cell { padding:6px; border-right:1px solid var(--border); min-height:48px; vertical-align:top; }
-.week-all-day-cell:last-child { border-right:none; }
-
-/* INTERVENTO COMPLETATO */
-tr.int-completato td { text-decoration: line-through; color: var(--muted) !important; opacity: .55; }
-tr.int-completato td * { text-decoration: line-through; }
-
-/* GIORNO SELEZIONATO */
-.cal-cell.selected { background: rgba(59,130,246,.1); outline: 1px solid rgba(59,130,246,.3); }
-
-/* ============================================================
-   PRATICHE — TIMELINE
-   ============================================================ */
-.pratica-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 16px 18px; margin-bottom: 12px;
-  transition: border-color .15s;
-}
-.pratica-card:hover { border-color: rgba(255,255,255,.18); }
-.pratica-card-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
-.pratica-card-info { flex: 1; min-width: 0; }
-.pratica-imp  { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
-.pratica-meta { font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-/* TIMELINE STEPS */
-.timeline { display: flex; gap: 0; margin-top: 4px; }
-.tl-step {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  position: relative;
-}
-.tl-step:not(:last-child)::after {
-  content: ''; position: absolute; top: 14px; left: 50%; right: -50%;
-  height: 2px; background: var(--border); z-index: 0;
-}
-.tl-step.done:not(:last-child)::after { background: var(--green); }
-.tl-dot {
-  width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border);
-  background: var(--bg3); display: flex; align-items: center; justify-content: center;
-  font-size: 13px; z-index: 1; position: relative; transition: all .2s;
-}
-.tl-step.done .tl-dot { border-color: var(--green); background: rgba(143,190,122,.15); }
-.tl-step.current .tl-dot { border-color: var(--yellow); background: rgba(200,180,100,.15); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(200,180,100,.3)} 50%{box-shadow:0 0 0 6px rgba(200,180,100,0)} }
-.tl-label { font-size: 10px; color: var(--muted); margin-top: 6px; text-align: center; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
-.tl-step.done .tl-label { color: var(--green); }
-.tl-step.current .tl-label { color: var(--yellow); }
-.tl-data { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
-
-/* PRATICA BADGE STATO */
-.pra-stato {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
-}
-.pra-stato.Richiesta  { background:rgba(200,200,200,.1); color:#ccc; }
-.pra-stato.Preventivo { background:rgba(200,180,100,.12); color:var(--yellow); }
-.pra-stato.BdO        { background:rgba(122,176,216,.12); color:#7ab0d8; }
-.pra-stato.DDT        { background:rgba(154,132,200,.12); color:#c4b5fd; }
-.pra-stato.Chiusa     { background:rgba(143,190,122,.12); color:var(--green); }
-
-/* MODAL PRATICA — STEP PANEL */
-.step-panel {
-  border: 1px solid var(--border); border-radius: 10px;
-  margin-bottom: 10px; overflow: hidden;
-}
-.step-panel-head {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; cursor: pointer; user-select: none;
-  transition: background .1s;
-}
-.step-panel-head:hover { background: var(--bg3); }
-.step-panel-head.done { background: rgba(143,190,122,.06); }
-.step-panel-head.current { background: rgba(200,180,100,.06); border-left: 3px solid var(--yellow); }
-.step-panel-icon { font-size: 16px; flex-shrink: 0; }
-.step-panel-title { font-weight: 700; font-size: 14px; flex: 1; }
-.step-panel-badge { font-size: 11px; color: var(--muted); }
-.step-panel-body { padding: 14px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,.1); display: none; }
-.step-panel-body.open { display: block; }
-.step-imp-amount {
-  font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 700;
-  color: var(--yellow); margin-bottom: 8px;
-}
-
-/* INTERVENTO CON PRATICA — indicatore */
-.pra-dot {
-  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--yellow); margin-left: 5px; vertical-align: middle;
-  flex-shrink: 0;
-}
-</style>
-</head>
-<body>
-
-<!-- LOGIN -->
-<div id="loginWrap">
-  <div class="login-box">
-    <div class="login-logo">Siram Veolia</div>
-    <div class="login-title">Responsabile</div>
-    <div class="login-sub">Inserisci il PIN per accedere</div>
-    <label class="login-lbl">PIN</label>
-    <input class="login-inp" type="password" id="pinInp" maxlength="4"
-      placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="login-btn" onclick="doLogin()">Accedi</button>
-    <div class="login-err" id="loginErr"></div>
-  </div>
-</div>
-
-<!-- APP SHELL -->
-<div id="appShell" style="display:none;flex-direction:column;min-height:100vh">
-  <div class="topbar">
-    <div class="brand">Siram <span>Responsabile</span></div>
-    <div class="topbar-right">
-      <span style="font-size:12px;color:var(--muted)" id="topDate"></span>
-      <button class="logout-btn" onclick="doLogout()">Esci</button>
-    </div>
-  </div>
-
-  <div class="shell">
-    <aside class="sidebar">
-      <div class="nav-sec">Pianificazione</div>
-      <div class="nav-item active" onclick="nav('calendario')" id="nav-calendario">📅 Calendario</div>
-      <div class="nav-item" onclick="nav('interventi')" id="nav-interventi">
-        ☰ Interventi <span class="nav-badge" id="badgeAperti">0</span>
-      </div>
-      <div class="nav-item" onclick="nav('report')" id="nav-report">✓ Stato manutenzioni</div>
-      <div class="nav-item" onclick="nav('pratiche')" id="nav-pratiche">
-        📄 Pratiche <span class="nav-badge" id="badgePratiche" style="background:var(--yellow);color:#1a1a1a;display:none">0</span>
-      </div>
-      <div class="nav-item" onclick="nav('rdacat')" id="nav-rdacat">
-        🛒 RDA / CAT <span class="nav-badge" id="badgeRda" style="background:#7ab0d8;color:#1a1a1a;display:none">0</span>
-      </div>
-      <div class="nav-sec">Anagrafica</div>
-      <div class="nav-item" onclick="nav('impianti')" id="nav-impianti">⊞ Impianti</div>
-      <div class="nav-item" onclick="nav('catalogo')" id="nav-catalogo">≡ Catalogo</div>
-      <div class="sidebar-foot">
-        <button class="refresh-btn" onclick="caricaDati()">↻ Aggiorna</button>
-      </div>
-    </aside>
-
-    <main class="main">
-
-      <!-- VIEW: CALENDARIO -->
-      <div class="view active" id="view-calendario">
-        <div id="loadingCal" class="loading-full"><div class="spin"></div> Caricamento...</div>
-        <div id="calContent" style="display:none">
-          <div class="rep-widget" id="repWidget">
-            <div style="flex-shrink:0">
-              <div class="rep-label">🔔 Reperibile questa settimana</div>
-              <div class="rep-operaio" id="repNome">—</div>
-              <div class="rep-orari">17:00 → 06:00 · weekend incluso</div>
-            </div>
-            <div class="rep-settimane" id="repSettimane"></div>
-          </div>
-          <div class="cal-header">
-            <div class="cal-title" id="calTitle">Aprile 2026</div>
-            <div class="cal-controls">
-              <div class="vista-switch">
-                <button class="vista-btn active" id="btnMese" onclick="setVista('mese')">Mese</button>
-                <button class="vista-btn" id="btnSett" onclick="setVista('settimana')">Settimana</button>
-              </div>
-              <button class="cal-btn" onclick="navPrec()">‹ Prec</button>
-              <button class="cal-btn" onclick="vaiOggi()">Oggi</button>
-              <button class="cal-btn" onclick="navSucc()">Succ ›</button>
-              <button class="cal-btn primary" onclick="openModalIntervento(null)">+ Intervento</button>
-              <button class="cal-btn" style="background:rgba(154,132,200,.12);color:#c4b5fd;border-color:rgba(154,132,200,.3)" onclick="openModalAssenza(null)">+ Assenza</button>
-            </div>
-          </div>
-          <div class="cal-legend">
-            <div class="leg-item"><div class="leg-dot" style="background:var(--matteo)"></div>Matteo</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--stefano)"></div>Stefano</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--michele)"></div>Michele</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--ezio)"></div>Ezio</div>
-            <div style="width:1px;background:var(--border);margin:0 4px"></div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--ferie)"></div>Ferie</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--permesso)"></div>Permesso</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--malattia)"></div>Malattia</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--yellow)"></div>Con pratica</div>
-          </div>
-          <div class="cal-wrap">
-            <div class="cal-days-hdr" id="calDaysHdr">
-              <div class="day-hdr">Lun</div><div class="day-hdr">Mar</div>
-              <div class="day-hdr">Mer</div><div class="day-hdr">Gio</div>
-              <div class="day-hdr">Ven</div>
-              <div class="day-hdr weekend">Sab</div><div class="day-hdr weekend">Dom</div>
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-            <div id="weekView" style="display:none">
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);position:sticky;top:0;z-index:3;background:var(--bg2);border-bottom:1px solid var(--border)">
-                <div id="weekHdrLun" class="week-day-hdr"></div>
-                <div id="weekHdrMar" class="week-day-hdr"></div>
-                <div id="weekHdrMer" class="week-day-hdr"></div>
-                <div id="weekHdrGio" class="week-day-hdr"></div>
-                <div id="weekHdrVen" class="week-day-hdr"></div>
-                <div id="weekHdrSab" class="week-day-hdr"></div>
-                <div id="weekHdrDom" class="week-day-hdr"></div>
-              </div>
-              <div id="weekAllDay" style="display:grid;grid-template-columns:repeat(7,1fr)">
-                <div id="wad0" class="week-all-day-cell"></div>
-                <div id="wad1" class="week-all-day-cell"></div>
-                <div id="wad2" class="week-all-day-cell"></div>
-                <div id="wad3" class="week-all-day-cell"></div>
-                <div id="wad4" class="week-all-day-cell"></div>
-                <div id="wad5" class="week-all-day-cell"></div>
-                <div id="wad6" class="week-all-day-cell"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- VIEW: INTERVENTI -->
-      <div class="view" id="view-interventi">
-        <div class="sec-header">
-          <div class="sec-title">Tutti gli interventi</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="openModalBacklog()" style="border-color:rgba(200,180,100,.3);color:var(--yellow)">+ Da assegnare</button>
-            <button class="btn btn-primary btn-sm" onclick="openModalIntervento(null)">+ Nuovo</button>
-          </div>
-        </div>
-        <div class="search-bar">
-          <input class="fc" id="searchInt" type="search" placeholder="Cerca impianto, operaio..." oninput="renderInterventi()"/>
-          <select class="fc" style="width:130px" id="filtStato" onchange="renderInterventi()">
-            <option value="">Tutti</option><option value="Aperto">Aperti</option><option value="Chiuso">Chiusi</option>
-          </select>
-          <select class="fc" style="width:130px" id="filtOp" onchange="renderInterventi()">
-            <option value="">Tutti gli operai</option>
-            <option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option>
-          </select>
-        </div>
-        <div id="backlogSection" style="display:none;margin-bottom:20px">
-          <div style="font-size:11px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-            <span>📋 Da assegnare</span>
-            <span id="backlogCount" style="background:rgba(200,180,100,.15);border:1px solid rgba(200,180,100,.3);padding:1px 8px;border-radius:8px;font-size:11px">0</span>
-          </div>
-          <div id="tblBacklog"></div>
-          <div style="height:1px;background:var(--border);margin:16px 0"></div>
-        </div>
-        <div class="table-wrap" id="tblInterventi"></div>
-      </div>
-
-      <!-- VIEW: REPORT -->
-      <div class="view" id="view-report">
-        <div class="sec-header">
-          <div class="sec-title" id="reportTitolo">Manutenzioni ordinarie 2026</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div id="reportSummary" style="font-size:12px;color:var(--muted)"></div>
-            <button class="btn btn-ghost btn-sm" onclick="esportaReport()">↓ Esporta CSV</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost btn-sm report-filter active" data-filter="tutti" onclick="setReportFilter('tutti')">Tutti</button>
-            <button class="btn btn-ghost btn-sm report-filter" data-filter="completato" onclick="setReportFilter('completato')">✓ Completati</button>
-            <button class="btn btn-ghost btn-sm report-filter" data-filter="assegnato" onclick="setReportFilter('assegnato')">→ Assegnati</button>
-            <button class="btn btn-ghost btn-sm report-filter" data-filter="dafare" onclick="setReportFilter('dafare')">✗ Da fare</button>
-          </div>
-          <input class="fc" id="reportSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:160px;max-width:300px" oninput="renderReport()"/>
-          <select class="fc" id="reportComune" style="width:160px" onchange="renderReport()">
-            <option value="">Tutti i comuni</option>
-          </select>
-        </div>
-        <div class="table-wrap" id="tblReport"></div>
-      </div>
-
-      <!-- VIEW: PRATICHE -->
-      <div class="view" id="view-pratiche">
-        <div class="sec-header">
-          <div class="sec-title">Pratiche documentali</div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div id="praticheSummary" style="font-size:12px;color:var(--muted)"></div>
-            <button class="btn btn-primary btn-sm" onclick="openModalNuovaPratica()">+ Nuova pratica</button>
-          </div>
-        </div>
-        <!-- Filtri -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta" onclick="setPraticaFilter('Richiesta')">📝 Richiesta</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerta" onclick="setPraticaFilter('Offerta')">🏷️ Offerta</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Preventivo" onclick="setPraticaFilter('Preventivo')">💰 Preventivo</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="BdO" onclick="setPraticaFilter('BdO')">📋 BdO</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="DDT" onclick="setPraticaFilter('DDT')">🚚 DDT</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiusa" onclick="setPraticaFilter('Chiusa')">✓ Chiuse</button>
-          <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:160px;max-width:260px;margin-left:8px" oninput="renderPratiche()"/>
-        </div>
-        <div id="tblPratiche"></div>
-      </div>
-
-      <!-- VIEW: RDA/CAT -->
-      <div class="view" id="view-rdacat">
-        <div class="sec-header">
-          <div class="sec-title">Richieste RDA / CAT</div>
-          <div id="rdaSummary" style="font-size:12px;color:var(--muted)"></div>
-        </div>
-        <div id="tblRdacat"></div>
-      </div>
-
-      <!-- VIEW: IMPIANTI -->
-      <div class="view" id="view-impianti">
-        <div class="sec-header"><div class="sec-title">Anagrafica impianti</div></div>
-        <div class="search-bar">
-          <input class="fc" id="searchImp" type="search" placeholder="Cerca codice, nome, comune..." oninput="renderImpianti()"/>
-        </div>
-        <div class="imp-grid" id="impGrid"></div>
-      </div>
-
-      <!-- VIEW: CATALOGO -->
-      <div class="view" id="view-catalogo">
-        <div class="sec-header"><div class="sec-title">Catalogo attività</div></div>
-        <div class="search-bar">
-          <select class="fc" id="catFiltImp" onchange="renderCatalogo()"><option value="">Tutti gli impianti</option></select>
-          <select class="fc" style="width:150px" id="catFiltTipo" onchange="renderCatalogo()">
-            <option value="">Tutti i tipi</option><option>Ordinaria</option><option>Straordinaria</option>
-          </select>
-        </div>
-        <div class="table-wrap" id="tblCatalogo"></div>
-        <div style="margin-top:20px">
-          <div class="sec-title" style="margin-bottom:12px">Aggiungi voce</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 2fr 80px 80px auto;gap:10px;align-items:flex-end">
-            <div class="fg" style="margin:0"><label>Impianto</label><select class="fc" id="catNewImp"></select></div>
-            <div class="fg" style="margin:0"><label>Tipo</label><select class="fc" id="catNewTipo"><option>Ordinaria</option><option>Straordinaria</option></select></div>
-            <div class="fg" style="margin:0"><label>Attività</label><input class="fc" id="catNewAtt" type="text" placeholder="Es. Pulizia filtri UTA"/></div>
-            <div class="fg" style="margin:0"><label>Ordine</label><input class="fc" id="catNewOrd" type="number" value="1" min="1"/></div>
-            <div class="fg" style="margin:0"><label>Obbl.</label><select class="fc" id="catNewObbl"><option>SI</option><option>NO</option></select></div>
-            <button class="btn btn-primary" onclick="salvaCatVoce()">Aggiungi</button>
-          </div>
-        </div>
-      </div>
-
-    </main>
-  </div>
-</div>
-
-<!-- ============================================================
-     MODALI
-     ============================================================ -->
-
-<!-- MODAL BACKLOG -->
-<div class="overlay" id="modalBacklog">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-head">
-      <div class="modal-title">Nuovo lavoro da assegnare</div>
-      <button class="modal-close" onclick="closeModal('modalBacklog')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="fg"><label>Impianto *</label>
-        <select class="fc" id="blImp"><option value="">Seleziona...</option></select></div>
-      <div class="fg"><label>Tipo visita *</label>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-ghost" id="blOrd" onclick="selBlTipo('Ordinaria')" style="flex:1">Ordinaria</button>
-          <button class="btn btn-ghost" id="blStr" onclick="selBlTipo('Straordinaria')" style="flex:1">Straordinaria</button>
-        </div>
-      </div>
-      <div class="fg"><label>Note</label>
-        <textarea class="fc" id="blNote" placeholder="Descrivi il lavoro da fare..." rows="3"></textarea></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalBacklog')">Annulla</button>
-      <button class="btn btn-primary" onclick="salvaBacklog()">Salva in backlog</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL ASSEGNA BACKLOG -->
-<div class="overlay" id="modalAssegna">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-head">
-      <div class="modal-title" id="assegnaTitle">Assegna lavoro</div>
-      <button class="modal-close" onclick="closeModal('modalAssegna')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="assegnaInfo" style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--muted)"></div>
-      <div class="fg"><label>Operai *</label>
-        <div class="op-chips" id="assegnaChips">
-          <div class="op-chip" id="achip-Matteo" onclick="toggleAssegnaChip('Matteo')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="achip-Stefano" onclick="toggleAssegnaChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="achip-Michele" onclick="toggleAssegnaChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
-          <div class="op-chip" id="achip-Ezio" onclick="toggleAssegnaChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
-        </div>
-      </div>
-      <div class="fg"><label>Data *</label><input class="fc" type="date" id="assegnaData"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-danger btn-sm" onclick="eliminaBacklog()">Elimina</button>
-      <button class="btn btn-ghost" onclick="closeModal('modalAssegna')">Annulla</button>
-      <button class="btn btn-primary" onclick="confermaAssegna()">Assegna</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL NUOVA PRATICA -->
-<div class="overlay" id="modalNuovaPratica">
-  <div class="modal" style="max-width:500px">
-    <div class="modal-head">
-      <div class="modal-title">📄 Nuova pratica</div>
-      <button class="modal-close" onclick="closeModal('modalNuovaPratica')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="fg">
-        <label>Impianto *</label>
-        <select class="fc" id="npImp"><option value="">Seleziona impianto...</option></select>
-      </div>
-      <div class="fg">
-        <label>Tipo visita</label>
-        <select class="fc" id="npTipo">
-          <option value="">— Nessuna (pratica standalone) —</option>
-          <option>Ordinaria</option><option>Straordinaria</option>
-        </select>
-      </div>
-      <div class="fg">
-        <label>Collega a intervento (opzionale)</label>
-        <select class="fc" id="npIntervento"><option value="">— Nessun collegamento —</option></select>
-      </div>
-      <div class="fg">
-        <label>Note richiesta</label>
-        <textarea class="fc" id="npNote" rows="3" placeholder="Descrivi il lavoro / motivo della pratica..."></textarea>
-      </div>
-      <div class="fg">
-        <label>📁 Link Drive (cartella documentazione)</label>
-        <input class="fc" type="url" id="npLink" placeholder="Incolla URL cartella Drive..."/>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalNuovaPratica')">Annulla</button>
-      <button class="btn btn-primary" onclick="creaPratica()">Crea pratica</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL DETTAGLIO PRATICA (timeline) -->
-<div class="overlay" id="modalPratica">
-  <div class="modal" style="max-width:620px">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title" id="praticaTitle">Pratica</div>
-        <div id="praticaSubtitle" style="font-size:12px;color:var(--muted);margin-top:4px"></div>
-      </div>
-      <button class="modal-close" onclick="closeModal('modalPratica')">✕</button>
-    </div>
-    <div class="modal-body">
-      <!-- Mini timeline visiva -->
-      <div id="praticaTimeline" class="timeline" style="margin-bottom:20px;padding:0 10px"></div>
-
-      <!-- Step panels -->
-      <div id="praticaSteps"></div>
-
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-danger btn-sm" onclick="eliminaPratica()">Elimina pratica</button>
-      <button class="btn btn-ghost" onclick="closeModal('modalPratica')">Chiudi</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL REPERIBILITÀ -->
-<div class="overlay" id="modalRep">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-head">
-      <div class="modal-title" id="repModalTitolo">Assegna reperibile</div>
-      <button class="modal-close" onclick="closeModal('modalRep')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="repDataHidden"/>
-      <div class="fg"><label>Operaio reperibile *</label>
-        <div class="op-chips">
-          <div class="op-chip" id="repchip-Matteo" onclick="toggleRepChip('Matteo')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="repchip-Stefano" onclick="toggleRepChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="repchip-Michele" onclick="toggleRepChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
-          <div class="op-chip" id="repchip-Ezio" onclick="toggleRepChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
-        </div>
-      </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:8px">🔔 In reperibilità dalle 17:00 alle 06:00 e nel weekend.</p>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalRep')">Annulla</button>
-      <button class="btn btn-primary" onclick="salvaReperibile()">Salva</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL GIORNO -->
-<div class="overlay" id="modalGiorno">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-head">
-      <div class="modal-title" id="giornoTitle">Giovedì 2 aprile</div>
-      <button class="modal-close" onclick="closeModal('modalGiorno')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="giornoInterventi" style="margin-bottom:16px"></div>
-      <div id="giornoAssenze"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalGiorno')">Chiudi</button>
-      <button class="btn btn-ghost" onclick="openModalAssenza(currentGiornoDate)">+ Assenza</button>
-      <button class="btn btn-primary" onclick="openModalIntervento(currentGiornoDate)">+ Intervento</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL NUOVO INTERVENTO -->
-<div class="overlay" id="modalIntervento">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">Nuovo intervento</div>
-      <button class="modal-close" onclick="closeModal('modalIntervento')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="fc-row">
-        <div class="fg"><label>Impianto *</label>
-          <select class="fc" id="nImp" onchange="onImpChange()"><option value="">Seleziona...</option></select></div>
-        <div class="fg"><label>Tipo visita *</label>
-          <select class="fc" id="nTipo" onchange="onTipoChange()">
-            <option value="">Seleziona...</option><option>Ordinaria</option><option>Straordinaria</option>
-          </select></div>
-      </div>
-      <div class="fg"><label>Operai *</label>
-        <div class="op-chips">
-          <div class="op-chip" id="chip-Matteo" onclick="toggleOpChip('Matteo')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="chip-Stefano" onclick="toggleOpChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
-          <div class="op-chip" id="chip-Michele" onclick="toggleOpChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
-          <div class="op-chip" id="chip-Ezio" onclick="toggleOpChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
-        </div>
-      </div>
-      <div class="fc-row">
-        <div class="fg"><label>Data inizio *</label><input class="fc" type="date" id="nData"/></div>
-        <div class="fg"><label>Data fine (multi-giorno)</label><input class="fc" type="date" id="nDataFine"/></div>
-      </div>
-      <div class="fc-row">
-        <div class="fg"><label>2° operaio (multi-giorno)</label>
-          <select class="fc" id="nOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
-      </div>
-      <div class="fg"><label>Note per l'operaio</label>
-        <textarea class="fc" id="nNote" placeholder="Es. Portare ricambi filtro..."></textarea></div>
-      <div id="nAnteprima" style="display:none">
-        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Checklist generata</div>
-        <div id="nAntList" class="chk-prev"></div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Attività extra</div>
-          <div id="nExtraList"></div>
-          <div class="extra-row">
-            <input class="fc" id="nExtraInp" type="text" placeholder="Aggiungi attività extra..."/>
-            <button class="btn btn-ghost btn-sm" onclick="addExtra()">+ Aggiungi</button>
-          </div>
-        </div>
-      </div>
-      <div id="nAntEmpty" style="display:none;font-size:12px;color:var(--muted);padding:10px;background:var(--bg3);border-radius:8px;margin-top:8px">
-        Nessuna attività in catalogo. Puoi aggiungere attività extra.
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalIntervento')">Annulla</button>
-      <button class="btn btn-primary" onclick="salvaIntervento()">Crea intervento</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL DETTAGLIO INTERVENTO -->
-<div class="overlay" id="modalDettaglio">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title" id="detTitle">Dettaglio</div>
-      <button class="modal-close" onclick="closeModal('modalDettaglio')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="detInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted)"></div>
-      <div id="detNote"></div>
-      <!-- Pratica collegata (se esiste) -->
-      <div id="detPraticaBox" style="display:none;margin-bottom:14px"></div>
-      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Checklist</div>
-      <div id="detChk"></div>
-      <div class="fc-row" style="margin-top:14px">
-        <div class="fg"><label>Stato</label>
-          <select class="fc" id="detStato"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
-        <div class="fg"><label>Posticipa al</label>
-          <input class="fc" type="date" id="detNuovaData"/></div>
-      </div>
-      <div class="fc-row" style="margin-top:10px">
-        <div class="fg"><label>Data fine lavori</label><input class="fc" type="date" id="detDataFine"/></div>
-        <div class="fg"><label>2° operaio (multi-giorno)</label>
-          <select class="fc" id="detOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
-      </div>
-      <div id="detSecondo" style="margin-top:8px"></div>
-      <div id="detDriveBox" style="margin-top:10px;display:none">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📁 Cartella Drive</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input class="fc" id="detLinkDrive" type="url" placeholder="Incolla URL cartella Drive..." style="flex:1;font-size:13px"/>
-          <button class="btn btn-ghost btn-sm" onclick="salvaLinkDrive()">Salva</button>
-          <a id="detDriveBtn" href="#" target="_blank" class="btn btn-ghost btn-sm" style="flex-shrink:0;display:none;color:#7ab0d8;border-color:rgba(122,176,216,.3)">📁 Apri</a>
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-danger btn-sm" onclick="eliminaIntervento()">Elimina</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="aproPraticaDaIntervento()">📄 Gestisci pratica</button>
-      <button class="btn btn-ghost" onclick="closeModal('modalDettaglio')">Chiudi</button>
-      <button class="btn btn-primary" onclick="salvaDettaglio()">Salva</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL NUOVA ASSENZA -->
-<div class="overlay" id="modalAssenza">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-head">
-      <div class="modal-title">Nuova assenza</div>
-      <button class="modal-close" onclick="closeModal('modalAssenza')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="fc-row">
-        <div class="fg"><label>Operaio *</label>
-          <select class="fc" id="aOp"><option value="">Seleziona...</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
-        <div class="fg"><label>Tipo *</label>
-          <select class="fc" id="aTipo"><option>Ferie</option><option>Permesso</option><option>Malattia</option></select></div>
-      </div>
-      <div class="fc-row">
-        <div class="fg"><label>Dal *</label><input class="fc" type="date" id="aDal"/></div>
-        <div class="fg"><label>Al *</label><input class="fc" type="date" id="aAl"/></div>
-      </div>
-      <div class="fg"><label>Note</label><input class="fc" type="text" id="aNote" placeholder="Opzionale"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('modalAssenza')">Annulla</button>
-      <button class="btn btn-primary" onclick="salvaAssenza()">Salva</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL STORICO IMPIANTO -->
-<div class="overlay" id="modalStorico">
-  <div class="modal" style="max-width:620px">
-    <div class="modal-head">
-      <div class="modal-title" id="storicoTitle">Storico</div>
-      <button class="modal-close" onclick="closeModal('modalStorico')">✕</button>
-    </div>
-    <div class="modal-body" id="storicoBody"></div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('modalStorico')">Chiudi</button></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-// ============================================================
-//  CONFIG
-// ============================================================
-const PROXY_URL = 'https://siram-proxy.onrender.com';
-const RESP_PIN  = '1234';
-
-// ============================================================
-//  STATO
-// ============================================================
-let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], pratiche:[], rdacat:[], reperibilita:null };
-let calAnno = new Date().getFullYear();
-let calMese = new Date().getMonth();
-let currentDetId      = null;
-let currentGiornoDate = null;
-let currentPraticaId  = null;
-let nExtraItems       = [];
-let blTipoSel         = '';
-let currentBacklogId  = null;
-let praticaFilterCorrente = 'tutti';
-let reportFilterCorrente  = 'tutti';
-
-// ============================================================
-//  LOGIN
-// ============================================================
-function doLogin() {
-  const pin = document.getElementById('pinInp').value;
-  if (pin === RESP_PIN) {
-    document.getElementById('loginWrap').style.display = 'none';
-    const shell = document.getElementById('appShell');
-    shell.style.display = 'flex'; shell.style.flexDirection = 'column';
-    document.getElementById('topDate').textContent =
-      new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-    caricaDati();
-  } else {
-    document.getElementById('loginErr').textContent = 'PIN errato';
-    document.getElementById('pinInp').value = '';
-    setTimeout(() => document.getElementById('loginErr').textContent = '', 2000);
-  }
-}
-function doLogout() {
-  document.getElementById('appShell').style.display = 'none';
-  document.getElementById('loginWrap').style.display = 'flex';
-  document.getElementById('pinInp').value = '';
-}
-document.getElementById('pinInp').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
-
-// ============================================================
-//  API
-// ============================================================
-async function apiGet(path)     { const r = await fetch(PROXY_URL+path); return r.json(); }
-async function apiPost(path, b) { const r = await fetch(PROXY_URL+path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); return r.json(); }
-
-async function caricaDati() {
+async function pushNotifica(sheets, operai, titolo, corpo) {
+  if (!process.env.VAPID_PUBLIC_KEY) return;
   try {
-    const d = await apiGet('/dati-responsabile');
-    S.impianti   = d.impianti   || [];
-    S.catalogo   = d.catalogo   || [];
-    S.interventi = d.interventi || [];
-    S.checklist  = d.checklist  || [];
-    S.assenze    = d.assenze    || [];
-    S.pratiche   = d.pratiche   || [];
-
-    // Backlog
-    const nBacklog = S.interventi.filter(i => i.stato === 'DaAssegnare').length;
-    const backlogSec = document.getElementById('backlogSection');
-    if (backlogSec) { backlogSec.style.display = nBacklog > 0 ? 'block' : 'none'; document.getElementById('backlogCount').textContent = nBacklog; renderBacklog(); }
-    document.getElementById('badgeAperti').textContent = S.interventi.filter(i => i.stato==='Aperto').length;
-
-    popolaSelectImpianti();
-
-    // Badge pratiche aperte (non chiuse)
-    const nPraticheAperte = S.pratiche.filter(p => p.stato !== 'Chiusa').length;
-    const bpra = document.getElementById('badgePratiche');
-    bpra.textContent = nPraticheAperte;
-    bpra.style.display = nPraticheAperte > 0 ? '' : 'none';
-    document.getElementById('praticheSummary').textContent =
-      nPraticheAperte + ' in corso · ' + S.pratiche.filter(p=>p.stato==='Chiusa').length + ' chiuse';
-
-    // RDA/CAT
-    try {
-      const dr = await apiGet('/rdacat');
-      S.rdacat = dr.richieste || [];
-      const nRda = S.rdacat.filter(r => r.stato==='Inviata').length;
-      const bRda = document.getElementById('badgeRda');
-      bRda.textContent = nRda; bRda.style.display = nRda > 0 ? '' : 'none';
-      document.getElementById('rdaSummary').textContent = nRda + ' nuove · ' + S.rdacat.filter(r=>r.stato==='In lavorazione').length + ' in lavorazione';
-    } catch(e) { S.rdacat = []; }
-
-    // Reperibilità
-    try { const rep = await apiGet('/reperibile'); S.reperibilita = rep; renderRepWidget(); } catch(e) { S.reperibilita = null; }
-
-    // Popola filtro comuni report
-    const comuniSet = [...new Set(S.impianti.map(i=>i.comune).filter(Boolean))].sort();
-    const selComune = document.getElementById('reportComune');
-    selComune.innerHTML = '<option value="">Tutti i comuni</option>' + comuniSet.map(c=>`<option value="${c}">${c}</option>`).join('');
-
-    renderCalendario(); renderInterventi(); renderImpianti(); renderCatalogo();
-    document.getElementById('loadingCal').style.display = 'none';
-    document.getElementById('calContent').style.display = 'block';
-  } catch(e) {
-    document.getElementById('loadingCal').innerHTML = `<p style="color:var(--red)">Errore: ${e.message}</p>`;
-  }
-}
-
-// ============================================================
-//  NAVIGAZIONE
-// ============================================================
-function nav(id) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('nav-'+id).classList.add('active');
-  document.getElementById('view-'+id).classList.add('active');
-  if (id==='calendario') renderCalendario();
-  if (id==='interventi') { renderInterventi(); renderBacklog(); }
-  if (id==='impianti')   renderImpianti();
-  if (id==='catalogo')   renderCatalogo();
-  if (id==='report')     renderReport();
-  if (id==='pratiche')   renderPratiche();
-  if (id==='rdacat')     renderRdacat();
-}
-
-// ============================================================
-//  CALENDARIO
-// ============================================================
-const MESI       = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
-const ASSENZA_COLOR = { Ferie:'ev-ferie', Permesso:'ev-permesso', Malattia:'ev-malattia' };
-
-function toLocaleDateStr(d) {
-  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), g = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${g}`;
-}
-
-let vistaCorrente = 'mese';
-let settOffset = 0;
-
-function setVista(v) {
-  vistaCorrente = v;
-  document.getElementById('btnMese').classList.toggle('active', v==='mese');
-  document.getElementById('btnSett').classList.toggle('active', v==='settimana');
-  document.getElementById('calDaysHdr').style.display = v==='mese' ? '' : 'none';
-  document.getElementById('calGrid').style.display    = v==='mese' ? '' : 'none';
-  document.getElementById('weekView').style.display   = v==='settimana' ? '' : 'none';
-  if (v==='mese') renderCalendario(); else renderSettimana();
-}
-function navPrec() { if(vistaCorrente==='mese'){calMese--;if(calMese<0){calMese=11;calAnno--;}renderCalendario();}else{settOffset--;renderSettimana();} }
-function navSucc() { if(vistaCorrente==='mese'){calMese++;if(calMese>11){calMese=0;calAnno++;}renderCalendario();}else{settOffset++;renderSettimana();} }
-function vaiOggi() { calAnno=new Date().getFullYear();calMese=new Date().getMonth();settOffset=0; if(vistaCorrente==='mese')renderCalendario();else renderSettimana(); }
-
-function getLunediSettimana(offset) {
-  const oggi = new Date();
-  const dow  = oggi.getDay();
-  const lun  = new Date(oggi);
-  lun.setDate(oggi.getDate() - (dow===0?6:dow-1) + offset*7);
-  lun.setHours(0,0,0,0);
-  return lun;
-}
-
-function renderSettimana() {
-  const lun  = getLunediSettimana(settOffset);
-  const oggi = toLocaleDateStr(new Date());
-  const dom  = new Date(lun); dom.setDate(lun.getDate()+6);
-  document.getElementById('calTitle').textContent =
-    lun.getDate()+' '+MESI[lun.getMonth()].slice(0,3)+' – '+dom.getDate()+' '+MESI[dom.getMonth()].slice(0,3)+' '+dom.getFullYear();
-  const hdrIds = ['weekHdrLun','weekHdrMar','weekHdrMer','weekHdrGio','weekHdrVen','weekHdrSab','weekHdrDom'];
-  for (let g=0;g<7;g++) {
-    const d=new Date(lun);d.setDate(lun.getDate()+g);
-    const ds=toLocaleDateStr(d);
-    const el=document.getElementById(hdrIds[g]);
-    el.innerHTML=`<div class="week-day-hdr-nome">${GIORNI_SHORT[d.getDay()]}</div><div class="week-day-hdr-num">${d.getDate()}</div>`;
-    el.className='week-day-hdr'+(ds===oggi?' oggi':'');
-  }
-  for (let g=0;g<7;g++) {
-    const d=new Date(lun);d.setDate(lun.getDate()+g);
-    const ds=toLocaleDateStr(d);
-    const cell=document.getElementById('wad'+g);
-    const ints=S.interventi.filter(i=>i.dataPrevista===ds);
-    const ass=S.assenze.filter(a=>a.dataInizio<=ds&&a.dataFine>=ds);
-    const mostrati=new Set();
-    const intsHtml=ints.map(i=>{
-      if(mostrati.has(i.id))return '';
-      mostrati.add(i.id);
-      if(i.interventoCollegato)mostrati.add(i.interventoCollegato);
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
-      const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-      const done=chk.filter(c=>c.eseguita==='SI').length;
-      const completo=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
-      const col=OPERAI_HEX[i.operaio]||'#888';
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      const praDot=hasPratica?'<span style="width:6px;height:6px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:4px;flex-shrink:0"></span>':'';
-      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 5px 5px 0;${completo?'text-decoration:line-through;opacity:.5':''}"
-        onclick="openDettaglio('${i.id}')">${nome} · ${i.operaio}${praDot}</div>`;
-    }).join('');
-    cell.innerHTML=intsHtml+ass.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
-  }
-}
-
-function renderCalendario() {
-  document.getElementById('calTitle').textContent = MESI[calMese]+' '+calAnno;
-  const grid=document.getElementById('calGrid');
-  const oggi=toLocaleDateStr(new Date());
-  const primo=new Date(calAnno,calMese,1);
-  const nGiorni=new Date(calAnno,calMese+1,0).getDate();
-  let startDow=primo.getDay()-1; if(startDow<0)startDow=6;
-  let cells='';
-  const prevDays=new Date(calAnno,calMese,0).getDate();
-  for(let i=startDow-1;i>=0;i--) cells+=`<div class="cal-cell other-month"><div class="day-num">${prevDays-i}</div></div>`;
-  for(let g=1;g<=nGiorni;g++){
-    const dateStr=toLocaleDateStr(new Date(calAnno,calMese,g));
-    const dow=new Date(calAnno,calMese,g).getDay();
-    const isWeekend=(dow===0||dow===6),isOggi=dateStr===oggi;
-    let cls='cal-cell';
-    if(isWeekend)cls+=' weekend'; if(isOggi)cls+=' today';
-    const intGiorno=S.interventi.filter(i=>{
-      if(!i.dataFine||i.dataFine<=i.dataPrevista)return i.dataPrevista===dateStr;
-      return dateStr>=i.dataPrevista&&dateStr<=i.dataFine;
-    });
-    const mostratiMese=new Set();
-    const intDedup=intGiorno.filter(i=>{
-      if(mostratiMese.has(i.id))return false;
-      mostratiMese.add(i.id);
-      if(i.interventoCollegato)mostratiMese.add(i.interventoCollegato);
-      return true;
-    });
-    const intConSecondario=intGiorno.flatMap(i=>{
-      const chips=[i];
-      if(i.dataFine&&i.operaioSecondario2&&dateStr>=i.dataPrevista&&dateStr<=i.dataFine)
-        chips.push({...i,operaio:i.operaioSecondario2,_isSecondario:true});
-      return chips;
-    });
-    let evHtml=intConSecondario.map(i=>{
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-      const done=chk.filter(c=>c.eseguita==='SI').length;
-      const isChiuso=i.stato==='Chiuso';
-      const tuttiDone=isChiuso||(chk.length>0&&done===chk.length);
-      const col=OPERAI_HEX[i.operaio]||'#888';
-      const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
-      const isMulti=i.dataFine&&i.dataFine>i.dataPrevista;
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      const praDot=hasPratica?'<span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle"></span>':'';
-      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 4px 4px 0;${isMulti?'border-right:2px solid '+col+';':''} ${tuttiDone?'text-decoration:line-through;opacity:.45':''}"
-        onclick="event.stopPropagation();openDettaglio('${i.id}')">${nome}${isMulti?' 📅':''}${praDot}</div>`;
-    }).join('');
-    const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
-    const assHtml=assGiorno.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
-    cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}<span class="day-add">+</span></div>${evHtml}${assHtml}</div>`;
-  }
-  const totCells=startDow+nGiorni;
-  const resto=totCells%7===0?0:7-(totCells%7);
-  for(let i=1;i<=resto;i++) cells+=`<div class="cal-cell other-month"><div class="day-num">${i}</div></div>`;
-  grid.innerHTML=cells;
-}
-
-// ============================================================
-//  MODAL GIORNO
-// ============================================================
-function openGiorno(dateStr) {
-  currentGiornoDate=dateStr;
-  const d=new Date(dateStr+'T00:00:00');
-  document.getElementById('giornoTitle').textContent=d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
-  const ints=S.interventi.filter(i=>i.dataPrevista===dateStr);
-  document.getElementById('giornoInterventi').innerHTML=ints.length===0
-    ?'<p style="font-size:13px;color:var(--muted);margin-bottom:8px">Nessun intervento</p>'
-    :`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Interventi</div>`+
-    ints.map(i=>{
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-      const done=chk.filter(c=>c.eseguita==='SI').length;
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
-        <div><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${i.operaio} · ${i.tipoVisita} · ${done}/${chk.length}</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
-      </div>`;
-    }).join('');
-  const ass=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
-  document.getElementById('giornoAssenze').innerHTML=ass.length===0?''
-    :`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Assenze</div>`+
-    ass.map(a=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
-      <div><span style="font-weight:600">${a.operaio}</span> <span style="color:var(--muted)">${a.tipo}</span></div>
-      <button class="btn btn-danger btn-sm" onclick="eliminaAssenza('${a.id}')">✕</button>
-    </div>`).join('');
-  document.getElementById('modalGiorno').classList.add('open');
-}
-
-// ============================================================
-//  REPORT MANUTENZIONI
-// ============================================================
-function setReportFilter(f) {
-  reportFilterCorrente=f;
-  document.querySelectorAll('.report-filter[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));
-  renderReport();
-}
-
-function renderReport() {
-  const anno=new Date().getFullYear();
-  const search=(document.getElementById('reportSearch')||{}).value||'';
-  const comune=(document.getElementById('reportComune')||{}).value||'';
-  document.getElementById('reportTitolo').textContent=`Manutenzioni ordinarie ${anno}`;
-  const righe=S.impianti.map(imp=>{
-    const intAnno=S.interventi.filter(i=>i.codiceImpianto===imp.codice&&i.tipoVisita==='Ordinaria'&&i.dataPrevista>=`${anno}-01-01`&&i.dataPrevista<=`${anno}-12-31`);
-    const chiusi=intAnno.filter(i=>i.stato==='Chiuso').sort((a,b)=>b.dataChiusura.localeCompare(a.dataChiusura));
-    const aperti=intAnno.filter(i=>i.stato==='Aperto').sort((a,b)=>a.dataPrevista.localeCompare(b.dataPrevista));
-    let stato,statoLbl,dataInfo,operaioInfo;
-    if(chiusi.length>0){stato='completato';statoLbl='✓ Completato';dataInfo=chiusi[0].dataChiusura||chiusi[0].dataPrevista;operaioInfo=chiusi[0].operaio;}
-    else if(aperti.length>0){stato='assegnato';statoLbl='→ Assegnato';dataInfo=aperti[0].dataPrevista;operaioInfo=aperti[0].operaio;}
-    else{stato='dafare';statoLbl='✗ Da fare';dataInfo='';operaioInfo='';}
-    return{imp,stato,statoLbl,dataInfo,operaioInfo,nInterventi:intAnno.length};
-  });
-  const nCompletato=righe.filter(r=>r.stato==='completato').length;
-  const nAssegnato=righe.filter(r=>r.stato==='assegnato').length;
-  const nDafare=righe.filter(r=>r.stato==='dafare').length;
-  document.getElementById('reportSummary').textContent=`${nCompletato} completati · ${nAssegnato} assegnati · ${nDafare} da fare`;
-  let lista=righe;
-  if(reportFilterCorrente!=='tutti')lista=lista.filter(r=>r.stato===reportFilterCorrente);
-  if(comune)lista=lista.filter(r=>r.imp.comune===comune);
-  if(search)lista=lista.filter(r=>(r.imp.codice+r.imp.descrizione+r.imp.comune).toLowerCase().includes(search.toLowerCase()));
-  lista.sort((a,b)=>({dafare:0,assegnato:1,completato:2}[a.stato]-{dafare:0,assegnato:1,completato:2}[b.stato])||a.imp.comune.localeCompare(b.imp.comune));
-  const el=document.getElementById('tblReport');
-  if(!lista.length){el.innerHTML='<div class="empty">Nessun impianto trovato</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Stato</th><th>Codice</th><th>Impianto</th><th>Comune</th><th>Operaio</th><th>Data</th><th>N.</th><th></th></tr></thead><tbody>`+
-    lista.map(r=>`<tr>
-      <td><span class="stato-dot ${r.stato}"></span><span class="stato-${r.stato}">${r.statoLbl}</span></td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${r.imp.codice}</td>
-      <td style="font-weight:600">${r.imp.descrizione}</td>
-      <td style="color:var(--muted)">${r.imp.comune||'—'}</td>
-      <td>${r.operaioInfo||'—'}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.dataInfo||'—'}</td>
-      <td style="text-align:center;color:var(--muted)">${r.nInterventi||0}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="openStorico('${r.imp.codice}')">Storico</button>
-        ${r.stato==='dafare'?`<button class="btn btn-primary btn-sm" style="margin-left:4px" onclick="openModalIntervento(null);document.getElementById('nImp').value='${r.imp.codice}';onImpChange()">+ Pianifica</button>`:''}
-      </td>
-    </tr>`).join('')+'</tbody></table>';
-}
-
-function esportaReport() {
-  const table=document.querySelector('#tblReport table'); if(!table)return;
-  const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('th,td')].map(td=>'"'+td.innerText.replace(/"/g,'""')+'"').join(','));
-  const csv='\uFEFF'+rows.join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`manutenzioni_${new Date().getFullYear()}.csv`; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ============================================================
-//  PRATICHE
-// ============================================================
-const PRATICA_STEPS = [
-  { key:'richiesta',  label:'Richiesta',         icon:'📝', fields:['dataRichiesta','noteRichiesta','linkRichiesta'] },
-  { key:'offerta',    label:'Offerta fornitore',  icon:'🏷️', fields:['dataOfferta','fornitoreOfferta','importoOfferta','linkOfferta'] },
-  { key:'preventivo', label:'Preventivo',         icon:'💰', fields:['dataPreventivo','importoPreventivo','linkPreventivo'] },
-  { key:'bdo',        label:'BdO',                icon:'📋', fields:['dataBdo','numeroBdo','linkBdo'] },
-  { key:'ddt',        label:'DDT',                icon:'🚚', fields:['dataDdt','numeroDdt','linkDdt'] },
-  { key:'chiuso',     label:'Chiusa',             icon:'✓',  fields:['dataChiusura','noteChiusura'] },
-];
-const PRATICA_STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
-
-function praticaStepIdx(stato) { return PRATICA_STATI.indexOf(stato); }
-
-function setPraticaFilter(f) {
-  praticaFilterCorrente=f;
-  document.querySelectorAll('.report-filter[data-pfilter]').forEach(b=>b.classList.toggle('active',b.dataset.pfilter===f));
-  renderPratiche();
-}
-
-function renderPratiche() {
-  const search=(document.getElementById('praticaSearch')||{}).value||'';
-  let lista=[...S.pratiche];
-  if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
-  if(search) lista=lista.filter(p=>{
-    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-    return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase());
-  });
-  // Ordina: aperte prima (per indice stato), poi chiuse
-  lista.sort((a,b)=>{
-    const da=a.stato==='Chiusa'?99:praticaStepIdx(a.stato);
-    const db=b.stato==='Chiusa'?99:praticaStepIdx(b.stato);
-    return da-db||b.creatoIl.localeCompare(a.creatoIl);
-  });
-  const el=document.getElementById('tblPratiche');
-  if(!lista.length){el.innerHTML='<div class="empty">Nessuna pratica trovata</div>';return;}
-  el.innerHTML=lista.map(p=>{
-    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-    const interv=S.interventi.find(x=>x.id===p.idIntervento);
-    const stepCorrente=praticaStepIdx(p.stato);
-    // Mini timeline
-    const timelineHtml=PRATICA_STEPS.map((s,i)=>{
-      const isDone=i<stepCorrente;
-      const isCurr=i===stepCorrente;
-      let dataStep='';
-      if(s.key==='richiesta'&&p.dataRichiesta) dataStep=p.dataRichiesta;
-      else if(s.key==='offerta'&&p.dataOfferta) dataStep=p.dataOfferta;
-      else if(s.key==='preventivo'&&p.dataPreventivo) dataStep=p.dataPreventivo;
-      else if(s.key==='bdo'&&p.dataBdo) dataStep=p.dataBdo;
-      else if(s.key==='ddt'&&p.dataDdt) dataStep=p.dataDdt;
-      else if(s.key==='chiuso'&&p.dataChiusura) dataStep=p.dataChiusura;
-      return `<div class="tl-step ${isDone?'done':''} ${isCurr?'current':''}">
-        <div class="tl-dot">${isDone?'✓':s.icon}</div>
-        <div class="tl-label">${s.label}</div>
-        ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
-      </div>`;
-    }).join('');
-    return `<div class="pratica-card">
-      <div class="pratica-card-head">
-        <div class="pratica-card-info">
-          <div class="pratica-imp">${imp?imp.descrizione:p.codiceImpianto}
-            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${p.codiceImpianto}</span>
-          </div>
-          <div class="pratica-meta">
-            ${imp&&imp.comune?`<span>📍 ${imp.comune}</span>`:''}
-            ${interv?`<span>📅 Intervento ${interv.dataPrevista} · ${interv.tipoVisita}</span>`:''}
-            <span>Aperta il ${p.creatoIl}</span>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-          <span class="pra-stato ${p.stato}">${p.stato}</span>
-          <div style="display:flex;gap:6px">
-            ${interv?`<button class="btn btn-ghost btn-sm" onclick="openDettaglio('${interv.id}')">OdL</button>`:''}
-            <button class="btn btn-primary btn-sm" onclick="openPratica('${p.id}')">Gestisci →</button>
-          </div>
-        </div>
-      </div>
-      <div class="timeline">${timelineHtml}</div>
-      ${p.noteRichiesta?`<div style="margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;padding:8px 12px;background:var(--bg3);border-radius:8px">${p.noteRichiesta}</div>`:''}
-    </div>`;
-  }).join('');
-}
-
-// Apri modal dettaglio pratica
-function openPratica(id) {
-  currentPraticaId=id;
-  const p=S.pratiche.find(x=>x.id===id);
-  const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-  const interv=S.interventi.find(x=>x.id===p.idIntervento);
-  document.getElementById('praticaTitle').textContent=(imp?imp.descrizione:p.codiceImpianto);
-  document.getElementById('praticaSubtitle').textContent=
-    (imp&&imp.comune?imp.comune+' · ':'')+
-    (interv?'Intervento '+interv.dataPrevista+' · '+interv.tipoVisita:'Pratica standalone')+
-    ' · Aperta il '+p.creatoIl;
-
-  // Timeline visiva
-  const stepCorrente=praticaStepIdx(p.stato);
-  document.getElementById('praticaTimeline').innerHTML=PRATICA_STEPS.map((s,i)=>{
-    const isDone=i<stepCorrente, isCurr=i===stepCorrente;
-    let dataStep='';
-    if(s.key==='richiesta'&&p.dataRichiesta)dataStep=p.dataRichiesta;
-    else if(s.key==='offerta'&&p.dataOfferta)dataStep=p.dataOfferta;
-    else if(s.key==='preventivo'&&p.dataPreventivo)dataStep=p.dataPreventivo;
-    else if(s.key==='bdo'&&p.dataBdo)dataStep=p.dataBdo;
-    else if(s.key==='ddt'&&p.dataDdt)dataStep=p.dataDdt;
-    else if(s.key==='chiuso'&&p.dataChiusura)dataStep=p.dataChiusura;
-    return `<div class="tl-step ${isDone?'done':''} ${isCurr?'current':''}">
-      <div class="tl-dot">${isDone?'✓':s.icon}</div>
-      <div class="tl-label">${s.label}</div>
-      ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
-    </div>`;
-  }).join('');
-
-  // Step panels
-  document.getElementById('praticaSteps').innerHTML=PRATICA_STEPS.map((s,i)=>{
-    const isDone=i<stepCorrente, isCurr=i===stepCorrente;
-    const cls=isDone?'done':isCurr?'current':'';
-    let bodyHtml='';
-
-    if(s.key==='richiesta') {
-      bodyHtml=`
-        <div class="fg"><label>Data richiesta</label><input class="fc" type="date" id="ps_dataRichiesta" value="${p.dataRichiesta||''}"/></div>
-        <div class="fg"><label>Note</label><textarea class="fc" id="ps_noteRichiesta" rows="2" placeholder="Descrizione del lavoro...">${p.noteRichiesta||''}</textarea></div>
-        <div class="fg"><label>📁 Link Drive</label><input class="fc" type="url" id="ps_linkRichiesta" value="${p.linkRichiesta||''}" placeholder="URL cartella Drive..."/>
-          ${p.linkRichiesta?`<a href="${p.linkRichiesta}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('richiesta')">Salva step</button>`;
-    } else if(s.key==='offerta') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data ricezione offerta</label><input class="fc" type="date" id="ps_dataOfferta" value="${p.dataOfferta||''}"/></div>
-          <div class="fg"><label>Importo offerta €</label><input class="fc" type="number" step="0.01" id="ps_importoOfferta" value="${p.importoOfferta||''}" placeholder="0.00"/></div>
-        </div>
-        ${p.importoOfferta?`<div class="step-imp-amount" style="color:#c4b5fd">€ ${parseFloat(p.importoOfferta).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
-        <div class="fg"><label>Fornitore</label><input class="fc" type="text" id="ps_fornitoreOfferta" value="${p.fornitoreOfferta||''}" placeholder="Nome fornitore..."/></div>
-        <div class="fg"><label>📁 Link Drive (offerta)</label><input class="fc" type="url" id="ps_linkOfferta" value="${p.linkOfferta||''}" placeholder="URL file offerta..."/>
-          ${p.linkOfferta?`<a href="${p.linkOfferta}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('offerta')">Salva step</button>`;
-    } else if(s.key==='preventivo') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data ricezione preventivo</label><input class="fc" type="date" id="ps_dataPreventivo" value="${p.dataPreventivo||''}"/></div>
-          <div class="fg"><label>Importo €</label><input class="fc" type="number" step="0.01" id="ps_importoPreventivo" value="${p.importoPreventivo||''}" placeholder="0.00"/></div>
-        </div>
-        ${p.importoPreventivo?`<div class="step-imp-amount">€ ${parseFloat(p.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
-        <div class="fg"><label>📁 Link Drive (preventivo)</label><input class="fc" type="url" id="ps_linkPreventivo" value="${p.linkPreventivo||''}" placeholder="URL file preventivo..."/>
-          ${p.linkPreventivo?`<a href="${p.linkPreventivo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('preventivo')">Salva step</button>`;
-    } else if(s.key==='bdo') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data BdO emesso</label><input class="fc" type="date" id="ps_dataBdo" value="${p.dataBdo||''}"/></div>
-          <div class="fg"><label>Numero BdO</label><input class="fc" type="text" id="ps_numeroBdo" value="${p.numeroBdo||''}" placeholder="Es. BDO-2026-001"/></div>
-        </div>
-        <div class="fg"><label>📁 Link Drive (BdO)</label><input class="fc" type="url" id="ps_linkBdo" value="${p.linkBdo||''}" placeholder="URL file BdO..."/>
-          ${p.linkBdo?`<a href="${p.linkBdo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('bdo')">Salva step</button>`;
-    } else if(s.key==='ddt') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data DDT ricevuto</label><input class="fc" type="date" id="ps_dataDdt" value="${p.dataDdt||''}"/></div>
-          <div class="fg"><label>Numero DDT</label><input class="fc" type="text" id="ps_numeroDdt" value="${p.numeroDdt||''}" placeholder="Es. DDT-2026-001"/></div>
-        </div>
-        <div class="fg"><label>📁 Link Drive (DDT)</label><input class="fc" type="url" id="ps_linkDdt" value="${p.linkDdt||''}" placeholder="URL file DDT..."/>
-          ${p.linkDdt?`<a href="${p.linkDdt}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('ddt')">Salva step</button>`;
-    } else if(s.key==='chiuso') {
-      bodyHtml=`
-        <div class="fg"><label>Data chiusura pratica</label><input class="fc" type="date" id="ps_dataChiusura" value="${p.dataChiusura||new Date().toISOString().slice(0,10)}"/></div>
-        <div class="fg"><label>Note finali</label><textarea class="fc" id="ps_noteChiusura" rows="2" placeholder="Note di chiusura, eventuali pendenze...">${p.noteChiusura||''}</textarea></div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('chiuso')" style="background:var(--green);color:#1a1a1a">✓ Chiudi pratica</button>`;
+    const rows = await leggi(sheets, SH.PUSHTOKENS).catch(() => []);
+    const targets = rows.slice(1).filter(r => r[0] && operai.includes(r[0]));
+    for (const row of targets) {
+      try {
+        const sub = JSON.parse(row[1]);
+        await webpush.sendNotification(sub, JSON.stringify({ title: titolo, body: corpo, icon: '/icon.svg' }));
+      } catch(e) { console.warn('Push fallita per', row[0], e.statusCode); }
     }
-
-    // Auto-apri il pannello corrente
-    const bodyOpen=isCurr?'open':'';
-    return `<div class="step-panel">
-      <div class="step-panel-head ${cls}" onclick="toggleStepPanel(this)">
-        <span class="step-panel-icon">${isDone?'✅':isCurr?s.icon:'⬜'}</span>
-        <span class="step-panel-title">${s.label}</span>
-        <span class="step-panel-badge">${isDone?'Completato':isCurr?'In corso':'In attesa'}</span>
-        <span style="color:var(--muted);font-size:14px;margin-left:8px">▾</span>
-      </div>
-      <div class="step-panel-body ${bodyOpen}">${bodyHtml}</div>
-    </div>`;
-  }).join('');
-
-  document.getElementById('modalPratica').classList.add('open');
+  } catch(e) { console.warn('pushNotifica error:', e.message); }
 }
 
-function toggleStepPanel(head) {
-  const body=head.nextElementSibling;
-  body.classList.toggle('open');
+function getAuth() {
+  const creds = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  return new google.auth.GoogleAuth({ credentials: creds, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
+}
+async function getSheets() { const auth = getAuth(); return google.sheets({ version: 'v4', auth }); }
+
+app.use(cors());
+app.use(express.json());
+app.get('/', (req, res) => res.json({ ok: true, service: 'Siram Proxy' }));
+
+async function leggi(sheets, foglio) {
+  const r = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: foglio });
+  return r.data.values || [];
 }
 
-async function salvaStep(step) {
-  const p=S.pratiche.find(x=>x.id===currentPraticaId);
-  if(!p) return;
-  const dati={};
-  if(step==='richiesta') {
-    dati.dataRichiesta=document.getElementById('ps_dataRichiesta').value;
-    dati.noteRichiesta=document.getElementById('ps_noteRichiesta').value;
-    dati.linkRichiesta=document.getElementById('ps_linkRichiesta').value;
-  } else if(step==='offerta') {
-    dati.dataOfferta=document.getElementById('ps_dataOfferta').value;
-    dati.fornitoreOfferta=document.getElementById('ps_fornitoreOfferta').value;
-    dati.importoOfferta=document.getElementById('ps_importoOfferta').value;
-    dati.linkOfferta=document.getElementById('ps_linkOfferta').value;
-  } else if(step==='preventivo') {
-    dati.dataPreventivo=document.getElementById('ps_dataPreventivo').value;
-    dati.importoPreventivo=document.getElementById('ps_importoPreventivo').value;
-    dati.linkPreventivo=document.getElementById('ps_linkPreventivo').value;
-  } else if(step==='bdo') {
-    dati.dataBdo=document.getElementById('ps_dataBdo').value;
-    dati.numeroBdo=document.getElementById('ps_numeroBdo').value;
-    dati.linkBdo=document.getElementById('ps_linkBdo').value;
-  } else if(step==='ddt') {
-    dati.dataDdt=document.getElementById('ps_dataDdt').value;
-    dati.numeroDdt=document.getElementById('ps_numeroDdt').value;
-    dati.linkDdt=document.getElementById('ps_linkDdt').value;
-  } else if(step==='chiuso') {
-    dati.dataChiusura=document.getElementById('ps_dataChiusura').value;
-    dati.noteChiusura=document.getElementById('ps_noteChiusura').value;
-  }
+function fmtData(val) {
+  if (!val) return '';
+  try { const d = new Date(val); if (isNaN(d.getTime())) return ''; return d.toISOString().slice(0,10); } catch(e) { return ''; }
+}
+function fmtDateTime(val) {
+  if (!val) return '';
+  try { const d = new Date(val); if (isNaN(d.getTime())) return ''; return d.toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }); } catch(e) { return ''; }
+}
+
+app.get('/vapid-public', (req, res) => res.json({ key: VAPID_PUBLIC }));
+
+app.post('/registra-push', async (req, res) => {
   try {
-    const r=await apiPost('/aggiorna-pratica',{id:currentPraticaId,step,dati});
-    if(!r.ok){toast('Errore salvataggio','err');return;}
-    // Aggiorna localmente
-    Object.assign(p,dati);
-    // Avanza stato se necessario
-    const statiMap={richiesta:'Richiesta',offerta:'Offerta',preventivo:'Preventivo',bdo:'BdO',ddt:'DDT',chiuso:'Chiusa'};
-    const statoNuovo=statiMap[step];
-    if(praticaStepIdx(statoNuovo)>praticaStepIdx(p.stato)) p.stato=statoNuovo;
-    // Aggiorna badge
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
-    toast('Step salvato','ok');
-    // Riapri modal aggiornato
-    openPratica(currentPraticaId);
-  } catch(e){toast('Errore','err');}
-}
-
-async function eliminaPratica() {
-  if(!confirm('Eliminare questa pratica? I documenti Drive non verranno toccati.'))return;
-  try {
-    await apiPost('/elimina-pratica',{id:currentPraticaId});
-    S.pratiche=S.pratiche.filter(p=>p.id!==currentPraticaId);
-    closeModal('modalPratica');
-    renderPratiche();
-    // Aggiorna badge
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
-    toast('Pratica eliminata','ok');
-  } catch(e){toast('Errore','err');}
-}
-
-// Apri nuova pratica
-function openModalNuovaPratica(idIntervento) {
-  document.getElementById('npNote').value='';
-  document.getElementById('npLink').value='';
-  document.getElementById('npTipo').value='';
-  // Popola impianti
-  const selImp=document.getElementById('npImp');
-  selImp.innerHTML='<option value="">Seleziona impianto...</option>'+
-    S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
-  // Popola interventi collegabili
-  const selInt=document.getElementById('npIntervento');
-  const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
-  selInt.innerHTML='<option value="">— Nessun collegamento —</option>'+
-    intsAperti.map(i=>{
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      return `<option value="${i.id}" ${i.id===idIntervento?'selected':''}>
-        ${imp?imp.descrizione:i.codiceImpianto} · ${i.dataPrevista} · ${i.operaio}
-      </option>`;
-    }).join('');
-  if(idIntervento){
-    const interv=S.interventi.find(x=>x.id===idIntervento);
-    if(interv){
-      selImp.value=interv.codiceImpianto;
-      selInt.value=idIntervento;
-    }
-  }
-  document.getElementById('modalNuovaPratica').classList.add('open');
-}
-
-async function creaPratica() {
-  const codice=document.getElementById('npImp').value;
-  const note=document.getElementById('npNote').value.trim();
-  const link=document.getElementById('npLink').value.trim();
-  const idIntervento=document.getElementById('npIntervento').value;
-  if(!codice){toast('Seleziona un impianto','err');return;}
-  try {
-    const r=await apiPost('/crea-pratica',{idIntervento,codiceImpianto:codice,noteRichiesta:note,linkRichiesta:link});
-    if(!r.ok){toast('Errore creazione','err');return;}
-    const oggi=new Date().toISOString().slice(0,10);
-    S.pratiche.push({id:r.id,idIntervento,codiceImpianto:codice,stato:'Richiesta',dataRichiesta:oggi,noteRichiesta:note,linkRichiesta:link,dataPreventivo:'',importoPreventivo:'',linkPreventivo:'',dataBdo:'',numeroBdo:'',linkBdo:'',dataDdt:'',numeroDdt:'',linkDdt:'',dataChiusura:'',noteChiusura:'',creatoIl:oggi});
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
-    closeModal('modalNuovaPratica');
-    toast('Pratica creata','ok');
-    renderPratiche();
-    // Apri subito la pratica
-    setTimeout(()=>openPratica(r.id),300);
-  } catch(e){toast('Errore','err');}
-}
-
-// Bottone "Gestisci pratica" dal dettaglio intervento
-function aproPraticaDaIntervento() {
-  const praticaEsistente=S.pratiche.find(p=>p.idIntervento===currentDetId);
-  if(praticaEsistente){
-    closeModal('modalDettaglio');
-    openPratica(praticaEsistente.id);
-  } else {
-    closeModal('modalDettaglio');
-    openModalNuovaPratica(currentDetId);
-  }
-}
-
-// ============================================================
-//  RDA/CAT
-// ============================================================
-const STATI_RDA=['Inviata','In lavorazione','Completata','Annullata'];
-
-function renderRdacat() {
-  const el=document.getElementById('tblRdacat');
-  if(!S.rdacat.length){el.innerHTML='<div class="empty">Nessuna richiesta RDA/CAT</div>';return;}
-  const ordine={Inviata:0,'In lavorazione':1,Completata:2,Annullata:3};
-  const lista=[...S.rdacat].sort((a,b)=>ordine[a.stato]-ordine[b.stato]||b.creatoIl.localeCompare(a.creatoIl));
-  const tipoIcon={'Sostituzione apparecchiatura':'🔧','Supporto tecnico':'👨‍🔧','Materiali/Ricambi':'📦','Altro':'📋'};
-  el.innerHTML=lista.map(r=>{
-    const imp=S.impianti.find(x=>x.codice===r.codiceImpianto);
-    const interv=S.interventi.find(x=>x.id===r.idIntervento);
-    const statoClass='stato-'+r.stato.toLowerCase().replace(' ','-');
-    return `<div class="rda-card">
-      <div class="rda-card-head">
-        <div class="rda-card-info">
-          <div class="rda-imp">${imp?imp.descrizione:r.codiceImpianto} <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${r.codiceImpianto}</span></div>
-          <div class="rda-tipo-badge">${tipoIcon[r.tipologia]||'📋'} ${r.tipologia}</div>
-          <div class="rda-meta">
-            <span>👤 ${r.operaio}</span>
-            ${imp&&imp.comune?`<span>📍 ${imp.comune}</span>`:''}
-            ${interv?`<span>📅 ${interv.dataPrevista}</span>`:''}
-            <span style="color:var(--muted)">${r.creatoIl}</span>
-          </div>
-          ${r.nota?`<div class="rda-nota">💬 "${r.nota}"</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-          <span class="${statoClass}" style="font-size:13px;font-weight:700">${r.stato}</span>
-          <select class="rda-stato-select" onchange="aggiornaRda('${r.id}',this.value)">
-            ${STATI_RDA.map(s=>`<option value="${s}" ${s===r.stato?'selected':''}>${s}</option>`).join('')}
-          </select>
-          <div style="display:flex;gap:6px">
-            ${interv?`<button class="btn btn-ghost btn-sm" onclick="openDettaglio('${interv.id}')">Apri OdL</button>`:''}
-            <button class="btn btn-danger btn-sm" onclick="eliminaRda('${r.id}')">✕</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function aggiornaRda(id,stato) {
-  try {
-    await apiPost('/aggiorna-rdacat',{id,stato});
-    const r=S.rdacat.find(x=>x.id===id); if(r)r.stato=stato;
-    renderRdacat();
-    const nRda=S.rdacat.filter(r=>r.stato==='Inviata').length;
-    const badge=document.getElementById('badgeRda'); badge.textContent=nRda; badge.style.display=nRda>0?'':'none';
-    toast('Stato aggiornato','ok');
-  } catch(e){toast('Errore','err');}
-}
-async function eliminaRda(id) {
-  if(!confirm('Eliminare questa richiesta?'))return;
-  try { await apiPost('/elimina-rdacat',{id}); S.rdacat=S.rdacat.filter(r=>r.id!==id); renderRdacat(); toast('Eliminata','ok'); } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  BACKLOG
-// ============================================================
-function openModalBacklog() {
-  blTipoSel='';
-  document.getElementById('blImp').value='';
-  document.getElementById('blOrd').style.background='';
-  document.getElementById('blStr').style.background='';
-  document.getElementById('blNote').value='';
-  document.getElementById('modalBacklog').classList.add('open');
-}
-function selBlTipo(tipo) {
-  blTipoSel=tipo;
-  document.getElementById('blOrd').style.background=tipo==='Ordinaria'?'var(--bg4)':'';
-  document.getElementById('blStr').style.background=tipo==='Straordinaria'?'var(--bg4)':'';
-}
-async function salvaBacklog() {
-  const imp=document.getElementById('blImp').value;
-  if(!imp){toast('Seleziona un impianto','err');return;}
-  if(!blTipoSel){toast('Seleziona il tipo visita','err');return;}
-  try {
-    const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:blTipoSel,operaio:'DaAssegnare',dataPrevista:'9999-12-31',note:document.getElementById('blNote').value.trim(),attivitaExtra:[],statoOverride:'DaAssegnare'});
-    if(!r.ok){toast('Errore','err');return;}
-    closeModal('modalBacklog'); toast('Aggiunto al backlog','ok'); await caricaDati(); nav('interventi');
-  } catch(e){toast('Errore','err');}
-}
-
-function renderBacklog() {
-  const list=S.interventi.filter(i=>i.stato==='DaAssegnare').sort((a,b)=>a.creatoIl.localeCompare(b.creatoIl));
-  const el=document.getElementById('tblBacklog');
-  if(!list.length){el.innerHTML='<div class="empty">Nessun lavoro in attesa</div>';return;}
-  el.innerHTML=list.map(i=>{
-    const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-    return `<div class="backlog-card">
-      <div class="backlog-info">
-        <div class="backlog-imp">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="backlog-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span>${imp.comune}</span>`:''}<span style="color:var(--muted)">creato il ${i.creatoIl}</span></div>
-        ${i.note?`<div class="backlog-note">"${i.note}"</div>`:''}
-      </div>
-      <div class="backlog-actions"><button class="btn btn-primary btn-sm" onclick="openAssegna('${i.id}')">Assegna →</button></div>
-    </div>`;
-  }).join('');
-}
-
-function openAssegna(id) {
-  currentBacklogId=id;
-  const i=S.interventi.find(x=>x.id===id);
-  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-  document.getElementById('assegnaTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('assegnaInfo').innerHTML=`<span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${i.note?`<span style="margin-left:10px;font-style:italic">${i.note}</span>`:''}`;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('achip-'+n).classList.remove('selected'));
-  document.getElementById('assegnaData').value=toLocaleDateStr(new Date());
-  document.getElementById('modalAssegna').classList.add('open');
-}
-
-function toggleAssegnaChip(nome) { document.getElementById('achip-'+nome).classList.toggle('selected'); }
-function toggleRepChip(nome) { ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected')); document.getElementById('repchip-'+nome).classList.add('selected'); }
-
-async function confermaAssegna() {
-  const operai=['Matteo','Stefano','Michele','Ezio'].filter(n=>document.getElementById('achip-'+n).classList.contains('selected'));
-  const data=document.getElementById('assegnaData').value;
-  if(!operai.length){toast('Seleziona almeno un operaio','err');return;}
-  if(!data){toast('Seleziona una data','err');return;}
-  try {
-    await apiPost('/elimina-intervento',{id:currentBacklogId});
-    const i=S.interventi.find(x=>x.id===currentBacklogId);
-    await Promise.all(operai.map(op=>apiPost('/crea-intervento',{codiceImpianto:i.codiceImpianto,tipoVisita:i.tipoVisita,operaio:op,dataPrevista:data,note:i.note,attivitaExtra:[]})));
-    closeModal('modalAssegna');
-    toast(operai.length>1?`Assegnato a ${operai.length} operai`:`Assegnato a ${operai[0]}`,'ok');
-    await caricaDati(); nav('calendario');
-  } catch(e){toast('Errore','err');}
-}
-
-async function eliminaBacklog() {
-  if(!confirm('Eliminare questo lavoro dal backlog?'))return;
-  try { await apiPost('/elimina-intervento',{id:currentBacklogId}); closeModal('modalAssegna'); toast('Eliminato','ok'); await caricaDati(); renderBacklog(); } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  INTERVENTI TABELLA
-// ============================================================
-function renderInterventi() {
-  const search=(document.getElementById('searchInt')||{}).value||'';
-  const stato=(document.getElementById('filtStato')||{}).value||'';
-  const op=(document.getElementById('filtOp')||{}).value||'';
-  let list=S.interventi.filter(i=>i.stato!=='DaAssegnare');
-  if(stato)list=list.filter(i=>i.stato===stato);
-  if(op)list=list.filter(i=>i.operaio===op);
-  if(search)list=list.filter(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);return (i.codiceImpianto+(imp?imp.descrizione+imp.comune:'')+i.operaio).toLowerCase().includes(search.toLowerCase());});
-  list=list.sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
-  const el=document.getElementById('tblInterventi');
-  if(!list.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Data</th><th>Impianto</th><th>Operaio</th><th>Tipo</th><th>Stato</th><th>Avanzamento</th><th></th></tr></thead><tbody>`+
-    list.map(i=>{
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-      const done=chk.filter(c=>c.eseguita==='SI').length;
-      const pct=chk.length>0?Math.round(done/chk.length*100):0;
-      const tuttiDone=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      return `<tr class="${tuttiDone?'int-completato':''}">
-        <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}</td>
-        <td><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div><div style="font-size:11px;color:var(--muted)">${i.codiceImpianto}</div></td>
-        <td>${i.operaio}</td>
-        <td><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span></td>
-        <td><span class="badge ${i.stato==='Aperto'?'badge-aperto':'badge-chiuso'}">${i.stato}</span></td>
-        <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div><span class="prog-txt">${done}/${chk.length}</span></div></td>
-        <td><button class="btn btn-ghost btn-sm" onclick="openDettaglio('${i.id}')">Apri</button></td>
-      </tr>`;
-    }).join('')+'</tbody></table>';
-}
-
-// ============================================================
-//  DETTAGLIO INTERVENTO
-// ============================================================
-function openDettaglio(id) {
-  currentDetId=id;
-  const i=S.interventi.find(x=>x.id===id);
-  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-  document.getElementById('detTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('detStato').value=i.stato;
-  document.getElementById('detNuovaData').value='';
-
-  // Note
-  const tutteNote=i.note||'';
-  const primoSep=tutteNote.indexOf(' | Chiusura:');
-  const notaNormale=primoSep>=0?tutteNote.slice(0,primoSep).trim():tutteNote.trim();
-  const tuttiPezzi=tutteNote.split(' | ');
-  const eventiCrono=tuttiPezzi.filter(p=>p.indexOf('Chiusura:')===0||p.indexOf('Riaperto')===0);
-  const notaChiusura=eventiCrono.join('\n');
-
-  document.getElementById('detInfo').innerHTML=`
-    <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
-    <div><span style="color:var(--muted)">Data</span><br>${i.dataPrevista}</div>
-    <div><span style="color:var(--muted)">Operaio</span><br>
-      <select id="detOperaio" class="fc" style="margin-top:4px;padding:4px 8px;font-size:13px">
-        ${['Matteo','Stefano','Michele','Ezio'].map(n=>`<option value="${n}" ${i.operaio===n?'selected':''}>${n}</option>`).join('')}
-      </select></div>
-    <div><span style="color:var(--muted)">Tipo</span><br>${i.tipoVisita}</div>
-    ${notaNormale?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${notaNormale}</div>`:''}
-    ${notaChiusura?`<div style="grid-column:1/-1;margin-top:4px;padding:14px 16px;background:rgba(63,185,80,.15);border:2px solid rgba(63,185,80,.45);border-left:5px solid #3fb950;border-radius:0 10px 10px 0">
-      <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Cronologia</div>
-      <div style="font-size:13px;color:#e6edf3;line-height:1.8;white-space:pre-line">${notaChiusura}</div>
-    </div>`:''}`;
-
-  // Pratica collegata
-  const praticaBox=document.getElementById('detPraticaBox');
-  const pratica=S.pratiche.find(p=>p.idIntervento===id);
-  if(pratica){
-    const stepCorrente=praticaStepIdx(pratica.stato);
-    praticaBox.style.display='block';
-    praticaBox.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(200,180,100,.08);border:1px solid rgba(200,180,100,.2);border-radius:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:16px">📄</span>
-        <div>
-          <div style="font-size:13px;font-weight:700">Pratica in corso</div>
-          <div style="font-size:11px;color:var(--muted)">Step: <span class="pra-stato ${pratica.stato}" style="font-size:10px;padding:1px 6px">${pratica.stato}</span>
-          ${pratica.importoOfferta?` · Offerta € ${parseFloat(pratica.importoOfferta).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
-          ${pratica.importoPreventivo?` · Prev. € ${parseFloat(pratica.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
-        </div>
-      </div>
-      <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="closeModal('modalDettaglio');openPratica('${pratica.id}')">Apri pratica →</button>
-    </div>`;
-  } else {
-    praticaBox.style.display='none';
-  }
-
-  // Campi multi-giorno
-  document.getElementById('detDataFine').value=i.dataFine||'';
-  document.getElementById('detOpSecondario2').value=i.operaioSecondario2||'';
-
-  // Drive
-  const driveBox=document.getElementById('detDriveBox');
-  driveBox.style.display='block';
-  document.getElementById('detLinkDrive').value=i.linkDrive||'';
-  const driveBtn=document.getElementById('detDriveBtn');
-  if(i.linkDrive){driveBtn.href=i.linkDrive;driveBtn.style.display='';}else{driveBtn.style.display='none';}
-
-  // Secondo operaio
-  const secEl=document.getElementById('detSecondo');
-  if(i.secondoOperaio){
-    secEl.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(154,132,200,.1);border:1px solid rgba(154,132,200,.25);border-radius:10px;font-size:13px">
-      <span>👥</span><div><span style="color:var(--muted)">Secondo richiesto:</span> <strong>${i.secondoOperaio}</strong></div>
-      <button onclick="rimuoviSecondoResp('${id}')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer">✕</button></div>`;
-  } else { secEl.innerHTML=''; }
-
-  // Checklist
-  const chk=S.checklist.filter(c=>c.idIntervento===id);
-  document.getElementById('detChk').innerHTML=chk.length===0
-    ?'<p style="color:var(--muted);font-size:12px">Nessuna attività</p>'
-    :chk.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:7px;margin-bottom:5px;font-size:13px;opacity:${c.eseguita==='SI'?'.55':'1'}">
-        <div style="width:8px;height:8px;border-radius:50%;background:${c.eseguita==='SI'?'var(--green)':'var(--border)'}"></div>
-        <div style="flex:1;text-decoration:${c.eseguita==='SI'?'line-through':'none'}">${c.attivita}</div>
-        ${c.extra==='SI'?'<span style="font-size:10px;color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:1px 6px;border-radius:4px">EXTRA</span>':''}
-        ${c.note?`<span style="font-size:11px;color:var(--yellow)">⚠ ${c.note}</span>`:''}
-      </div>`).join('');
-
-  document.getElementById('modalDettaglio').classList.add('open');
-}
-
-async function salvaDettaglio() {
-  const stato=document.getElementById('detStato').value;
-  const nuovaData=document.getElementById('detNuovaData').value;
-  const operaio=document.getElementById('detOperaio')?.value;
-  try {
-    await apiPost('/aggiorna-intervento',{id:currentDetId,stato,operaio});
-    const i=S.interventi.find(x=>x.id===currentDetId);
-    if(i){i.stato=stato;if(operaio)i.operaio=operaio;}
-    if(nuovaData){await apiPost('/posticipa-intervento',{id:currentDetId,nuovaData});if(i)i.dataPrevista=nuovaData;}
-    const dataFine=document.getElementById('detDataFine')?.value||'';
-    const opSec2=document.getElementById('detOpSecondario2')?.value||'';
-    const hadMulti=i&&(i.dataFine||i.operaioSecondario2);
-    if(dataFine||opSec2||hadMulti){
-      await apiPost('/aggiorna-multigiorno',{id:currentDetId,dataFine,operaioSecondario2:opSec2});
-      if(i){i.dataFine=dataFine;i.operaioSecondario2=opSec2;}
-    }
-    closeModal('modalDettaglio');
-    toast('Salvato','ok');
-    renderCalendario(); renderInterventi();
-    const nBacklog=S.interventi.filter(i=>i.stato==='DaAssegnare').length;
-    const bSec=document.getElementById('backlogSection');
-    if(bSec){bSec.style.display=nBacklog>0?'block':'none';document.getElementById('backlogCount').textContent=nBacklog;renderBacklog();}
-    document.getElementById('badgeAperti').textContent=S.interventi.filter(i=>i.stato==='Aperto').length;
-  } catch(e){toast('Errore','err');}
-}
-
-async function rimuoviSecondoResp(id) {
-  try { await apiPost('/segnala-secondo',{id,secondoOperaio:''}); const i=S.interventi.find(x=>x.id===id);if(i)i.secondoOperaio=''; openDettaglio(id); toast('Rimosso','ok'); } catch(e){toast('Errore','err');}
-}
-async function eliminaIntervento() {
-  if(!confirm('Eliminare questo intervento?'))return;
-  try {
-    await apiPost('/elimina-intervento',{id:currentDetId});
-    S.interventi=S.interventi.filter(i=>i.id!==currentDetId);
-    S.checklist=S.checklist.filter(c=>c.idIntervento!==currentDetId);
-    closeModal('modalDettaglio'); toast('Eliminato','ok'); renderCalendario(); renderInterventi();
-  } catch(e){toast('Errore','err');}
-}
-
-async function salvaLinkDrive() {
-  const link=document.getElementById('detLinkDrive').value.trim();
-  try {
-    await apiPost('/salva-link-drive',{id:currentDetId,tipo:'intervento',linkDrive:link});
-    const i=S.interventi.find(x=>x.id===currentDetId);if(i)i.linkDrive=link;
-    const btn=document.getElementById('detDriveBtn');
-    if(link){btn.href=link;btn.style.display='';}else btn.style.display='none';
-    toast('Link salvato','ok');
-  } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  NUOVO INTERVENTO
-// ============================================================
-function popolaSelectImpianti() {
-  const opts=S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');
-  ['nImp','catFiltImp','catNewImp','blImp'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    const prev=el.value;
-    el.innerHTML=(id==='catFiltImp'?'<option value="">Tutti</option>':'<option value="">Seleziona...</option>')+opts;
-    if(prev)el.value=prev;
-  });
-}
-
-function openModalIntervento(dateStr) {
-  nExtraItems=[];
-  document.getElementById('nImp').value='';
-  document.getElementById('nTipo').value='';
-  document.getElementById('nData').value=dateStr||new Date().toISOString().slice(0,10);
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
-  document.getElementById('nNote').value='';
-  document.getElementById('nAnteprima').style.display='none';
-  document.getElementById('nAntEmpty').style.display='none';
-  closeModal('modalGiorno');
-  document.getElementById('modalIntervento').classList.add('open');
-}
-
-function onImpChange() {
-  const imp=S.impianti.find(i=>i.codice===document.getElementById('nImp').value);
-  if(imp&&imp.operaioDefault){ ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected')); const chip=document.getElementById('chip-'+imp.operaioDefault);if(chip)chip.classList.add('selected'); }
-  onTipoChange();
-}
-function toggleOpChip(nome) { document.getElementById('chip-'+nome).classList.toggle('selected'); }
-function getOperaiSelezionati() { return ['Matteo','Stefano','Michele','Ezio'].filter(n=>document.getElementById('chip-'+n).classList.contains('selected')); }
-
-function onTipoChange() {
-  const codice=document.getElementById('nImp').value, tipo=document.getElementById('nTipo').value;
-  if(!codice||!tipo){document.getElementById('nAnteprima').style.display='none';return;}
-  const voci=S.catalogo.filter(c=>c.codiceImpianto===codice&&c.tipoVisita===tipo).sort((a,b)=>a.ordine-b.ordine);
-  nExtraItems=[];
-  if(!voci.length){document.getElementById('nAnteprima').style.display='none';document.getElementById('nAntEmpty').style.display='block';}
-  else{document.getElementById('nAntEmpty').style.display='none';document.getElementById('nAnteprima').style.display='block';document.getElementById('nAntList').innerHTML=voci.map(v=>`<div class="chk-prev-item"><div class="chk-prev-dot"></div>${v.attivita}</div>`).join('');renderExtraList();}
-}
-function addExtra() { const v=document.getElementById('nExtraInp').value.trim();if(!v)return;nExtraItems.push(v);document.getElementById('nExtraInp').value='';renderExtraList(); }
-function renderExtraList() { document.getElementById('nExtraList').innerHTML=nExtraItems.map((e,i)=>`<div class="chk-prev-item" style="border-left:2px solid var(--yellow)"><div class="chk-prev-dot" style="background:var(--yellow)"></div>${e}<button onclick="nExtraItems.splice(${i},1);renderExtraList()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer">✕</button></div>`).join(''); }
-
-async function salvaIntervento() {
-  const imp=document.getElementById('nImp').value, tipo=document.getElementById('nTipo').value;
-  const operai=getOperaiSelezionati(), data=document.getElementById('nData').value;
-  if(!imp||!tipo||!data){toast('Seleziona impianto, tipo e data','err');return;}
-  if(!operai.length){toast('Seleziona almeno un operaio','err');return;}
-  try {
-    toast('Creazione...');
-    const nota=document.getElementById('nNote').value;
-    if(operai.length===1){
-      const nDataFine=document.getElementById('nDataFine')?.value||'';
-      const nOpSec2=document.getElementById('nOpSecondario2')?.value||'';
-      const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:tipo,operaio:operai[0],dataPrevista:data,note:nota,attivitaExtra:nExtraItems,dataFine:nDataFine,operaioSecondario2:nOpSec2});
-      if(!r.ok){toast('Errore','err');return;}
+    const { operaio, subscription } = req.body;
+    if (!operaio || !subscription) return res.json({ ok: false });
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.PUSHTOKENS).catch(() => []);
+    const idx = rows.findIndex((r,i) => i > 0 && r[0] === operaio);
+    if (idx > 0) {
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.PUSHTOKENS}!A${idx+1}:B${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[operaio, JSON.stringify(subscription)]] } });
     } else {
-      const results=await Promise.all(operai.map(op=>apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:tipo,operaio:op,dataPrevista:data,note:nota,attivitaExtra:nExtraItems})));
-      if(results.some(r=>!r.ok)){toast('Errore su alcuni interventi','err');return;}
-      const ids=results.map(r=>r.id);
-      for(let k=1;k<ids.length;k++){
-        await apiPost('/imposta-collegamento',{id:ids[k],interventoCollegato:ids[0]});
-        await apiPost('/imposta-collegamento',{id:ids[0],interventoCollegato:ids[k]});
-      }
+      await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.PUSHTOKENS, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[operaio, JSON.stringify(subscription)]] } });
     }
-    closeModal('modalIntervento'); toast(operai.length>1?`${operai.length} interventi collegati!`:'Intervento creato!','ok');
-    await caricaDati();
-  } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  ASSENZE
-// ============================================================
-function openModalAssenza(dateStr) {
-  document.getElementById('aOp').value='';
-  document.getElementById('aTipo').value='Ferie';
-  document.getElementById('aDal').value=dateStr||new Date().toISOString().slice(0,10);
-  document.getElementById('aAl').value=dateStr||new Date().toISOString().slice(0,10);
-  document.getElementById('aNote').value='';
-  closeModal('modalGiorno');
-  document.getElementById('modalAssenza').classList.add('open');
-}
-async function salvaAssenza() {
-  const op=document.getElementById('aOp').value, dal=document.getElementById('aDal').value, al=document.getElementById('aAl').value;
-  if(!op||!dal||!al){toast('Compila tutti i campi','err');return;}
-  if(al<dal){toast('Data fine >= data inizio','err');return;}
-  try {
-    const r=await apiPost('/crea-assenza',{operaio:op,dataInizio:dal,dataFine:al,tipo:document.getElementById('aTipo').value,note:document.getElementById('aNote').value});
-    if(!r.ok){toast('Errore','err');return;}
-    closeModal('modalAssenza'); toast('Assenza salvata','ok'); await caricaDati();
-  } catch(e){toast('Errore','err');}
-}
-async function eliminaAssenza(id) {
-  if(!confirm('Eliminare questa assenza?'))return;
-  try { await apiPost('/elimina-assenza',{id}); S.assenze=S.assenze.filter(a=>a.id!==id); closeModal('modalGiorno'); toast('Eliminata','ok'); renderCalendario(); } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  IMPIANTI
-// ============================================================
-function renderImpianti() {
-  const search=(document.getElementById('searchImp')||{}).value||'';
-  let list=S.impianti;
-  if(search)list=list.filter(i=>(i.codice+i.descrizione+i.comune).toLowerCase().includes(search.toLowerCase()));
-  document.getElementById('impGrid').innerHTML=list.map(i=>{
-    const nAp=S.interventi.filter(x=>x.codiceImpianto===i.codice&&x.stato==='Aperto').length;
-    const nPrat=S.pratiche.filter(p=>p.codiceImpianto===i.codice&&p.stato!=='Chiusa').length;
-    return `<div class="imp-card">
-      <div class="imp-code">${i.codice}</div>
-      <div class="imp-name">${i.descrizione}</div>
-      <div class="imp-meta">${i.comune}${i.indirizzo?' · '+i.indirizzo:''}${i.operaioDefault?' → '+i.operaioDefault:''}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">${nAp} aperti${nPrat>0?` · <span style="color:var(--yellow)">${nPrat} pratiche</span>`:''}</div>
-      <div class="imp-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openStorico('${i.codice}')">Storico</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="openModalNuovaPratica();document.getElementById('npImp').value='${i.codice}'">+ Pratica</button>
-      </div>
-    </div>`;
-  }).join('')||'<div class="empty">Nessun impianto</div>';
-}
-
-// ============================================================
-//  CATALOGO
-// ============================================================
-function renderCatalogo() {
-  const imp=(document.getElementById('catFiltImp')||{}).value||'';
-  const tipo=(document.getElementById('catFiltTipo')||{}).value||'';
-  let list=S.catalogo;
-  if(imp)list=list.filter(c=>c.codiceImpianto===imp);
-  if(tipo)list=list.filter(c=>c.tipoVisita===tipo);
-  list=list.sort((a,b)=>a.codiceImpianto.localeCompare(b.codiceImpianto)||(a.ordine-b.ordine));
-  const el=document.getElementById('tblCatalogo');
-  if(!list.length){el.innerHTML='<div class="empty">Nessuna voce</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Impianto</th><th>Tipo</th><th>Attività</th><th>Ord.</th><th>Obbl.</th><th></th></tr></thead><tbody>`+
-    list.map(c=>`<tr>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${c.codiceImpianto}</td>
-      <td><span class="badge ${c.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${c.tipoVisita}</span></td>
-      <td>${c.attivita}</td>
-      <td style="color:var(--muted)">${c.ordine}</td>
-      <td><span style="font-size:11px;color:${c.obbligatoria==='SI'?'var(--green)':'var(--muted)'}">${c.obbligatoria}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="elimCatVoce('${c.codiceImpianto}','${c.tipoVisita}','${escJs(c.attivita)}')">✕</button></td>
-    </tr>`).join('')+'</tbody></table>';
-}
-async function salvaCatVoce() {
-  const d={codiceImpianto:document.getElementById('catNewImp').value,tipoVisita:document.getElementById('catNewTipo').value,attivita:document.getElementById('catNewAtt').value.trim(),ordine:parseInt(document.getElementById('catNewOrd').value)||1,obbligatoria:document.getElementById('catNewObbl').value};
-  if(!d.codiceImpianto||!d.attivita){toast('Seleziona impianto e scrivi attività','err');return;}
-  try { await apiPost('/salva-catalogo',d); toast('Aggiunta','ok'); document.getElementById('catNewAtt').value=''; await caricaDati(); } catch(e){toast('Errore','err');}
-}
-async function elimCatVoce(codice,tipo,att) {
-  if(!confirm('Eliminare "'+att+'"?'))return;
-  try { await apiPost('/elimina-catalogo',{codice,tipoVisita:tipo,attivita:att}); toast('Eliminata','ok'); await caricaDati(); } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  STORICO IMPIANTO
-// ============================================================
-function openStorico(codice) {
-  const imp=S.impianti.find(i=>i.codice===codice);
-  document.getElementById('storicoTitle').textContent='Storico — '+(imp?imp.descrizione:codice);
-  const ints=S.interventi.filter(i=>i.codiceImpianto===codice).sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
-  if(!ints.length){document.getElementById('storicoBody').innerHTML='<div class="empty">Nessun intervento registrato</div>';}
-  else{document.getElementById('storicoBody').innerHTML=ints.map(i=>{
-    const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-    const done=chk.filter(c=>c.eseguita==='SI').length;
-    const hasPrat=S.pratiche.some(p=>p.idIntervento===i.id);
-    return `<div class="stor-entry ${i.stato.toLowerCase()}">
-      <div class="stor-head">
-        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${i.dataPrevista}</span>
-        <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}">${i.stato}</span>
-        <span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>
-        <span style="font-size:12px;color:var(--muted)">${i.operaio}</span>
-        ${hasPrat?'<span class="pra-dot"></span>':''}
-        <span style="font-size:12px;color:var(--muted);margin-left:auto">${done}/${chk.length}</span>
-      </div>
-      <div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'✗'} ${c.attivita}</span>`).join('')}</div>
-    </div>`;
-  }).join('');}
-  document.getElementById('modalStorico').classList.add('open');
-}
-
-// ============================================================
-//  REPERIBILITÀ
-// ============================================================
-function renderRepWidget() {
-  const rep=S.reperibilita; if(!rep)return;
-  document.getElementById('repNome').textContent=rep.corrente&&rep.corrente.operaio?rep.corrente.operaio:'—';
-  const oggi=new Date(), dow=oggi.getDay()===0?6:oggi.getDay()-1;
-  const lunCorrente=new Date(oggi); lunCorrente.setDate(oggi.getDate()-dow); lunCorrente.setHours(0,0,0,0);
-  const lunStr=toLocaleDateStr(lunCorrente);
-  document.getElementById('repSettimane').innerHTML=rep.settimane.map(s=>{
-    const d=new Date(s.data+'T00:00:00'), dom=new Date(d); dom.setDate(d.getDate()+6);
-    const label=d.getDate()+' '+MESI_SHORT[d.getMonth()]+' – '+dom.getDate()+' '+MESI_SHORT[dom.getMonth()];
-    return `<div class="rep-sett-btn ${s.data===lunStr?'corrente':''}" onclick="openRepModal('${s.data}','${s.operaio||''}')">
-      <div class="sett-data">${label}</div>
-      <div class="sett-op ${s.operaio?'':'vuoto'}">${s.operaio||'non assegnato'}</div>
-    </div>`;
-  }).join('');
-}
-function openRepModal(data,operaioAttuale) {
-  const d=new Date(data+'T00:00:00'), dom=new Date(d); dom.setDate(d.getDate()+6);
-  document.getElementById('repModalTitolo').textContent='Settimana '+d.getDate()+' '+MESI_SHORT[d.getMonth()]+' – '+dom.getDate()+' '+MESI_SHORT[dom.getMonth()];
-  document.getElementById('repDataHidden').value=data;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{const el=document.getElementById('repchip-'+n);if(el)el.classList.toggle('selected',n===operaioAttuale);});
-  document.getElementById('modalRep').classList.add('open');
-}
-async function salvaReperibile() {
-  const data=document.getElementById('repDataHidden').value;
-  const operaio=['Matteo','Stefano','Michele','Ezio'].find(n=>document.getElementById('repchip-'+n).classList.contains('selected'));
-  if(!operaio){toast('Seleziona un operaio','err');return;}
-  try {
-    await apiPost('/salva-reperibile',{data,operaio});
-    if(S.reperibilita){const s=S.reperibilita.settimane.find(x=>x.data===data);if(s)s.operaio=operaio;const oggi=new Date(),dow=oggi.getDay()===0?6:oggi.getDay()-1,lun=new Date(oggi);lun.setDate(oggi.getDate()-dow);lun.setHours(0,0,0,0);if(toLocaleDateStr(lun)===data)S.reperibilita.corrente.operaio=operaio;renderRepWidget();}
-    closeModal('modalRep'); toast('Reperibile: '+operaio,'ok');
-  } catch(e){toast('Errore','err');}
-}
-
-// ============================================================
-//  UTILS
-// ============================================================
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function escJs(s) { return (s||'').replace(/'/g,"\\'"); }
-function toast(msg,type) {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className='toast '+(type||''); el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2400);
-}
-
-document.querySelectorAll('.overlay').forEach(o=>{
-  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
 });
 
-setInterval(()=>{
-  if(!document.querySelector('.overlay.open')){ caricaDati(); console.log('Auto-refresh',new Date().toLocaleTimeString('it-IT')); }
-},5*60*1000);
-</script>
-</body>
-</html>
+app.get('/dati', async (req, res) => {
+  try {
+    const sheets = await getSheets();
+    const [rImp, rCat, rInt, rChk] = await Promise.all([
+      leggi(sheets, SH.IMPIANTI), leggi(sheets, SH.CATALOGO),
+      leggi(sheets, SH.INTERVENTI), leggi(sheets, SH.CHECKLIST),
+    ]);
+    const impianti   = rImp.slice(1).filter(r=>r[0]).map(r=>({ codice:r[0]||'', descrizione:r[1]||'', comune:r[2]||'', indirizzo:r[3]||'', operaioDefault:r[4]||'' }));
+    const catalogo   = rCat.slice(1).filter(r=>r[0]).map(r=>({ codiceImpianto:r[0]||'', tipoVisita:r[1]||'', attivita:r[2]||'', ordine:Number(r[3])||0, obbligatoria:r[4]||'SI' }));
+    const interventi = rInt.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', codiceImpianto:r[1]||'', dataPrevista:fmtData(r[2]), operaio:r[3]||'', tipoVisita:r[4]||'', stato:r[5]||'', note:r[6]||'', dataChiusura:fmtData(r[7]), creatoIl:fmtData(r[8]), secondoOperaio:r[9]||'', interventoCollegato:r[10]||'', linkDrive:r[11]||'', dataFine:fmtData(r[12]), operaioSecondario2:r[13]||'' }));
+    const checklist  = rChk.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', idIntervento:r[1]||'', attivita:r[2]||'', eseguita:r[3]||'NO', oraCompletamento:fmtDateTime(r[4]), note:r[5]||'', extra:r[6]||'NO' }));
+    res.json({ impianti, catalogo, interventi, checklist });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/aggiorna-voce', async (req, res) => {
+  try {
+    const { id, eseguita, note } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.CHECKLIST);
+    const idx = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx === -1) return res.json({ ok: false, errore: 'Voce non trovata' });
+    const rowNum = idx + 1;
+    if (eseguita !== undefined) {
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.CHECKLIST}!D${rowNum}`, valueInputOption: 'RAW', requestBody: { values: [[eseguita]] } });
+      const ora = eseguita === 'SI' ? new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.CHECKLIST}!E${rowNum}`, valueInputOption: 'RAW', requestBody: { values: [[ora]] } });
+    }
+    if (note !== undefined) {
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.CHECKLIST}!F${rowNum}`, valueInputOption: 'RAW', requestBody: { values: [[note]] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/aggiorna-intervento', async (req, res) => {
+  try {
+    const { id, stato, operaio } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.INTERVENTI);
+    const ora    = stato === 'Chiuso' ? new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+
+    async function aggiornaRiga(rigaId) {
+      const i = rows.findIndex((r,idx) => idx > 0 && r[0] === rigaId);
+      if (i < 1) return;
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!F${i+1}`, valueInputOption: 'RAW', requestBody: { values: [[stato]] } });
+      if (stato === 'Chiuso') {
+        await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!H${i+1}`, valueInputOption: 'RAW', requestBody: { values: [[ora]] } });
+      }
+      if (stato === 'Aperto') {
+        const notaAttuale = rows[i][6] || '';
+        const dataRiapertura = new Date().toLocaleString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        const notaAggiornata = notaAttuale ? notaAttuale + ` | 🔄 Riaperto il ${dataRiapertura}` : `🔄 Riaperto il ${dataRiapertura}`;
+        await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!G${i+1}:H${i+1}`, valueInputOption: 'RAW', requestBody: { values: [[notaAggiornata, '']] } });
+      }
+    }
+
+    const notaChiusura = req.body.notaChiusura;
+    if (stato === 'Chiuso' && notaChiusura) {
+      const rowNota = rows.findIndex((r,idx) => idx > 0 && r[0] === id);
+      if (rowNota > 0) {
+        const notaEsistente = rows[rowNota][6] || '';
+        const nuovaNota = notaEsistente ? notaEsistente + ' | Chiusura: ' + notaChiusura : 'Chiusura: ' + notaChiusura;
+        await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!G${rowNota+1}`, valueInputOption: 'RAW', requestBody: { values: [[nuovaNota]] } });
+      }
+    }
+    if (operaio) {
+      const rowOp = rows.findIndex((r,idx) => idx > 0 && r[0] === id);
+      if (rowOp > 0) {
+        await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!D${rowOp+1}`, valueInputOption: 'RAW', requestBody: { values: [[operaio]] } });
+      }
+    }
+    await aggiornaRiga(id);
+    const mainRow = rows.find((r,idx) => idx > 0 && r[0] === id);
+    const collegato = mainRow && mainRow[10] ? mainRow[10] : null;
+    if (collegato) await aggiornaRiga(collegato);
+    const inverso = rows.find((r,idx) => idx > 0 && r[10] === id);
+    if (inverso && inverso[0] !== id) await aggiornaRiga(inverso[0]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/aggiungi-extra', async (req, res) => {
+  try {
+    const { idIntervento, attivita } = req.body;
+    const sheets = await getSheets();
+    const id = 'CHK-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.CHECKLIST, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[id, idIntervento, attivita, 'NO', '', '', 'SI']] } });
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.get('/dati-responsabile', async (req, res) => {
+  try {
+    const sheets = await getSheets();
+    const [rImp, rCat, rInt, rChk, rAss, rPrat, rOff] = await Promise.all([
+      leggi(sheets, SH.IMPIANTI), leggi(sheets, SH.CATALOGO),
+      leggi(sheets, SH.INTERVENTI), leggi(sheets, SH.CHECKLIST),
+      leggi(sheets, SH.ASSENZE).catch(() => [[]]),
+      leggi(sheets, SH.PRATICHE).catch(() => [[]]),
+      leggi(sheets, SH.OFFERTE).catch(() => [[]]),
+    ]);
+    const impianti   = rImp.slice(1).filter(r=>r[0]).map(r=>({ codice:r[0]||'', descrizione:r[1]||'', comune:r[2]||'', indirizzo:r[3]||'', operaioDefault:r[4]||'' }));
+    const catalogo   = rCat.slice(1).filter(r=>r[0]).map(r=>({ codiceImpianto:r[0]||'', tipoVisita:r[1]||'', attivita:r[2]||'', ordine:Number(r[3])||0, obbligatoria:r[4]||'SI' }));
+    const interventi = rInt.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', codiceImpianto:r[1]||'', dataPrevista:fmtData(r[2]), operaio:r[3]||'', tipoVisita:r[4]||'', stato:r[5]||'', note:r[6]||'', dataChiusura:fmtData(r[7]), creatoIl:fmtData(r[8]), secondoOperaio:r[9]||'', interventoCollegato:r[10]||'', linkDrive:r[11]||'', dataFine:fmtData(r[12]), operaioSecondario2:r[13]||'' }));
+    const checklist  = rChk.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', idIntervento:r[1]||'', attivita:r[2]||'', eseguita:r[3]||'NO', oraCompletamento:fmtDateTime(r[4]), note:r[5]||'', extra:r[6]||'NO' }));
+    const assenze    = rAss.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', operaio:r[1]||'', dataInizio:fmtData(r[2]), dataFine:fmtData(r[3]), tipo:r[4]||'', note:r[5]||'' }));
+    // Pratiche — 19 colonne A→S
+    const pratiche = rPrat.slice(1).filter(r=>r[0]).map(r=>({
+      id:               r[0]||'',
+      idIntervento:     r[1]||'',
+      codiceImpianto:   r[2]||'',
+      stato:            r[3]||'Richiesta',
+      dataRichiesta:    fmtData(r[4]),
+      noteRichiesta:    r[5]||'',
+      linkRichiesta:    r[6]||'',
+      dataPreventivo:   fmtData(r[7]),
+      importoPreventivo:r[8]||'',
+      linkPreventivo:   r[9]||'',
+      dataBdo:          fmtData(r[10]),
+      numeroBdo:        r[11]||'',
+      linkBdo:          r[12]||'',
+      dataDdt:          fmtData(r[13]),
+      numeroDdt:        r[14]||'',
+      linkDdt:          r[15]||'',
+      dataChiusura:     fmtData(r[16]),
+      noteChiusura:     r[17]||'',
+      creatoIl:         fmtData(r[18]),
+    }));
+    // Offerte — foglio separato
+    // A=ID | B=IDPratica | C=Fornitore | D=Descrizione | E=Importo | F=Data | G=LinkDrive | H=Selezionata | I=Note
+    const offerte = rOff.slice(1).filter(r=>r[0]).map(r=>({
+      id:          r[0]||'',
+      idPratica:   r[1]||'',
+      fornitore:   r[2]||'',
+      descrizione: r[3]||'',
+      importo:     r[4]||'',
+      data:        fmtData(r[5]),
+      linkDrive:   r[6]||'',
+      selezionata: r[7]==='SI',
+      note:        r[8]||'',
+    }));
+    res.json({ impianti, catalogo, interventi, checklist, assenze, pratiche, offerte });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/crea-intervento', async (req, res) => {
+  try {
+    const { codiceImpianto, dataPrevista, operaio, tipoVisita, note, attivitaExtra } = req.body;
+    const statoIniziale      = req.body.statoOverride || 'Aperto';
+    const dataFine           = req.body.dataFine || '';
+    const operaioSecondario2 = req.body.operaioSecondario2 || '';
+    const sheets = await getSheets();
+    const id   = 'INT-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    const oggi = new Date().toLocaleDateString('it-IT');
+    await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.INTERVENTI, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[id, codiceImpianto, dataPrevista, operaio, tipoVisita, statoIniziale, note||'', '', oggi, '', req.body.interventoCollegato||'', '', dataFine, operaioSecondario2]] } });
+    const rCat = await leggi(sheets, SH.CATALOGO);
+    const voci = rCat.slice(1).filter(r=>r[0]===codiceImpianto&&r[1]===tipoVisita).sort((a,b)=>(Number(a[3])||0)-(Number(b[3])||0));
+    const chkRows = voci.map(r => { const chkId='CHK-'+Math.random().toString(36).substring(2,10).toUpperCase(); return [chkId, id, r[2]||'', 'NO', '', '', 'NO']; });
+    if (attivitaExtra && attivitaExtra.length > 0) {
+      attivitaExtra.forEach(att => { const chkId='CHK-'+Math.random().toString(36).substring(2,10).toUpperCase(); chkRows.push([chkId, id, att, 'NO', '', '', 'SI']); });
+    }
+    if (chkRows.length > 0) {
+      await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.CHECKLIST, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: chkRows } });
+    }
+    if (statoIniziale !== 'DaAssegnare') {
+      const rImp   = await leggi(sheets, SH.IMPIANTI);
+      const impRow = rImp.slice(1).find(r=>r[0]===codiceImpianto);
+      const nomeImp = impRow ? impRow[1] : codiceImpianto;
+      const dataFmt = new Date(dataPrevista+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+      await pushNotifica(sheets, [operaio], '📋 Nuovo intervento assegnato', `${nomeImp} — ${tipoVisita} · ${dataFmt}`);
+    }
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/elimina-intervento', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rChk = await leggi(sheets, SH.CHECKLIST);
+    const chkIdxs = rChk.map((r,i)=>i).filter(i=>i>0&&rChk[i][1]===id).reverse();
+    for (const idx of chkIdxs) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.CHECKLIST), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] } });
+    }
+    const rInt = await leggi(sheets, SH.INTERVENTI);
+    const intIdx = rInt.findIndex((r,i)=>i>0&&r[0]===id);
+    if (intIdx > 0) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.INTERVENTI), dimension:'ROWS', startIndex:intIdx, endIndex:intIdx+1 } } }] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/crea-assenza', async (req, res) => {
+  try {
+    const { operaio, dataInizio, dataFine, tipo, note } = req.body;
+    const sheets = await getSheets();
+    const id = 'ASS-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.ASSENZE, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[id, operaio, dataInizio, dataFine, tipo, note||'']] } });
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/elimina-assenza', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rAss = await leggi(sheets, SH.ASSENZE);
+    const idx = rAss.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx > 0) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.ASSENZE), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/notifica-fmp', async (req, res) => {
+  try {
+    const { operaio, codiceImpianto, note, id } = req.body;
+    const sheets = await getSheets();
+    const rImp   = await leggi(sheets, SH.IMPIANTI);
+    const impRow = rImp.slice(1).find(r=>r[0]===codiceImpianto);
+    const nome   = impRow ? impRow[1] : codiceImpianto;
+    await pushNotifica(sheets, [operaio], '🚨 Nuova segnalazione FMP', `${nome} — ${note.slice(0,80)}`);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/imposta-collegamento', async (req, res) => {
+  try {
+    const { id, interventoCollegato } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.INTERVENTI);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx < 1) return res.json({ ok: false });
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!K${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[interventoCollegato]] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/segnala-secondo', async (req, res) => {
+  try {
+    const { id, secondoOperaio } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.INTERVENTI);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Intervento non trovato' });
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!J${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[secondoOperaio]] } });
+    if (secondoOperaio) {
+      const row = rows[idx];
+      const rImp = await leggi(sheets, SH.IMPIANTI);
+      const impRow = rImp.slice(1).find(r=>r[0]===row[1]);
+      const nomeImp = impRow ? impRow[1] : row[1];
+      const dataFmt = row[2] ? new Date(row[2]+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'}) : '';
+      await pushNotifica(sheets, [secondoOperaio], '👥 Richiesto il tuo supporto', `${nomeImp} · ${dataFmt} — insieme a ${row[3]}`);
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/posticipa-intervento', async (req, res) => {
+  try {
+    const { id, nuovaData } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.INTERVENTI);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Intervento non trovato' });
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!C${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[nuovaData]] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/salva-catalogo', async (req, res) => {
+  try {
+    const { codiceImpianto, tipoVisita, attivita, ordine, obbligatoria } = req.body;
+    const sheets = await getSheets();
+    await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.CATALOGO, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[codiceImpianto, tipoVisita, attivita, ordine||1, obbligatoria||'SI']] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/elimina-catalogo', async (req, res) => {
+  try {
+    const { codice, tipoVisita, attivita } = req.body;
+    const sheets = await getSheets();
+    const rows = await leggi(sheets, SH.CATALOGO);
+    const idx = rows.findIndex((r,i)=>i>0&&r[0]===codice&&r[1]===tipoVisita&&r[2]===attivita);
+    if (idx > 0) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.CATALOGO), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// ============================================================
+//  PRATICHE — CRUD COMPLETO
+//  Colonne foglio "Pratiche" (19 colonne, A→S):
+//  A=ID | B=IDIntervento | C=CodiceImpianto | D=Stato |
+//  E=DataRichiesta | F=NoteRichiesta | G=LinkRichiesta |
+//  H=DataPreventivo | I=ImportoPreventivo | J=LinkPreventivo |
+//  K=DataBdo | L=NumeroBdo | M=LinkBdo |
+//  N=DataDdt | O=NumeroDdt | P=LinkDdt |
+//  Q=DataChiusura | R=NoteChiusura | S=CreatoIl
+//
+//  Stato iter: Richiesta → Offerta → Preventivo → BdO → DDT → Chiusa
+//  Le offerte sono gestite nel foglio separato "Offerte"
+// ============================================================
+
+// GET /pratiche
+app.get('/pratiche', async (req, res) => {
+  try {
+    const sheets   = await getSheets();
+    const rows     = await leggi(sheets, SH.PRATICHE).catch(() => []);
+    const pratiche = rows.slice(1).filter(r=>r[0]).map(r=>({
+      id:               r[0]||'',
+      idIntervento:     r[1]||'',
+      codiceImpianto:   r[2]||'',
+      stato:            r[3]||'Richiesta',
+      dataRichiesta:    fmtData(r[4]),
+      noteRichiesta:    r[5]||'',
+      linkRichiesta:    r[6]||'',
+      dataPreventivo:   fmtData(r[7]),
+      importoPreventivo:r[8]||'',
+      linkPreventivo:   r[9]||'',
+      dataBdo:          fmtData(r[10]),
+      numeroBdo:        r[11]||'',
+      linkBdo:          r[12]||'',
+      dataDdt:          fmtData(r[13]),
+      numeroDdt:        r[14]||'',
+      linkDdt:          r[15]||'',
+      dataChiusura:     fmtData(r[16]),
+      noteChiusura:     r[17]||'',
+      creatoIl:         fmtData(r[18]),
+    }));
+    res.json({ pratiche });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /crea-pratica
+app.post('/crea-pratica', async (req, res) => {
+  try {
+    const { idIntervento, codiceImpianto, noteRichiesta, linkRichiesta } = req.body;
+    if (!codiceImpianto) return res.json({ ok: false, errore: 'codiceImpianto richiesto' });
+    const sheets  = await getSheets();
+    const id      = 'PRA-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    const oggi    = new Date().toLocaleDateString('it-IT');
+    const dataOggi = new Date().toISOString().slice(0,10);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID, range: SH.PRATICHE,
+      valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [[
+        id, idIntervento||'', codiceImpianto, 'Richiesta',
+        dataOggi, noteRichiesta||'', linkRichiesta||'',
+        '', '', '',   // preventivo
+        '', '', '',   // bdo
+        '', '', '',   // ddt
+        '', '',       // chiusura
+        oggi          // creatoIl
+      ]] },
+    });
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /aggiorna-pratica
+app.post('/aggiorna-pratica', async (req, res) => {
+  try {
+    const { id, step, dati } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.PRATICHE);
+    const idx    = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Pratica non trovata' });
+
+    const STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
+
+    const stepMap = {
+      richiesta:  { range: `${SH.PRATICHE}!E${idx+1}:G${idx+1}`, fields: ['dataRichiesta','noteRichiesta','linkRichiesta'],      statoNew: 'Richiesta' },
+      preventivo: { range: `${SH.PRATICHE}!H${idx+1}:J${idx+1}`, fields: ['dataPreventivo','importoPreventivo','linkPreventivo'], statoNew: 'Preventivo' },
+      bdo:        { range: `${SH.PRATICHE}!K${idx+1}:M${idx+1}`, fields: ['dataBdo','numeroBdo','linkBdo'],                      statoNew: 'BdO' },
+      ddt:        { range: `${SH.PRATICHE}!N${idx+1}:P${idx+1}`, fields: ['dataDdt','numeroDdt','linkDdt'],                      statoNew: 'DDT' },
+      chiuso:     { range: `${SH.PRATICHE}!Q${idx+1}:R${idx+1}`, fields: ['dataChiusura','noteChiusura'],                        statoNew: 'Chiusa' },
+    };
+
+    const s = stepMap[step];
+    if (!s) return res.json({ ok: false, errore: 'Step non valido' });
+
+    const values = s.fields.map((f,fi) => dati[f] !== undefined ? dati[f] : (rows[idx][7+fi] || ''));
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID, range: s.range,
+      valueInputOption: 'RAW', requestBody: { values: [values] },
+    });
+
+    // Avanza stato solo in avanti
+    const statoAttuale = rows[idx][3] || 'Richiesta';
+    const idxAtt = STATI.indexOf(statoAttuale);
+    const idxNuo = STATI.indexOf(s.statoNew);
+    if (idxNuo > idxAtt) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID, range: `${SH.PRATICHE}!D${idx+1}`,
+        valueInputOption: 'RAW', requestBody: { values: [[s.statoNew]] },
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /avanza-stato-offerta — porta pratica in stato "Offerta" quando si aggiunge la prima offerta
+app.post('/avanza-stato-offerta', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.PRATICHE);
+    const idx    = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Pratica non trovata' });
+    const STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
+    const statoAtt = rows[idx][3] || 'Richiesta';
+    if (STATI.indexOf(statoAtt) < STATI.indexOf('Offerta')) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID, range: `${SH.PRATICHE}!D${idx+1}`,
+        valueInputOption: 'RAW', requestBody: { values: [['Offerta']] },
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /elimina-pratica
+app.post('/elimina-pratica', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.PRATICHE);
+    const idx    = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx > 0) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.PRATICHE), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] },
+      });
+    }
+    // Elimina anche le offerte collegate
+    const rOff = await leggi(sheets, SH.OFFERTE).catch(() => []);
+    const idxOff = rOff.map((r,i)=>i).filter(i=>i>0&&rOff[i][1]===id).reverse();
+    for (const io of idxOff) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.OFFERTE), dimension:'ROWS', startIndex:io, endIndex:io+1 } } }] },
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// ============================================================
+//  OFFERTE — foglio separato
+//  Colonne: A=ID | B=IDPratica | C=Fornitore | D=Descrizione |
+//           E=Importo | F=Data | G=LinkDrive | H=Selezionata | I=Note
+// ============================================================
+
+// GET /offerte?idPratica=PRA-XXX
+app.get('/offerte', async (req, res) => {
+  try {
+    const { idPratica } = req.query;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.OFFERTE).catch(() => []);
+    const offerte = rows.slice(1).filter(r=>r[0]&&(!idPratica||r[1]===idPratica)).map(r=>({
+      id:          r[0]||'',
+      idPratica:   r[1]||'',
+      fornitore:   r[2]||'',
+      descrizione: r[3]||'',
+      importo:     r[4]||'',
+      data:        fmtData(r[5]),
+      linkDrive:   r[6]||'',
+      selezionata: r[7]==='SI',
+      note:        r[8]||'',
+    }));
+    res.json({ offerte });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /crea-offerta
+app.post('/crea-offerta', async (req, res) => {
+  try {
+    const { idPratica, fornitore, descrizione, importo, data, linkDrive, note } = req.body;
+    if (!idPratica || !fornitore) return res.json({ ok: false, errore: 'idPratica e fornitore richiesti' });
+    const sheets = await getSheets();
+    const id     = 'OFF-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    const oggi   = data || new Date().toISOString().slice(0,10);
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID, range: SH.OFFERTE,
+      valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [[id, idPratica, fornitore, descrizione||'', importo||'', oggi, linkDrive||'', 'NO', note||'']] },
+    });
+    // Porta pratica in stato Offerta se era ancora in Richiesta
+    const rows = await leggi(sheets, SH.PRATICHE);
+    const idx  = rows.findIndex((r,i) => i > 0 && r[0] === idPratica);
+    if (idx > 0) {
+      const STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
+      const statoAtt = rows[idx][3] || 'Richiesta';
+      if (STATI.indexOf(statoAtt) < STATI.indexOf('Offerta')) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID, range: `${SH.PRATICHE}!D${idx+1}`,
+          valueInputOption: 'RAW', requestBody: { values: [['Offerta']] },
+        });
+      }
+    }
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /seleziona-offerta — imposta una offerta come selezionata, deseleziona le altre della stessa pratica
+app.post('/seleziona-offerta', async (req, res) => {
+  try {
+    const { id, idPratica } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.OFFERTE);
+    // Deseleziona tutte le offerte della pratica, poi seleziona quella scelta
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] === idPratica) {
+        const sel = rows[i][0] === id ? 'SI' : 'NO';
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID, range: `${SH.OFFERTE}!H${i+1}`,
+          valueInputOption: 'RAW', requestBody: { values: [[sel]] },
+        });
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// POST /elimina-offerta
+app.post('/elimina-offerta', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.OFFERTE);
+    const idx    = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx > 0) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.OFFERTE), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] },
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// ============================================================
+//  GET /rdacat / POST /crea-rdacat / POST /aggiorna-rdacat / POST /elimina-rdacat
+// ============================================================
+app.get('/rdacat', async (req, res) => {
+  try {
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.RDACAT).catch(() => []);
+    const richieste = rows.slice(1).filter(r=>r[0]).map(r=>({ id:r[0]||'', idIntervento:r[1]||'', codiceImpianto:r[2]||'', tipologia:r[3]||'', nota:r[4]||'', operaio:r[5]||'', stato:r[6]||'Inviata', creatoIl:r[7]||'', aggiornatoIl:r[8]||'' }));
+    res.json({ richieste });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/crea-rdacat', async (req, res) => {
+  try {
+    const { idIntervento, codiceImpianto, tipologia, nota, operaio } = req.body;
+    const sheets = await getSheets();
+    const id     = 'RDA-' + Math.random().toString(36).substring(2,10).toUpperCase();
+    const oggi   = new Date().toLocaleDateString('it-IT');
+    await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.RDACAT, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[id, idIntervento, codiceImpianto, tipologia, nota, operaio, 'Inviata', oggi, '']] } });
+    res.json({ ok: true, id });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/aggiorna-rdacat', async (req, res) => {
+  try {
+    const { id, stato } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.RDACAT);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx < 1) return res.json({ ok: false, errore: 'RDA non trovata' });
+    const oggi = new Date().toLocaleDateString('it-IT');
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.RDACAT}!G${idx+1}:I${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[stato, rows[idx][7], oggi]] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/elimina-rdacat', async (req, res) => {
+  try {
+    const { id } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.RDACAT);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx > 0) {
+      await sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, requestBody: { requests: [{ deleteDimension: { range: { sheetId: await getSheetId(sheets, SH.RDACAT), dimension:'ROWS', startIndex:idx, endIndex:idx+1 } } }] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+// ============================================================
+//  REPERIBILITA
+// ============================================================
+app.get('/reperibile', async (req, res) => {
+  try {
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.REPERIBILITA).catch(() => []);
+    const oggi   = new Date();
+    const dow    = oggi.getDay() === 0 ? 6 : oggi.getDay() - 1;
+    const lun    = new Date(oggi); lun.setDate(oggi.getDate() - dow); lun.setHours(0,0,0,0);
+    const lunStr = lun.toISOString().slice(0,10);
+    const riga   = rows.slice(1).find(r => { if(!r[0]) return false; try { const d=new Date(r[0]); return d.toISOString().slice(0,10)===lunStr; } catch(e){return false;} });
+    const settimane = [];
+    for (let i=-2; i<=6; i++) {
+      const s = new Date(lun); s.setDate(lun.getDate()+i*7);
+      const sStr = s.toISOString().slice(0,10);
+      const rigaS = rows.slice(1).find(r=>{ try{return new Date(r[0]).toISOString().slice(0,10)===sStr;}catch(e){return false;} });
+      settimane.push({ data:sStr, operaio:rigaS?rigaS[1]:'' });
+    }
+    res.json({ corrente:{ data:lunStr, operaio:riga?riga[1]:null }, settimane });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/salva-reperibile', async (req, res) => {
+  try {
+    const { data, operaio } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.REPERIBILITA).catch(() => []);
+    const idx    = rows.findIndex((r,i)=>{ if(i===0||!r[0]) return false; try{return new Date(r[0]).toISOString().slice(0,10)===data;}catch(e){return false;} });
+    if (idx > 0) {
+      await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.REPERIBILITA}!A${idx+1}:B${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[data, operaio]] } });
+    } else {
+      await sheets.spreadsheets.values.append({ spreadsheetId: SHEET_ID, range: SH.REPERIBILITA, valueInputOption: 'RAW', insertDataOption: 'INSERT_ROWS', requestBody: { values: [[data, operaio]] } });
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/salva-link-drive', async (req, res) => {
+  try {
+    const { id, tipo, linkDrive } = req.body;
+    const foglio = SH.INTERVENTI;
+    const rows   = await (await getSheets()).spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: foglio }).then(r=>r.data.values||[]);
+    const idx    = rows.findIndex((r,i) => i > 0 && r[0] === id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Record non trovato' });
+    const sheets = await getSheets();
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${foglio}!L${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[linkDrive]] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+app.post('/aggiorna-multigiorno', async (req, res) => {
+  try {
+    const { id, dataFine, operaioSecondario2 } = req.body;
+    const sheets = await getSheets();
+    const rows   = await leggi(sheets, SH.INTERVENTI);
+    const idx    = rows.findIndex((r,i)=>i>0&&r[0]===id);
+    if (idx < 1) return res.json({ ok: false, errore: 'Intervento non trovato' });
+    await sheets.spreadsheets.values.update({ spreadsheetId: SHEET_ID, range: `${SH.INTERVENTI}!M${idx+1}:N${idx+1}`, valueInputOption: 'RAW', requestBody: { values: [[dataFine||'', operaioSecondario2||'']] } });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, errore: err.message }); }
+});
+
+async function getSheetId(sheets, name) {
+  const meta  = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const sheet = meta.data.sheets.find(s => s.properties.title === name);
+  if (!sheet) throw new Error('Foglio non trovato: ' + name);
+  return sheet.properties.sheetId;
+}
+
+app.listen(PORT, () => console.log(`Siram Proxy attivo sulla porta ${PORT}`));
