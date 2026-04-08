@@ -379,6 +379,36 @@ tr.int-completato td * { text-decoration: line-through; }
   background: var(--yellow); margin-left: 5px; vertical-align: middle;
   flex-shrink: 0;
 }
+
+/* EVENTI CALENDARIO — ordinari compatti, straordinari in evidenza */
+.ev-ord {
+  font-size: 10px; padding: 1px 5px; border-radius: 3px;
+  margin-bottom: 1px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; cursor: pointer; opacity: .55;
+  transition: opacity .1s;
+}
+.ev-ord:hover { opacity: .85; }
+.ev-ord.completato { opacity: .25; text-decoration: line-through; }
+
+.ev-str {
+  font-size: 11px; font-weight: 600; padding: 3px 6px;
+  border-radius: 0 5px 5px 0; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; transition: opacity .1s;
+  border-left: 3px solid;
+}
+.ev-str:hover { opacity: .85; }
+.ev-str.completato { opacity: .4; text-decoration: line-through; }
+
+/* toggle nascondi ordinari */
+.toggle-ord-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--muted); transition: all .15s;
+  user-select: none;
+}
+.toggle-ord-btn.nascosti { background: rgba(200,200,200,.1); color: var(--accent); border-color: rgba(200,200,200,.2); }
 </style>
 </head>
 <body>
@@ -467,6 +497,11 @@ tr.int-completato td * { text-decoration: line-through; }
             <div class="leg-item"><div class="leg-dot" style="background:var(--permesso)"></div>Permesso</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--malattia)"></div>Malattia</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--yellow)"></div>Con pratica</div>
+            <div style="margin-left:auto">
+              <div class="toggle-ord-btn" id="toggleOrdBtn" onclick="toggleOrdinari()">
+                <span id="toggleOrdIcon">○</span> Ordinari
+              </div>
+            </div>
           </div>
           <div class="cal-wrap">
             <div class="cal-days-hdr" id="calDaysHdr">
@@ -954,6 +989,7 @@ let blTipoSel         = '';
 let currentBacklogId  = null;
 let praticaFilterCorrente = 'tutti';
 let reportFilterCorrente  = 'tutti';
+let mostraOrdinari        = true; // toggle ordinari nel calendario
 
 // ============================================================
 //  LOGIN
@@ -1086,6 +1122,20 @@ function navPrec() { if(vistaCorrente==='mese'){calMese--;if(calMese<0){calMese=
 function navSucc() { if(vistaCorrente==='mese'){calMese++;if(calMese>11){calMese=0;calAnno++;}renderCalendario();}else{settOffset++;renderSettimana();} }
 function vaiOggi() { calAnno=new Date().getFullYear();calMese=new Date().getMonth();settOffset=0; if(vistaCorrente==='mese')renderCalendario();else renderSettimana(); }
 
+function toggleOrdinari() {
+  mostraOrdinari = !mostraOrdinari;
+  const btn = document.getElementById('toggleOrdBtn');
+  const ico = document.getElementById('toggleOrdIcon');
+  if(mostraOrdinari) {
+    btn.classList.remove('nascosti');
+    ico.textContent = '○';
+  } else {
+    btn.classList.add('nascosti');
+    ico.textContent = '●';
+  }
+  if(vistaCorrente==='mese') renderCalendario(); else renderSettimana();
+}
+
 function getLunediSettimana(offset) {
   const oggi = new Date();
   const dow  = oggi.getDay();
@@ -1127,9 +1177,19 @@ function renderSettimana() {
       const completo=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
       const col=OPERAI_HEX[i.operaio]||'#888';
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      const praDot=hasPratica?'<span style="width:6px;height:6px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:4px;flex-shrink:0"></span>':'';
-      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 5px 5px 0;${completo?'text-decoration:line-through;opacity:.5':''}"
-        onclick="openDettaglio('${i.id}')">${nome} · ${i.operaio}${praDot}</div>`;
+      const praDot=hasPratica?'<span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle"></span>':'';
+      const isOrd = i.tipoVisita === 'Ordinaria';
+      if(isOrd) {
+        if(!mostraOrdinari) return '';
+        return `<div class="ev-ord ${completo?'completato':''}"
+          style="background:${col}18;color:${col}"
+          onclick="openDettaglio('${i.id}')"
+          title="${imp?imp.descrizione:i.codiceImpianto}">${nome} · ${i.operaio}${praDot}</div>`;
+      } else {
+        return `<div class="ev-str ${completo?'completato':''}"
+          style="background:${col}28;color:${col};border-color:${col}"
+          onclick="openDettaglio('${i.id}')">${nome} · ${i.operaio}${praDot}</div>`;
+      }
     }).join('');
     cell.innerHTML=intsHtml+ass.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
   }
@@ -1178,9 +1238,22 @@ function renderCalendario() {
       const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
       const isMulti=i.dataFine&&i.dataFine>i.dataPrevista;
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      const praDot=hasPratica?'<span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle"></span>':'';
-      return `<div class="ev" style="background:${col}22;color:${col};border-left:2px solid ${col};border-radius:0 4px 4px 0;${isMulti?'border-right:2px solid '+col+';':''} ${tuttiDone?'text-decoration:line-through;opacity:.45':''}"
-        onclick="event.stopPropagation();openDettaglio('${i.id}')">${nome}${isMulti?' 📅':''}${praDot}</div>`;
+      const praDot=hasPratica?`<span style="width:4px;height:4px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle;flex-shrink:0"></span>`:'';
+      const isOrd = i.tipoVisita === 'Ordinaria';
+
+      if(isOrd) {
+        // Ordinari: compatti, opachi, senza bordo laterale
+        if(!mostraOrdinari) return '';
+        return `<div class="ev-ord ${tuttiDone?'completato':''}"
+          style="background:${col}18;color:${col}"
+          onclick="event.stopPropagation();openDettaglio('${i.id}')"
+          title="${imp?imp.descrizione:i.codiceImpianto}">${nome}${praDot}</div>`;
+      } else {
+        // Straordinari: prominenti con bordo laterale spesso
+        return `<div class="ev-str ${tuttiDone?'completato':''}"
+          style="background:${col}28;color:${col};border-color:${col};${isMulti?'border-right:2px solid '+col+';':''}"
+          onclick="event.stopPropagation();openDettaglio('${i.id}')">${nome}${isMulti?' 📅':''}${praDot}</div>`;
+      }
     }).join('');
     const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
     const assHtml=assGiorno.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
