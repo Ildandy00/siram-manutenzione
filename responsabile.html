@@ -599,7 +599,7 @@ tr.int-completato td * { text-decoration: line-through; }
           </div>
         </div>
         <!-- Filtri -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta" onclick="setPraticaFilter('Richiesta')">📝 Richiesta</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerta" onclick="setPraticaFilter('Offerta')">🏷️ Offerta</button>
@@ -607,7 +607,10 @@ tr.int-completato td * { text-decoration: line-through; }
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="BdO" onclick="setPraticaFilter('BdO')">📋 BdO</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="DDT" onclick="setPraticaFilter('DDT')">🚚 DDT</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiusa" onclick="setPraticaFilter('Chiusa')">✓ Chiuse</button>
-          <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:160px;max-width:260px;margin-left:8px" oninput="renderPratiche()"/>
+          <select class="fc" id="praticaComuneFilter" onchange="renderPratiche()" style="width:160px;margin-left:4px">
+            <option value="">Tutti i comuni</option>
+          </select>
+          <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:140px;max-width:220px" oninput="renderPratiche()"/>
         </div>
         <div id="tblPratiche"></div>
       </div>
@@ -1381,8 +1384,26 @@ function setPraticaFilter(f) {
 
 function renderPratiche() {
   const search=(document.getElementById('praticaSearch')||{}).value||'';
+  const comuneSel=(document.getElementById('praticaComuneFilter')||{}).value||'';
+
+  // Popola select comuni con i comuni presenti nelle pratiche caricate
+  const selComune = document.getElementById('praticaComuneFilter');
+  if(selComune) {
+    const comuniSet = [...new Set(
+      S.pratiche.map(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp?imp.comune:''; })
+                .filter(Boolean).sort()
+    )];
+    const valoreAttuale = selComune.value;
+    selComune.innerHTML = '<option value="">Tutti i comuni</option>' +
+      comuniSet.map(c=>`<option value="${c}" ${c===valoreAttuale?'selected':''}>${c}</option>`).join('');
+  }
+
   let lista=[...S.pratiche];
   if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
+  if(comuneSel) lista=lista.filter(p=>{
+    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
+    return imp && imp.comune === comuneSel;
+  });
   if(search) lista=lista.filter(p=>{
     const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
     return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase());
@@ -1416,6 +1437,17 @@ function renderPratiche() {
         ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
       </div>`;
     }).join('');
+    // Colore badge comune per distinguerli visivamente
+    const COMUNI_COLORS = {
+      'Pesaro':           'rgba(122,176,216,.15);color:#7ab0d8',
+      'Misano Adriatico': 'rgba(154,132,200,.15);color:#c4b5fd',
+      'Gabicce Mare':     'rgba(143,190,122,.15);color:#8fbe7a',
+      'Verucchio':        'rgba(200,180,100,.15);color:var(--yellow)',
+      'Villa Verucchio':  'rgba(200,180,100,.1);color:var(--yellow)',
+      'Rimini':           'rgba(200,120,120,.15);color:#f87171',
+      'Corinaldo':        'rgba(100,180,180,.15);color:#5eead4',
+    };
+    const comuneStyle = imp&&imp.comune ? (COMUNI_COLORS[imp.comune]||'rgba(150,150,150,.15);color:var(--muted)') : '';
     return `<div class="pratica-card">
       <div class="pratica-card-head">
         <div class="pratica-card-info">
@@ -1423,7 +1455,7 @@ function renderPratiche() {
             <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${p.codiceImpianto}</span>
           </div>
           <div class="pratica-meta">
-            ${imp&&imp.comune?`<span>📍 ${imp.comune}</span>`:''}
+            ${imp&&imp.comune?`<span style="background:${comuneStyle};padding:1px 8px;border-radius:6px;font-weight:600;font-size:11px">📍 ${imp.comune}</span>`:''}
             ${interv?`<span>📅 Intervento ${interv.dataPrevista} · ${interv.tipoVisita}</span>`:''}
             <span>Aperta il ${p.creatoIl}</span>
           </div>
