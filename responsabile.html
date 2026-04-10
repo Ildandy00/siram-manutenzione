@@ -1876,7 +1876,10 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
 
   try {
     const operai = [...sel];
-    const nota = '[PRA:'+idPratica+']'; // riferimento alla pratica nelle note
+    // Nota = note richiesta della pratica + riferimento PRA per il collegamento
+    const p2 = S.pratiche.find(x=>x.id===idPratica);
+    const notaBase = p2 && p2.noteRichiesta ? p2.noteRichiesta.trim() : '';
+    const nota = (notaBase ? notaBase + ' ' : '') + '[PRA:'+idPratica+']';
     // Crea un intervento per ogni operaio selezionato
     const ids = [];
     for(const operaio of operai) {
