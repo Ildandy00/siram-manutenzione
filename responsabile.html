@@ -773,8 +773,8 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- Toggle Lavoro in gestione — sempre visibile -->
       <div id="praticaGestioneToggle" style="margin-bottom:10px"></div>
 
-      <!-- Assegnazione operai — sempre visibile -->
-      <div id="praticaOperaiBox" style="margin-bottom:14px"></div>
+      <!-- Pianifica intervento di realizzazione — sempre visibile -->
+      <div id="praticaInterventiBox" style="margin-bottom:14px"></div>
 
       <!-- Step panels -->
       <div id="praticaSteps"></div>
@@ -1473,13 +1473,6 @@ function renderPratiche() {
       </div>
       <div class="timeline">${timelineHtml}</div>
       ${p.noteRichiesta?`<div style="margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;padding:8px 12px;background:var(--bg3);border-radius:8px">${p.noteRichiesta}</div>`:''}
-      ${p.operai?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:11px;color:var(--muted)">👷</span>
-        ${p.operai.split(',').map(o=>o.trim()).filter(Boolean).map(o=>{
-          const col={Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060'}[o]||'#888';
-          return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${col}22;color:${col}">${o}</span>`;
-        }).join('')}
-      </div>`:''}
     </div>`;
   }).join('');
 }
@@ -1540,40 +1533,69 @@ function openPratica(id) {
       </div>
     </div>`;
 
-  // Assegnazione operai — chip selezionabili, sempre visibili
-  const operaiAssegnati = p.operai ? p.operai.split(',').map(o=>o.trim()).filter(Boolean) : [];
+  // Box pianifica intervento di realizzazione
   const OPERAI_LIST = [
     { nome:'Matteo',  colore:'#7a9ec8', iniziale:'M'  },
     { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
     { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
     { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
   ];
-  document.getElementById('praticaOperaiBox').innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-      padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0">
-        👷 Operai assegnati
+  // Interventi già collegati a questa pratica
+  const intCollegati = S.interventi.filter(i=>i.id===p.idIntervento||
+    S.pratiche.filter(x=>x.id===p.id).some(()=>i.note&&i.note.includes('[PRA:'+p.id+']')));
+  // Cerca interventi che hanno nel campo note il riferimento alla pratica
+  const intPratica = S.interventi.filter(i=>
+    (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento
+  );
+
+  const intListHtml = intPratica.length===0
+    ? `<div style="font-size:12px;color:var(--muted);padding:6px 0">Nessun intervento di realizzazione pianificato.</div>`
+    : intPratica.map(i=>{
+        const imp2=S.impianti.find(x=>x.codice===i.codiceImpianto);
+        const chk=S.checklist.filter(c=>c.idIntervento===i.id);
+        const done=chk.filter(c=>c.eseguita==='SI').length;
+        const col=OPERAI_HEX[i.operaio]||'#888';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;
+          padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:6px;
+          border-left:3px solid ${col}">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:${col}">${i.operaio}</div>
+            <div style="font-size:11px;color:var(--muted)">📅 ${i.dataPrevista} · ${done}/${chk.length} attività
+              <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}" style="margin-left:6px">${i.stato}</span>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="closeModal('modalPratica');openDettaglio('${i.id}')">Apri →</button>
+        </div>`;
+      }).join('');
+
+  document.getElementById('praticaInterventiBox').innerHTML=`
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+        🔨 Interventi di realizzazione
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
-        ${OPERAI_LIST.map(op=>{
-          const sel = operaiAssegnati.includes(op.nome);
-          return `<div onclick="toggleOperaiPratica('${p.id}','${op.nome}')"
-            style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
-              border:1.5px solid ${sel?op.colore:'var(--border)'};
-              background:${sel?op.colore+'22':'var(--bg4)'};
-              color:${sel?op.colore:'var(--muted)'};
-              font-size:13px;font-weight:${sel?'700':'500'};transition:all .15s;user-select:none">
-            <div style="width:20px;height:20px;border-radius:50%;background:${sel?op.colore:'var(--bg5)'};
-              display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
-              color:${sel?'#1a1a1a':'var(--muted)'}">${op.iniziale}</div>
-            ${op.nome}
-            ${sel?'<span style="font-size:10px">✓</span>':''}
-          </div>`;
-        }).join('')}
+      ${intListHtml}
+      <!-- Form aggiungi intervento -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pianifica nuovo intervento</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          ${OPERAI_LIST.map(op=>`
+            <div id="pint_chip_${p.id}_${op.nome}" onclick="togglePintChip('${p.id}','${op.nome}')"
+              style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;cursor:pointer;
+                border:1.5px solid var(--border);background:var(--bg4);color:var(--muted);
+                font-size:13px;font-weight:500;transition:all .15s;user-select:none">
+              <div style="width:18px;height:18px;border-radius:50%;background:var(--bg5);
+                display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${op.iniziale}</div>
+              ${op.nome}
+            </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="fg" style="margin:0;flex:1">
+            <label>Data intervento *</label>
+            <input class="fc" type="date" id="pint_data_${p.id}" value="${new Date().toISOString().slice(0,10)}"/>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-bottom:0;flex-shrink:0" onclick="pianificaInterventoPratica('${p.id}','${p.codiceImpianto}')">+ Pianifica</button>
+        </div>
       </div>
-      ${operaiAssegnati.length===0
-        ? `<span style="font-size:11px;color:var(--muted);font-style:italic">Nessun operaio assegnato</span>`
-        : ''}
     </div>`;
 
   // Step panels
@@ -1817,22 +1839,78 @@ async function avanzaAPreventivo(idPratica) {
   } catch(e){toast('Errore','err');}
 }
 
-async function toggleOperaiPratica(idPratica, nomeOperaio) {
-  const p = S.pratiche.find(x=>x.id===idPratica);
-  if(!p) return;
-  // Toggle: aggiunge o rimuove l'operaio dalla lista
-  let lista = p.operai ? p.operai.split(',').map(o=>o.trim()).filter(Boolean) : [];
-  if(lista.includes(nomeOperaio)) {
-    lista = lista.filter(o=>o!==nomeOperaio);
+// Chip selezione operai per pianificazione intervento pratica
+const _pintChipSel = {}; // { idPratica: Set<nomeOperaio> }
+
+function togglePintChip(idPratica, nomeOperaio) {
+  if(!_pintChipSel[idPratica]) _pintChipSel[idPratica] = new Set();
+  const sel = _pintChipSel[idPratica];
+  const OPERAI_COL = {Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060'};
+  const chip = document.getElementById('pint_chip_'+idPratica+'_'+nomeOperaio);
+  if(!chip) return;
+  if(sel.has(nomeOperaio)) {
+    sel.delete(nomeOperaio);
+    chip.style.borderColor = 'var(--border)';
+    chip.style.background  = 'var(--bg4)';
+    chip.style.color       = 'var(--muted)';
+    chip.style.fontWeight  = '500';
+    chip.querySelector('div').style.background = 'var(--bg5)';
+    chip.querySelector('div').style.color = 'var(--muted)';
   } else {
-    lista.push(nomeOperaio);
+    sel.add(nomeOperaio);
+    const col = OPERAI_COL[nomeOperaio]||'#888';
+    chip.style.borderColor = col;
+    chip.style.background  = col+'22';
+    chip.style.color       = col;
+    chip.style.fontWeight  = '700';
+    chip.querySelector('div').style.background = col;
+    chip.querySelector('div').style.color = '#1a1a1a';
   }
+}
+
+async function pianificaInterventoPratica(idPratica, codiceImpianto) {
+  const sel = _pintChipSel[idPratica];
+  if(!sel || sel.size===0) { toast('Seleziona almeno un operaio','err'); return; }
+  const data = document.getElementById('pint_data_'+idPratica)?.value;
+  if(!data) { toast('Seleziona una data','err'); return; }
+
   try {
-    const r = await apiPost('/assegna-operai-pratica',{id:idPratica, operai:lista});
-    if(!r.ok){toast('Errore','err');return;}
-    p.operai = lista.join(',');
-    openPratica(idPratica); // refresh modal
-  } catch(e){toast('Errore','err');}
+    const operai = [...sel];
+    const nota = '[PRA:'+idPratica+']'; // riferimento alla pratica nelle note
+    // Crea un intervento per ogni operaio selezionato
+    const ids = [];
+    for(const operaio of operai) {
+      const r = await apiPost('/crea-intervento',{
+        codiceImpianto, tipoVisita:'Straordinaria', operaio,
+        dataPrevista:data, note:nota, attivitaExtra:[]
+      });
+      if(r.ok) ids.push(r.id);
+    }
+    if(ids.length===0) { toast('Errore creazione','err'); return; }
+    // Se più operai, collegali tra loro
+    if(ids.length>1) {
+      for(let k=1;k<ids.length;k++) {
+        await apiPost('/imposta-collegamento',{id:ids[k],interventoCollegato:ids[0]});
+        await apiPost('/imposta-collegamento',{id:ids[0],interventoCollegato:ids[k]});
+      }
+    }
+    // Aggiorna stato globale con i nuovi interventi
+    const oggi = new Date().toISOString().slice(0,10);
+    operai.forEach((operaio,i)=>{
+      S.interventi.push({
+        id:ids[i], codiceImpianto, dataPrevista:data, operaio,
+        tipoVisita:'Straordinaria', stato:'Aperto', note:nota,
+        dataChiusura:'', creatoIl:oggi, secondoOperaio:'',
+        interventoCollegato:ids.length>1?(i===0?ids[1]:ids[0]):'',
+        linkDrive:'', dataFine:'', operaioSecondario2:''
+      });
+    });
+    // Reset chip
+    _pintChipSel[idPratica] = new Set();
+    toast(operai.length>1?`${operai.length} interventi pianificati`:'Intervento pianificato','ok');
+    openPratica(idPratica);
+    renderCalendario();
+  } catch(e){ toast('Errore','err'); }
 }
 
 async function toggleGestione(idPratica) {
