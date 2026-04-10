@@ -771,7 +771,10 @@ tr.int-completato td * { text-decoration: line-through; }
       <div id="praticaTimeline" class="timeline" style="margin-bottom:20px;padding:0 10px"></div>
 
       <!-- Toggle Lavoro in gestione — sempre visibile -->
-      <div id="praticaGestioneToggle" style="margin-bottom:14px"></div>
+      <div id="praticaGestioneToggle" style="margin-bottom:10px"></div>
+
+      <!-- Assegnazione operai — sempre visibile -->
+      <div id="praticaOperaiBox" style="margin-bottom:14px"></div>
 
       <!-- Step panels -->
       <div id="praticaSteps"></div>
@@ -1470,6 +1473,13 @@ function renderPratiche() {
       </div>
       <div class="timeline">${timelineHtml}</div>
       ${p.noteRichiesta?`<div style="margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;padding:8px 12px;background:var(--bg3);border-radius:8px">${p.noteRichiesta}</div>`:''}
+      ${p.operai?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;color:var(--muted)">👷</span>
+        ${p.operai.split(',').map(o=>o.trim()).filter(Boolean).map(o=>{
+          const col={Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060'}[o]||'#888';
+          return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${col}22;color:${col}">${o}</span>`;
+        }).join('')}
+      </div>`:''}
     </div>`;
   }).join('');
 }
@@ -1528,6 +1538,42 @@ function openPratica(id) {
           position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};
           transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
       </div>
+    </div>`;
+
+  // Assegnazione operai — chip selezionabili, sempre visibili
+  const operaiAssegnati = p.operai ? p.operai.split(',').map(o=>o.trim()).filter(Boolean) : [];
+  const OPERAI_LIST = [
+    { nome:'Matteo',  colore:'#7a9ec8', iniziale:'M'  },
+    { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
+    { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
+    { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
+  ];
+  document.getElementById('praticaOperaiBox').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0">
+        👷 Operai assegnati
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
+        ${OPERAI_LIST.map(op=>{
+          const sel = operaiAssegnati.includes(op.nome);
+          return `<div onclick="toggleOperaiPratica('${p.id}','${op.nome}')"
+            style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;cursor:pointer;
+              border:1.5px solid ${sel?op.colore:'var(--border)'};
+              background:${sel?op.colore+'22':'var(--bg4)'};
+              color:${sel?op.colore:'var(--muted)'};
+              font-size:13px;font-weight:${sel?'700':'500'};transition:all .15s;user-select:none">
+            <div style="width:20px;height:20px;border-radius:50%;background:${sel?op.colore:'var(--bg5)'};
+              display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+              color:${sel?'#1a1a1a':'var(--muted)'}">${op.iniziale}</div>
+            ${op.nome}
+            ${sel?'<span style="font-size:10px">✓</span>':''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${operaiAssegnati.length===0
+        ? `<span style="font-size:11px;color:var(--muted);font-style:italic">Nessun operaio assegnato</span>`
+        : ''}
     </div>`;
 
   // Step panels
@@ -1768,6 +1814,24 @@ async function avanzaAPreventivo(idPratica) {
     if(p && praticaStepIdx('Preventivo') > praticaStepIdx(p.stato)) p.stato='Preventivo';
     toast('Avanzato a Preventivo','ok');
     openPratica(idPratica);
+  } catch(e){toast('Errore','err');}
+}
+
+async function toggleOperaiPratica(idPratica, nomeOperaio) {
+  const p = S.pratiche.find(x=>x.id===idPratica);
+  if(!p) return;
+  // Toggle: aggiunge o rimuove l'operaio dalla lista
+  let lista = p.operai ? p.operai.split(',').map(o=>o.trim()).filter(Boolean) : [];
+  if(lista.includes(nomeOperaio)) {
+    lista = lista.filter(o=>o!==nomeOperaio);
+  } else {
+    lista.push(nomeOperaio);
+  }
+  try {
+    const r = await apiPost('/assegna-operai-pratica',{id:idPratica, operai:lista});
+    if(!r.ok){toast('Errore','err');return;}
+    p.operai = lista.join(',');
+    openPratica(idPratica); // refresh modal
   } catch(e){toast('Errore','err');}
 }
 
