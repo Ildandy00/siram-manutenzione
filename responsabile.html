@@ -245,6 +245,28 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .stor-chip.done { color: var(--green); }
 .stor-chip.skip { color: var(--red); }
 
+/* AVANZAMENTO OPERAI */
+.op-av-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px; position: relative; overflow: hidden;
+}
+.op-av-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.op-av-card.matteo::before  { background: var(--matteo); }
+.op-av-card.stefano::before { background: var(--stefano); }
+.op-av-card.michele::before { background: var(--michele); }
+.op-av-card.ezio::before    { background: var(--ezio); }
+.op-av-nome { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+.op-av-zona { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.op-av-nums { display: flex; gap: 16px; margin-bottom: 12px; }
+.op-av-num  { text-align: center; }
+.op-av-val  { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 700; line-height: 1; }
+.op-av-lbl  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+.op-av-bar  { height: 8px; background: var(--bg4); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+.op-av-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+.op-av-pct  { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+
 /* EMPTY */
 .empty { text-align: center; padding: 48px; color: var(--muted); font-size: 13px; }
 
@@ -445,6 +467,7 @@ tr.int-completato td * { text-decoration: line-through; }
         ☰ Interventi <span class="nav-badge" id="badgeAperti">0</span>
       </div>
       <div class="nav-item" onclick="nav('report')" id="nav-report">✓ Stato manutenzioni</div>
+      <div class="nav-item" onclick="nav('avanzamento')" id="nav-avanzamento">👷 Avanzamento operai</div>
       <div class="nav-item" onclick="nav('pratiche')" id="nav-pratiche">
         📄 Pratiche <span class="nav-badge" id="badgePratiche" style="background:var(--yellow);color:#1a1a1a;display:none">0</span>
       </div>
@@ -622,6 +645,20 @@ tr.int-completato td * { text-decoration: line-through; }
           <div id="rdaSummary" style="font-size:12px;color:var(--muted)"></div>
         </div>
         <div id="tblRdacat"></div>
+      </div>
+
+      <!-- VIEW: AVANZAMENTO OPERAI -->
+      <div class="view" id="view-avanzamento">
+        <div class="sec-header">
+          <div class="sec-title">Avanzamento stagione 2026</div>
+          <div id="avanzamentoSub" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+        <!-- Card totale -->
+        <div id="avanzamentoTotale" style="margin-bottom:20px"></div>
+        <!-- Cards per operaio -->
+        <div id="avanzamentoOperai" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
+        <!-- Tabella impianti da fare per operaio -->
+        <div id="avanzamentoDaFare" style="margin-top:24px"></div>
       </div>
 
       <!-- VIEW: IMPIANTI -->
@@ -1096,6 +1133,7 @@ function nav(id) {
   if (id==='report')     renderReport();
   if (id==='pratiche')   renderPratiche();
   if (id==='rdacat')     renderRdacat();
+  if (id==='avanzamento') renderAvanzamento();
 }
 
 // ============================================================
@@ -1362,6 +1400,167 @@ function esportaReport() {
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`manutenzioni_${new Date().getFullYear()}.csv`; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ============================================================
+//  AVANZAMENTO OPERAI
+// ============================================================
+function renderAvanzamento() {
+  const STAGIONE_INIZIO = '2026-04-16';
+  const STAGIONE_FINE   = '2026-10-01';
+  const anno = new Date().getFullYear();
+
+  const OPERAI_INFO = [
+    { nome:'Matteo',  zona:'Pesaro',          cls:'matteo',  col:'var(--matteo)' },
+    { nome:'Stefano', zona:'Pesaro',          cls:'stefano', col:'var(--stefano)' },
+    { nome:'Michele', zona:'Verucchio',       cls:'michele', col:'var(--michele)' },
+    { nome:'Ezio',    zona:'Misano · Gabicce', cls:'ezio',   col:'var(--ezio)' },
+  ];
+
+  // Mappa codice impianto → operaio dal foglio Assegnazione (via S.interventi)
+  // Calcola per ogni impianto lo stato nella stagione per ogni operaio
+  function statOperaio(nomeOperaio) {
+    // Impianti assegnati all'operaio = quelli con almeno un ordinario nel periodo
+    const impAssegnati = [...new Set(
+      S.impianti
+        .filter(i => i.operaioDefault === nomeOperaio)
+        .map(i => i.codice)
+    )];
+    // Aggiungi impianti con interventi ordinari nel periodo assegnati all'operaio
+    S.interventi.forEach(i => {
+      if((i.operaio===nomeOperaio||i.secondoOperaio===nomeOperaio) &&
+         i.tipoVisita==='Ordinaria' &&
+         i.dataPrevista>=STAGIONE_INIZIO && i.dataPrevista<=STAGIONE_FINE) {
+        if(!impAssegnati.includes(i.codiceImpianto))
+          impAssegnati.push(i.codiceImpianto);
+      }
+    });
+
+    const totale = impAssegnati.length;
+    let fatti=0, pianificati=0, daFare=0;
+    const dettaglio = impAssegnati.map(codice => {
+      const ints = S.interventi.filter(i =>
+        i.codiceImpianto===codice &&
+        i.tipoVisita==='Ordinaria' &&
+        i.dataPrevista>=STAGIONE_INIZIO && i.dataPrevista<=STAGIONE_FINE
+      );
+      const chiuso = ints.find(i=>i.stato==='Chiuso');
+      const aperto = ints.find(i=>i.stato==='Aperto');
+      const imp    = S.impianti.find(x=>x.codice===codice);
+      if(chiuso)     { fatti++;        return {codice,nome:imp?imp.descrizione:codice,comune:imp?imp.comune:'',stato:'verde',data:chiuso.dataChiusura||chiuso.dataPrevista}; }
+      if(aperto)     { pianificati++;  return {codice,nome:imp?imp.descrizione:codice,comune:imp?imp.comune:'',stato:'giallo',data:aperto.dataPrevista}; }
+      daFare++;
+      return {codice,nome:imp?imp.descrizione:codice,comune:imp?imp.comune:'',stato:'rosso',data:null};
+    });
+    return { totale, fatti, pianificati, daFare, dettaglio };
+  }
+
+  const statsPerOp = OPERAI_INFO.map(op => ({ ...op, ...statOperaio(op.nome) }));
+
+  // Totale generale
+  const totTot  = statsPerOp.reduce((a,o)=>a+o.totale,0);
+  const totFatti= statsPerOp.reduce((a,o)=>a+o.fatti,0);
+  const totPian = statsPerOp.reduce((a,o)=>a+o.pianificati,0);
+  const totDaF  = statsPerOp.reduce((a,o)=>a+o.daFare,0);
+  const totPct  = totTot>0 ? Math.round(totFatti/totTot*100) : 0;
+
+  document.getElementById('avanzamentoSub').textContent =
+    `${totFatti}/${totTot} completati · stagione 16/04→01/10/${anno}`;
+
+  // Card totale
+  document.getElementById('avanzamentoTotale').innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Totale complessivo</div>
+        <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700">${totPct}%</div>
+      </div>
+      <div style="height:10px;background:var(--bg4);border-radius:5px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;width:${totPct}%;background:var(--green);border-radius:5px;transition:width .6s ease"></div>
+      </div>
+      <div style="display:flex;gap:20px;font-size:13px">
+        <span style="color:var(--green)">✓ ${totFatti} fatti</span>
+        <span style="color:var(--yellow)">→ ${totPian} pianificati</span>
+        <span style="color:var(--red)">✗ ${totDaF} da fare</span>
+        <span style="color:var(--muted);margin-left:auto">${totTot} totali</span>
+      </div>
+    </div>`;
+
+  // Card per operaio
+  document.getElementById('avanzamentoOperai').innerHTML = statsPerOp.map(op => {
+    const pct = op.totale>0 ? Math.round(op.fatti/op.totale*100) : 0;
+    const barColor = pct===100?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+    return `<div class="op-av-card ${op.cls}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div>
+          <div class="op-av-nome">${op.nome}</div>
+          <div class="op-av-zona">${op.zona} · ${op.totale} impianti</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:${barColor}">${pct}%</div>
+      </div>
+      <div class="op-av-nums">
+        <div class="op-av-num">
+          <div class="op-av-val" style="color:var(--green)">${op.fatti}</div>
+          <div class="op-av-lbl">Fatti</div>
+        </div>
+        <div class="op-av-num">
+          <div class="op-av-val" style="color:var(--yellow)">${op.pianificati}</div>
+          <div class="op-av-lbl">Pianificati</div>
+        </div>
+        <div class="op-av-num">
+          <div class="op-av-val" style="color:var(--red)">${op.daFare}</div>
+          <div class="op-av-lbl">Da fare</div>
+        </div>
+      </div>
+      <div class="op-av-bar">
+        <div class="op-av-fill" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+      <div class="op-av-pct">
+        <span>${op.fatti} completati</span>
+        <span>${op.totale-op.fatti} rimanenti</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Sezione impianti da fare per operaio (ordinati per data pianificata)
+  let daFareHtml = '';
+  statsPerOp.forEach(op => {
+    const daFare = op.dettaglio
+      .filter(d => d.stato !== 'verde')
+      .sort((a,b) => {
+        // pianificati prima (hanno data), poi da fare
+        if(a.stato==='giallo' && b.stato!=='giallo') return -1;
+        if(b.stato==='giallo' && a.stato!=='giallo') return 1;
+        return (a.comune||'').localeCompare(b.comune||'');
+      });
+    if(!daFare.length) return;
+    daFareHtml += `
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:${op.col};text-transform:uppercase;
+          letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${op.col}"></div>
+          ${op.nome} — ${daFare.length} da completare
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Impianto</th><th>Comune</th><th>Stato</th><th>Data</th></tr></thead>
+            <tbody>
+              ${daFare.map(d=>`<tr>
+                <td style="font-weight:600">${d.nome}</td>
+                <td style="color:var(--muted)">${d.comune||'—'}</td>
+                <td>${d.stato==='giallo'
+                  ? `<span style="color:var(--yellow);font-weight:700">→ Pianificato</span>`
+                  : `<span style="color:var(--red);font-weight:700">✗ Da fare</span>`}</td>
+                <td style="font-family:'DM Mono',monospace;font-size:12px">${d.data||'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('avanzamentoDaFare').innerHTML = daFareHtml
+    ? `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Dettaglio da completare</div>${daFareHtml}`
+    : `<div class="empty">🎉 Tutti gli impianti completati!</div>`;
 }
 
 // ============================================================
