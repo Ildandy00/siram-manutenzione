@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>I miei impianti — Siram</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #282828;
+  --bg2:    #333333;
+  --bg3:    #3e3e3e;
+  --bg4:    #484848;
+  --border: rgba(255,255,255,.1);
+  --text:   #eeeeee;
+  --muted:  #999999;
+  --accent: #cccccc;
+  --green:  #8fbe7a;
+  --red:    #c87878;
+  --yellow: #c8b464;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Outfit', sans-serif; font-size: 15px;
+  min-height: 100vh; min-height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-bottom: calc(var(--safe-bot) + 16px);
+}
+
+/* TOPBAR */
+.topbar {
+  background: #222; border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 0 16px; height: 54px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.back-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; text-decoration: none;
+  transition: all .15s;
+}
+.back-btn:active { background: var(--bg4); }
+.page-title { font-size: 17px; font-weight: 700; }
+.operaio-badge {
+  font-size: 12px; font-weight: 700; padding: 3px 10px;
+  border-radius: 8px; margin-left: 6px;
+}
+
+/* SUMMARY BAR */
+.summary-bar {
+  display: flex; gap: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 12px 16px; gap: 16px;
+}
+.summary-item { flex: 1; text-align: center; }
+.summary-val { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 700; line-height: 1; }
+.summary-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+.summary-item.verde .summary-val  { color: var(--green); }
+.summary-item.rosso .summary-val  { color: var(--red); }
+.summary-item.totale .summary-val { color: var(--accent); }
+
+/* PROGRESS BAR */
+.progress-wrap {
+  padding: 12px 16px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.progress-bar-outer {
+  height: 8px; background: var(--red); border-radius: 4px; overflow: hidden;
+}
+.progress-bar-inner {
+  height: 100%; background: var(--green); border-radius: 4px;
+  transition: width .5s ease;
+}
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--muted); margin-top: 5px;
+}
+
+/* SEARCH & FILTERS */
+.filters {
+  padding: 12px 16px; display: flex; gap: 8px; align-items: center;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  position: sticky; top: 54px; z-index: 40;
+}
+.search-inp {
+  flex: 1; padding: 9px 12px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px;
+}
+.search-inp:focus { outline: none; border-color: var(--accent); }
+.filter-btn {
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--muted); font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.filter-btn.active-verde  { background: rgba(143,190,122,.15); color: var(--green); border-color: rgba(143,190,122,.3); }
+.filter-btn.active-rosso  { background: rgba(200,120,120,.15); color: var(--red);   border-color: rgba(200,120,120,.3); }
+.filter-btn.active-tutti  { background: var(--bg4); color: var(--text); border-color: rgba(255,255,255,.15); }
+
+/* COMUNE HEADER */
+.comune-header {
+  padding: 8px 16px 4px;
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  background: var(--bg);
+}
+
+/* IMPIANTO CARD */
+.imp-card {
+  margin: 0 12px 8px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  display: flex; align-items: stretch;
+  active-opacity: .7;
+}
+.imp-card:active { opacity: .8; }
+.stato-strip {
+  width: 5px; flex-shrink: 0;
+}
+.stato-strip.verde { background: var(--green); }
+.stato-strip.rosso { background: var(--red); }
+
+.imp-card-body {
+  flex: 1; padding: 12px 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.stato-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.stato-icon.verde { background: rgba(143,190,122,.15); }
+.stato-icon.rosso { background: rgba(200,120,120,.12); }
+
+.imp-info { flex: 1; min-width: 0; }
+.imp-nome {
+  font-size: 14px; font-weight: 700; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.imp-codice {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--muted); margin-top: 2px;
+}
+.imp-meta {
+  font-size: 12px; color: var(--muted); margin-top: 4px;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+}
+.data-badge {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  padding: 2px 7px; border-radius: 5px; font-weight: 600;
+}
+.data-badge.verde { background: rgba(143,190,122,.15); color: var(--green); }
+.data-badge.rosso { background: rgba(200,120,120,.12); color: var(--red); }
+.data-badge.pianif { background: rgba(200,180,100,.12); color: var(--yellow); }
+
+.imp-card-arrow {
+  padding: 0 14px; display: flex; align-items: center;
+  color: var(--muted); font-size: 16px; flex-shrink: 0;
+}
+
+/* EMPTY */
+.empty {
+  text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px;
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+/* LOADING */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 200px; gap: 12px; color: var(--muted); font-size: 14px;
+}
+.spin {
+  width: 22px; height: 22px; border: 2px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: calc(var(--safe-bot) + 20px); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; font-weight: 600; z-index: 999;
+  opacity: 0; transition: all .25s; white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* LOGIN */
+#loginWrap {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; min-height: 100dvh; padding: 24px;
+}
+.login-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 40px 28px; width: 100%; max-width: 360px;
+}
+.login-logo {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 3px;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 6px;
+}
+.login-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.login-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+.login-lbl {
+  display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
+}
+.login-inp {
+  width: 100%; padding: 14px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 20px; letter-spacing: 8px; text-align: center;
+  margin-bottom: 16px;
+}
+.login-inp:focus { outline: none; border-color: var(--accent); }
+.login-btn {
+  width: 100%; padding: 14px; background: var(--accent); border: none;
+  border-radius: 12px; color: #1a1a1a; font-family: 'Outfit', sans-serif;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.login-btn:active { opacity: .85; }
+.login-err { font-size: 13px; color: var(--red); margin-top: 10px; text-align: center; min-height: 18px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="login-box">
+    <div class="login-logo">Siram Veolia</div>
+    <div class="login-title">I miei impianti</div>
+    <div class="login-sub">Inserisci il tuo PIN per accedere</div>
+    <label class="login-lbl">PIN</label>
+    <input class="login-inp" type="password" id="pinInp" maxlength="4"
+      placeholder="••••" inputmode="numeric" pattern="[0-9]*"
+      onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Accedi</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appWrap" style="display:none">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <a href="/" class="back-btn">‹</a>
+      <div>
+        <div class="page-title">I miei impianti
+          <span class="operaio-badge" id="operaioBadge"></span>
+        </div>
+      </div>
+    </div>
+    <button onclick="caricaDati()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">↻</button>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-bar" id="summaryBar" style="display:none">
+    <div class="summary-item totale">
+      <div class="summary-val" id="sumTot">0</div>
+      <div class="summary-lbl">Totale</div>
+    </div>
+    <div class="summary-item verde">
+      <div class="summary-val" id="sumFatti">0</div>
+      <div class="summary-lbl">✓ Fatti</div>
+    </div>
+    <div class="summary-item rosso">
+      <div class="summary-val" id="sumDaFare">0</div>
+      <div class="summary-lbl">✗ Da fare</div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap" id="progressWrap" style="display:none">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="progressBar" style="width:0%"></div>
+    </div>
+    <div class="progress-label">
+      <span id="progressLeft">0 completati</span>
+      <span id="progressRight">0%</span>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <input class="search-inp" type="search" id="searchInp"
+      placeholder="🔍 Cerca impianto..." oninput="renderImpianti()"/>
+    <button class="filter-btn active-tutti" id="btnTutti" onclick="setFiltro('tutti')">Tutti</button>
+    <button class="filter-btn" id="btnRosso" onclick="setFiltro('rosso')">✗</button>
+    <button class="filter-btn" id="btnVerde" onclick="setFiltro('verde')">✓</button>
+  </div>
+
+  <!-- LISTA -->
+  <div id="listaImpianti" style="padding-top:8px">
+    <div class="loading"><div class="spin"></div>Caricamento...</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PROXY_URL = 'https://siram-proxy.onrender.com';
+const PINS = { '2001':'Matteo', '2002':'Stefano', '2003':'Michele', '2004':'Ezio' };
+const COLORI_OP = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
+
+// Stagione corrente
+const STAGIONE_INIZIO = '2026-04-16';
+const STAGIONE_FINE   = '2026-10-01';
+
+let operaioCorrente = null;
+let D = { impianti:[], interventi:[], checklist:[] };
+let filtroCorrente  = 'tutti';
+
+// ── LOGIN ──
+function doLogin() {
+  const pin = document.getElementById('pinInp').value.trim();
+  const nome = PINS[pin];
+  if(!nome) {
+    document.getElementById('loginErr').textContent = 'PIN non valido';
+    document.getElementById('pinInp').value = '';
+    setTimeout(()=>document.getElementById('loginErr').textContent='', 2000);
+    return;
+  }
+  operaioCorrente = nome;
+  document.getElementById('loginWrap').style.display = 'none';
+  document.getElementById('appWrap').style.display   = 'block';
+  const col = COLORI_OP[nome]||'#888';
+  document.getElementById('operaioBadge').textContent = nome;
+  document.getElementById('operaioBadge').style.cssText =
+    `background:${col}22;color:${col};border:1px solid ${col}44;border-radius:8px;padding:2px 8px;font-size:12px`;
+  caricaDati();
+}
+document.getElementById('pinInp').addEventListener('keydown', e => {
+  if(e.key==='Enter') doLogin();
+});
+
+// ── CARICA DATI ──
+async function caricaDati() {
+  document.getElementById('listaImpianti').innerHTML =
+    '<div class="loading"><div class="spin"></div>Caricamento...</div>';
+  document.getElementById('summaryBar').style.display   = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  try {
+    const r = await fetch(PROXY_URL+'/dati');
+    const d = await r.json();
+    D.impianti   = (d.impianti   ||[]).filter(i=>i.operaioDefault===operaioCorrente);
+    D.interventi = d.interventi  ||[];
+    D.checklist  = d.checklist   ||[];
+    renderSummary();
+    renderImpianti();
+    document.getElementById('summaryBar').style.display   = 'flex';
+    document.getElementById('progressWrap').style.display = 'block';
+  } catch(e) {
+    document.getElementById('listaImpianti').innerHTML =
+      `<div class="empty"><div class="empty-icon">⚠️</div>Errore caricamento dati</div>`;
+    toast('Errore di connessione');
+  }
+}
+
+// ── CALCOLA STATO PER IMPIANTO ──
+// Verde = ha almeno un intervento Ordinaria CHIUSO nel periodo stagione
+// Rosso = nessun intervento Ordinaria chiuso (né aperto) nel periodo
+// Giallo (pianificato) = ha intervento Aperto nel periodo ma non ancora chiuso
+function statoImpianto(codice) {
+  const intStagione = D.interventi.filter(i =>
+    i.codiceImpianto === codice &&
+    i.tipoVisita === 'Ordinaria' &&
+    i.dataPrevista >= STAGIONE_INIZIO &&
+    i.dataPrevista <= STAGIONE_FINE
+  );
+  const chiuso  = intStagione.find(i => i.stato === 'Chiuso');
+  const aperto  = intStagione.find(i => i.stato === 'Aperto');
+  if(chiuso) return {
+    stato: 'verde',
+    data:  chiuso.dataChiusura || chiuso.dataPrevista,
+    tipo:  'Completato',
+    id:    chiuso.id,
+  };
+  if(aperto) return {
+    stato: 'giallo',
+    data:  aperto.dataPrevista,
+    tipo:  'Pianificato',
+    id:    aperto.id,
+  };
+  return { stato:'rosso', data:null, tipo:'Da fare', id:null };
+}
+
+// ── SUMMARY ──
+function renderSummary() {
+  const stati = D.impianti.map(i=>statoImpianto(i.codice));
+  const nTot    = stati.length;
+  const nVerdi  = stati.filter(s=>s.stato==='verde').length;
+  const nRossi  = stati.filter(s=>s.stato==='rosso'||s.stato==='giallo').length;
+  const pct     = nTot>0 ? Math.round(nVerdi/nTot*100) : 0;
+  document.getElementById('sumTot').textContent    = nTot;
+  document.getElementById('sumFatti').textContent  = nVerdi;
+  document.getElementById('sumDaFare').textContent = nRossi;
+  document.getElementById('progressBar').style.width = pct+'%';
+  document.getElementById('progressLeft').textContent = nVerdi+' completati';
+  document.getElementById('progressRight').textContent = pct+'%';
+}
+
+// ── RENDER LISTA ──
+function renderImpianti() {
+  const search = (document.getElementById('searchInp')||{}).value||'';
+
+  // Calcola stato per tutti, filtra e ordina
+  let lista = D.impianti.map(i=>({
+    ...i,
+    s: statoImpianto(i.codice),
+  }));
+
+  if(filtroCorrente==='verde') lista = lista.filter(i=>i.s.stato==='verde');
+  if(filtroCorrente==='rosso') lista = lista.filter(i=>i.s.stato==='rosso'||i.s.stato==='giallo');
+
+  if(search) lista = lista.filter(i=>
+    (i.codice+i.descrizione+i.comune).toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Ordina: rosso prima, poi giallo, poi verde; dentro ogni gruppo per comune+descrizione
+  const ordineStato = {rosso:0, giallo:1, verde:2};
+  lista.sort((a,b)=>{
+    const os = ordineStato[a.s.stato]-ordineStato[b.s.stato];
+    if(os!==0) return os;
+    const oc = (a.comune||'').localeCompare(b.comune||'');
+    if(oc!==0) return oc;
+    return (a.descrizione||'').localeCompare(b.descrizione||'');
+  });
+
+  if(!lista.length) {
+    document.getElementById('listaImpianti').innerHTML =
+      `<div class="empty"><div class="empty-icon">${filtroCorrente==='verde'?'🟢':filtroCorrente==='rosso'?'🔴':'🏢'}</div>
+       ${search?'Nessun impianto trovato':'Nessun impianto in questa categoria'}</div>`;
+    return;
+  }
+
+  // Raggruppa per comune
+  let html = '';
+  let ultimoComune = null;
+
+  lista.forEach(i => {
+    if(i.comune !== ultimoComune) {
+      if(ultimoComune!==null) html += `</div>`; // chiudi gruppo precedente
+      html += `<div class="comune-group">
+        <div class="comune-header">📍 ${i.comune||'—'}</div>`;
+      ultimoComune = i.comune;
+    }
+
+    const {stato, data, tipo} = i.s;
+    const icon   = stato==='verde' ? '✓' : stato==='giallo' ? '→' : '✗';
+    const dataBadgeClass = stato==='verde'?'verde':stato==='giallo'?'pianif':'rosso';
+    const dataLabel = data
+      ? (stato==='verde' ? 'Fatto il '+data : 'Prev. '+data)
+      : 'Non pianificato';
+
+    html += `<div class="imp-card" onclick="${i.s.id?`apriIntervento('${i.s.id}')`:''}" style="${i.s.id?'cursor:pointer':''}">
+      <div class="stato-strip ${stato==='verde'?'verde':'rosso'}"></div>
+      <div class="imp-card-body">
+        <div class="stato-icon ${stato==='verde'?'verde':'rosso'}">${icon}</div>
+        <div class="imp-info">
+          <div class="imp-nome">${i.descrizione}</div>
+          <div class="imp-codice">${i.codice}</div>
+          <div class="imp-meta">
+            <span class="data-badge ${dataBadgeClass}">${dataLabel}</span>
+            ${stato==='verde'?`<span style="font-size:11px;color:var(--green)">Manutenzione completata</span>`:''}
+            ${stato==='giallo'?`<span style="font-size:11px;color:var(--yellow)">Intervento pianificato</span>`:''}
+            ${stato==='rosso'?`<span style="font-size:11px;color:var(--red)">Da completare</span>`:''}
+          </div>
+        </div>
+      </div>
+      ${i.s.id?`<div class="imp-card-arrow">›</div>`:''}
+    </div>`;
+  });
+
+  if(ultimoComune!==null) html += `</div>`;
+  document.getElementById('listaImpianti').innerHTML = html;
+}
+
+// ── FILTRO ──
+function setFiltro(f) {
+  filtroCorrente = f;
+  document.getElementById('btnTutti').className = 'filter-btn' + (f==='tutti'?' active-tutti':'');
+  document.getElementById('btnRosso').className = 'filter-btn' + (f==='rosso'?' active-rosso':'');
+  document.getElementById('btnVerde').className = 'filter-btn' + (f==='verde'?' active-verde':'');
+  renderImpianti();
+}
+
+// ── APRI INTERVENTO (torna alla pagina principale dell'operaio) ──
+function apriIntervento(id) {
+  // Salva l'ID in sessionStorage, l'app operaio lo leggerà all'apertura
+  try { sessionStorage.setItem('openInterventoId', id); } catch(e){}
+  window.location.href = '/';
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
