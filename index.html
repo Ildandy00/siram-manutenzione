@@ -90,7 +90,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 /* FAB impianti — posizionato accanto al fab-cal */
 .fab-imp{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:84px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3);text-decoration:none}
 .fab-imp:active{transform:scale(.90);background:var(--bg3)}
-.panel{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;z-index:10}
+.panel{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;z-index:10;overflow:hidden}
 .panel.open{transform:translateX(0)}
 .panel-top{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0}
 .back-btn{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--text);width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;line-height:1;cursor:pointer;flex-shrink:0}
