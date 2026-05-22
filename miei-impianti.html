@@ -354,16 +354,55 @@ async function caricaDati() {
   document.getElementById('summaryBar').style.display   = 'none';
   document.getElementById('progressWrap').style.display = 'none';
   try {
-    const r = await fetch(PROXY_URL+'/dati');
-    const d = await r.json();
-    D.impianti   = (d.impianti   ||[]).filter(i=>i.operaioDefault===operaioCorrente);
-    D.interventi = d.interventi  ||[];
-    D.checklist  = d.checklist   ||[];
+    // Carica dati base + codici assegnati dal foglio Assegnazione in parallelo
+    const [dBase, dAss] = await Promise.all([
+      fetch(PROXY_URL+'/dati').then(r=>r.json()),
+      fetch(PROXY_URL+'/impianti-operaio?operaio='+encodeURIComponent(operaioCorrente))
+        .then(r=>r.json()).catch(()=>({ codici:[] })),
+    ]);
+
+    const tuttiImpianti = dBase.impianti  || [];
+    D.interventi        = dBase.interventi || [];
+    D.checklist         = dBase.checklist  || [];
+
+    // Fonte 1: foglio Assegnazione (più affidabile)
+    const codiciAssegnazione = new Set((dAss.codici || []).map(c=>c.toUpperCase()));
+
+    // Fonte 2: impianti con operaioDefault corrispondente
+    const codiciDefault = new Set(
+      tuttiImpianti
+        .filter(i => i.operaioDefault === operaioCorrente)
+        .map(i => i.codice.toUpperCase())
+    );
+
+    // Fonte 3: impianti con almeno un intervento ordinario nel periodo
+    const codiciInterventi = new Set(
+      D.interventi
+        .filter(i =>
+          (i.operaio === operaioCorrente || i.secondoOperaio === operaioCorrente) &&
+          i.tipoVisita === 'Ordinaria' &&
+          i.dataPrevista >= STAGIONE_INIZIO &&
+          i.dataPrevista <= STAGIONE_FINE
+        )
+        .map(i => i.codiceImpianto.toUpperCase())
+    );
+
+    // Unione di tutte le fonti
+    const codiciTotali = new Set([...codiciAssegnazione, ...codiciDefault, ...codiciInterventi]);
+
+    console.log('Impianti trovati:', codiciTotali.size,
+      '(Assegnazione:', codiciAssegnazione.size,
+      '| Default:', codiciDefault.size,
+      '| Interventi:', codiciInterventi.size, ')');
+
+    D.impianti = tuttiImpianti.filter(i => codiciTotali.has(i.codice.toUpperCase()));
+
     renderSummary();
     renderImpianti();
     document.getElementById('summaryBar').style.display   = 'flex';
     document.getElementById('progressWrap').style.display = 'block';
   } catch(e) {
+    console.error('Errore caricaDati:', e);
     document.getElementById('listaImpianti').innerHTML =
       `<div class="empty"><div class="empty-icon">⚠️</div>Errore caricamento dati</div>`;
     toast('Errore di connessione');
