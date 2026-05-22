@@ -308,7 +308,7 @@ select.nif-input option{background:var(--bg2)}
   </div>
     <div class="panel-top"><button class="back-btn" onclick="closePanel()">‹</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">⏱ Posticipa</button></div>
     <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attività</div><div id="panelChk"></div></div>
-    <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()">✓ Segna come completato</button>
+    <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()" style="display:none">✓ Segna come completato</button>
   </div>
   <div class="new-int-overlay" id="newIntOverlay">
     <div class="new-int-top">
@@ -497,11 +497,11 @@ function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find
   }
   }
   notaEl.innerHTML = noteHtml;
-  renderChk(id);aggFab(i);document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
+  renderChk(id);aggFab(i);document.getElementById('panelFab').style.display='';document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
 
 function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
 
-function closePanel(){document.getElementById('panel').classList.remove('open');expandedNota={};renderLista()}
+function closePanel(){document.getElementById('panel').classList.remove('open');document.getElementById('panelFab').style.display='none';expandedNota={};renderLista()}
 function toggleNota(id){expandedNota[id]=!expandedNota[id];renderChk(currentIntId)}
 async function toggleChk(chkId,intId){const item=S.checklist.find(c=>c.id===chkId);if(!item)return;const nv=item.eseguita==='SI'?'NO':'SI';item.eseguita=nv;renderChk(intId);aggFab(S.interventi.find(i=>i.id===intId));renderLista();try{await apiPost('/aggiorna-voce',{id:chkId,eseguita:nv})}catch(e){item.eseguita=nv==='SI'?'NO':'SI';renderChk(intId);toast('Errore rete','err')}}
 async function salvaNota(chkId,intId){const nota=document.getElementById('ni-'+chkId).value.trim();const item=S.checklist.find(c=>c.id===chkId);if(!item)return;item.note=nota;expandedNota[chkId]=false;renderChk(intId);toast(nota?'Nota salvata':'Nota rimossa','ok');await apiPost('/aggiorna-voce',{id:chkId,note:nota})}
