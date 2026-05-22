@@ -254,7 +254,7 @@ select.nif-input option{background:var(--bg2)}
   </div>
 
   <!-- PANEL I MIEI IMPIANTI -->
-  <div class="panel" id="impiantiPanel">
+  <div class="panel" id="impiantiPanel" style="overflow:hidden">
     <div class="panel-top">
       <button class="back-btn" onclick="closeImpiantiPanel()">‹</button>
       <div class="panel-title-wrap">
@@ -567,6 +567,7 @@ let IMP = { impianti:[], interventi:[] };
 let impFiltro = 'tutti';
 
 function openImpiantiPanel() {
+  setImpFiltro('tutti'); // inizializza stili bottoni solo quando si apre
   document.getElementById('impiantiPanel').classList.add('open');
   caricaImpianti();
 }
@@ -723,8 +724,6 @@ function renderImpiantiPanel() {
   });
   document.getElementById('impLista').innerHTML = html;
 }
-
-setImpFiltro('tutti'); // inizializza stili bottoni
 
 setInterval(()=>{if(!currentUser)return;const overlayAperto=document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open');if(!overlayAperto)caricaDati();},5*60*1000);
 </script>
