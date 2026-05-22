@@ -85,6 +85,11 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .empty-sub{font-size:15px;opacity:.7}
 .fab{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));right:22px;width:68px;height:68px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:36px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(47,129,247,.5);cursor:pointer}
 .fab:active{transform:scale(.88)}
+.fab-cal{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:22px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.fab-cal:active{transform:scale(.90);background:var(--bg3)}
+/* FAB impianti — posizionato accanto al fab-cal */
+.fab-imp{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:84px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3);text-decoration:none}
+.fab-imp:active{transform:scale(.90);background:var(--bg3)}
 .panel{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;z-index:10}
 .panel.open{transform:translateX(0)}
 .panel-top{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0}
@@ -197,8 +202,6 @@ select.nif-input option{background:var(--bg2)}
 .nif-fab:disabled{opacity:.4;cursor:default}
 .spinner{width:32px;height:32px;border:3px solid var(--bg4);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.fab-cal{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:22px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.fab-cal:active{transform:scale(.90);background:var(--bg3)}
 .week-day{padding:10px 6px;border-radius:12px;background:var(--bg3);border:1.5px solid var(--bg4);margin-bottom:8px}
 .week-day.oggi{background:rgba(47,129,247,.1);border-color:rgba(47,129,247,.3)}
 .week-day-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
@@ -246,13 +249,14 @@ select.nif-input option{background:var(--bg2)}
     <div class="main-scroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
     <button class="fab" onclick="openNewInt()">＋</button>
     <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">📅</button>
+    <!-- PULSANTE I MIEI IMPIANTI -->
+    <a href="/miei-impianti.html" class="fab-imp" title="I miei impianti">🏢</a>
   </div>
   <div class="panel" id="panel">
     <div class="panel-top"><button class="back-btn" onclick="closePanel()">‹</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">⏱ Posticipa</button></div>
     <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attività</div><div id="panelChk"></div></div>
     <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()">✓ Segna come completato</button>
   </div>
-  <!-- OVERLAY NUOVO INTERVENTO (dal FAB principale) -->
   <div class="new-int-overlay" id="newIntOverlay">
     <div class="new-int-top">
       <button class="back-btn" onclick="closeNewInt()">‹</button>
@@ -281,7 +285,6 @@ select.nif-input option{background:var(--bg2)}
 
   <div class="sheet-overlay" id="sheetOverlay"><div class="sheet"><div class="sheet-title">Attività extra</div><input class="sheet-inp" id="sheetInp" type="text" placeholder="Descrivi l'attività..." autocomplete="off"/><div class="sheet-btns"><button class="sheet-btn cancel" onclick="closeSheet()">Annulla</button><button class="sheet-btn ok" onclick="salvaExtra()">Aggiungi</button></div></div></div>
 
-  <!-- BOTTOM SHEET POSTICIPA -->
   <div class="sheet-overlay" id="postSheet">
     <div class="sheet">
       <div class="sheet-title">Posticipa intervento</div>
@@ -308,7 +311,6 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- BOTTOM SHEET MINI CALENDARIO SETTIMANALE -->
   <div class="sheet-overlay" id="weekSheet">
     <div class="sheet" style="max-height:85vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
@@ -319,7 +321,6 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- MODAL CHIUSURA ORDINE DI LAVORO -->
   <div class="modal-chiusura-overlay" id="modalChiusura">
     <div class="modal-chiusura">
       <div class="mc-title">Chiudi ordine di lavoro</div>
@@ -332,7 +333,6 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- BOTTOM SHEET SECONDO OPERAIO -->
   <div class="sheet-overlay" id="secondoSheet">
     <div class="sheet">
       <div class="sheet-title">Serve un secondo operaio</div>
@@ -342,7 +342,6 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- BOTTOM SHEET RDA/CAT -->
   <div class="sheet-overlay" id="rdaSheet">
     <div class="sheet">
       <div class="sheet-title">🛒 RDA / CAT</div>
@@ -362,12 +361,11 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <!-- BOTTOM SHEET PREVENTIVO -->
   <div class="sheet-overlay" id="prevSheet">
     <div class="sheet">
       <div class="sheet-title">💰 Richiedi preventivo</div>
       <div style="font-size:14px;font-weight:600;color:var(--muted);margin-bottom:14px" id="prevAttivita"></div>
-      <textarea class="sheet-inp" id="prevNota" rows="4" placeholder="Descrivi il lavoro da preventivare (es. sostituzione bruciatore, cambio valvola, rifacimento coibentazione...)"></textarea>
+      <textarea class="sheet-inp" id="prevNota" rows="4" placeholder="Descrivi il lavoro da preventivare..."></textarea>
       <div class="sheet-btns">
         <button class="sheet-btn cancel" onclick="closePrevSheet()">Annulla</button>
         <button class="sheet-btn ok" onclick="inviaPrev()" style="background:rgba(200,180,100,.85);color:#1a1a1a">Invia al responsabile</button>
@@ -378,13 +376,10 @@ select.nif-input option{background:var(--bg2)}
   <div class="toast" id="toast"></div>
 </div>
 <script>
-// URL del proxy Render — aggiorna dopo il deploy
 const PROXY_URL = 'https://siram-proxy.onrender.com';
 
-// blocca zoom doppio tap e pinch
 (function(){var l=0;document.addEventListener('touchstart',function(e){var n=Date.now();if(n-l<320)e.preventDefault();l=n},{passive:false});document.addEventListener('touchmove',function(e){if(e.touches.length>1)e.preventDefault()},{passive:false})})();
 
-// API calls verso il proxy
 async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(); }
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
@@ -402,7 +397,20 @@ function addPin(d){if(pinBuf.length>=4)return;pinBuf+=d;aggDots();if(pinBuf.leng
 function delPin(){pinBuf=pinBuf.slice(0,-1);aggDots();document.getElementById('pinErr').textContent=''}
 function aggDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);d.classList.toggle('on',i<pinBuf.length);d.classList.remove('err')}}
 function verifica(){if(pinBuf===USERS[currentUser].pin){entra()}else{for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.add('err');document.getElementById('pinErr').textContent='PIN errato, riprova';setTimeout(()=>{pinBuf='';aggDots()},900)}}
-function entra(){const u=USERS[currentUser];const av=document.getElementById('mainAv');av.style.background=u.color;av.textContent=u.initial;document.getElementById('mainNome').textContent=currentUser;document.getElementById('mainZona').textContent=u.zona;document.getElementById('loginScreen').classList.remove('active');document.getElementById('mainScreen').classList.add('active');caricaDati();setTimeout(registraPush,1500)}
+function entra(){
+  const u=USERS[currentUser];
+  const av=document.getElementById('mainAv');
+  av.style.background=u.color;av.textContent=u.initial;
+  document.getElementById('mainNome').textContent=currentUser;
+  document.getElementById('mainZona').textContent=u.zona;
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('mainScreen').classList.add('active');
+  caricaDati();
+  setTimeout(registraPush,1500);
+  // Controlla se c'è un intervento da aprire (da miei-impianti.html)
+  const openId = sessionStorage.getItem('openInterventoId');
+  if(openId){ sessionStorage.removeItem('openInterventoId'); setTimeout(()=>openPanel(openId),800); }
+}
 function logout(){currentUser=null;pinBuf='';S={impianti:[],interventi:[],checklist:[]};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
 
 async function caricaDati(){
@@ -410,7 +418,6 @@ async function caricaDati(){
     const [d, dp] = await Promise.all([apiGet('/dati'), apiGet('/preventivi').catch(()=>({preventivi:[]}))]);
     S.impianti=d.impianti||[];S.interventi=d.interventi||[];S.checklist=d.checklist||[];
     S.preventivi = dp.preventivi || [];
-    // Carica RDA/CAT
     const dr = await apiGet('/rdacat').catch(() => ({ richieste: [] }));
     S.rdacat = dr.richieste || [];
     renderLista();
@@ -423,34 +430,20 @@ function cardHTML(i,isSosp){const imp=S.impianti.find(x=>x.codice===i.codiceImpi
 function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find(x=>x.id===id);const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const oggi=new Date().toISOString().slice(0,10);document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+(i.dataPrevista<oggi?' · ⚠ Sospeso':'');document.getElementById('panelInfo').innerHTML=`
     <div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
     <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
-
-  // Banner secondo operaio
   const notaEl = document.getElementById('panelNote');
   let noteHtml = i.note ? `<div class="note-box">📋 ${i.note}</div>` : '';
   if (i.secondoOperaio) {
-    noteHtml += `<div class="secondo-banner">
-      👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong>
-      <button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button>
-    </div>`;
+    noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
   } else if (i.stato !== 'Chiuso') {
     noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
-  // RDA/CAT — controlla se già presente
   const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
   if (rdaCorrente) {
-    noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px">
-      <span style="font-size:18px">🛒</span>
-      <div style="flex:1;font-size:14px">
-        <div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div>
-        <div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div>
-      </div>
-      <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span>
-    </div>`;
+    noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
   } else if (i.stato !== 'Chiuso') {
     noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
   }
   }
   notaEl.innerHTML = noteHtml;
-
   renderChk(id);aggFab(i);document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
 
 function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
@@ -464,369 +457,58 @@ function aggFab(i){
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
   const fab=document.getElementById('panelFab');
-  if(i.stato==='Chiuso'){
-    fab.textContent='↺ Riapri intervento';
-    fab.className='panel-fab riapri';
-    // Nascondi posticipa se chiuso
-    const pb=document.getElementById('postBtn');
-    if(pb)pb.style.display='none';
-  } else {
-    fab.textContent=`✓ Completato (${done}/${chk.length})`;
-    fab.className='panel-fab completa';
-    const pb=document.getElementById('postBtn');
-    if(pb)pb.style.display='';
-  }
+  if(i.stato==='Chiuso'){fab.textContent='↺ Riapri intervento';fab.className='panel-fab riapri';const pb=document.getElementById('postBtn');if(pb)pb.style.display='none';}
+  else{fab.textContent=`✓ Completato (${done}/${chk.length})`;fab.className='panel-fab completa';const pb=document.getElementById('postBtn');if(pb)pb.style.display='';}
 }
-
-function openPostSheet(){
-  // Calcola le date e mostrале nel sheet
-  const domani=addDays(new Date(),1);
-  const sett=addDays(new Date(),7);
-  document.getElementById('postDomaniData').textContent=fmtData(domani.toISOString().slice(0,10));
-  document.getElementById('postSettData').textContent=fmtData(sett.toISOString().slice(0,10));
-  document.getElementById('postDateWrap').style.display='none';
-  document.getElementById('postDateInp').value='';
-  document.getElementById('postSheet').classList.add('open');
-}
+function openPostSheet(){const domani=addDays(new Date(),1);const sett=addDays(new Date(),7);document.getElementById('postDomaniData').textContent=fmtData(domani.toISOString().slice(0,10));document.getElementById('postSettData').textContent=fmtData(sett.toISOString().slice(0,10));document.getElementById('postDateWrap').style.display='none';document.getElementById('postDateInp').value='';document.getElementById('postSheet').classList.add('open')}
 function closePostSheet(){document.getElementById('postSheet').classList.remove('open')}
 function showPostDate(){document.getElementById('postDateWrap').style.display='block'}
-
 function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d}
-
-async function posticipa(tipo){
-  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
-  let nuovaData;
-  if(tipo==='domani')    nuovaData=addDays(new Date(),1).toISOString().slice(0,10);
-  else if(tipo==='settimana') nuovaData=addDays(new Date(),7).toISOString().slice(0,10);
-  else if(tipo==='custom'){
-    nuovaData=document.getElementById('postDateInp').value;
-    if(!nuovaData){toast('Seleziona una data','err');return;}
-  }
-  closePostSheet();
-  try{
-    await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});
-    i.dataPrevista=nuovaData;
-    // Aggiorna info strip nel panel
-    document.getElementById('panelInfo').innerHTML=`
-      <div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
-      <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(nuovaData)}</div></div>`;
-    renderLista();
-    toast('Posticipato a '+fmtData(nuovaData),'ok');
-  }catch(e){toast('Errore rete','err');}
-}
-async function toggleChiudi(){
-  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
-  if(i.stato==='Chiuso'){
-    i.stato='Aperto'; aggFab(i); renderLista();
-    await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});
-    if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}
-    toast('Riaperto','ok');
-    return;
-  }
-  const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);
-  const done=chk.filter(c=>c.eseguita==='SI').length;
-  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-  document.getElementById('mcSub').textContent=
-    (imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';
-  document.getElementById('mcNota').value='';
-  document.getElementById('modalChiusura').classList.add('open');
-}
-
+async function posticipa(tipo){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;let nuovaData;if(tipo==='domani')nuovaData=addDays(new Date(),1).toISOString().slice(0,10);else if(tipo==='settimana')nuovaData=addDays(new Date(),7).toISOString().slice(0,10);else if(tipo==='custom'){nuovaData=document.getElementById('postDateInp').value;if(!nuovaData){toast('Seleziona una data','err');return;}}closePostSheet();try{await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});i.dataPrevista=nuovaData;document.getElementById('panelInfo').innerHTML=`<div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div><div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(nuovaData)}</div></div>`;renderLista();toast('Posticipato a '+fmtData(nuovaData),'ok');}catch(e){toast('Errore rete','err');}}
+async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
 function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
+async function confermaChiusura(){const nota=document.getElementById('mcNota').value.trim();closeModalChiusura();const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;i.stato='Chiuso';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Chiuso';renderLista();}}toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');}
 
-async function confermaChiusura(){
-  const nota=document.getElementById('mcNota').value.trim();
-  closeModalChiusura();
-  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
-  i.stato='Chiuso'; aggFab(i); renderLista();
-  await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});
-  if(i.interventoCollegato){
-    const coll=S.interventi.find(x=>x.id===i.interventoCollegato);
-    if(coll){coll.stato='Chiuso';renderLista();}
-  }
-  toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');
-}
-// ---- NUOVO INTERVENTO DAL FAB ----
 let nifTipoSel = '';
-
-function openNewInt() {
-  // Popola select impianti
-  const sel = document.getElementById('nifImp');
-  sel.innerHTML = '<option value="">Seleziona impianto...</option>' +
-    S.impianti.map(i => `<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');
-  // Reset campi
-  sel.value = '';
-  nifTipoSel = '';
-  document.getElementById('nifOrd').classList.remove('sel');
-  document.getElementById('nifStr').classList.remove('sel');
-  document.getElementById('nifData').value = new Date().toISOString().slice(0,10);
-  document.getElementById('nifNote').value = '';
-  document.getElementById('newIntOverlay').classList.add('open');
-}
-
-function closeNewInt() {
-  document.getElementById('newIntOverlay').classList.remove('open');
-}
-
-function selNifTipo(tipo) {
-  nifTipoSel = tipo;
-  document.getElementById('nifOrd').classList.toggle('sel', tipo === 'Ordinaria');
-  document.getElementById('nifStr').classList.toggle('sel', tipo === 'Straordinaria');
-}
-
-function onNifImpChange() {
-  // nessuna logica specifica richiesta lato operaio
-}
-
-async function inviaNewInt() {
-  const imp  = document.getElementById('nifImp').value;
-  const data = document.getElementById('nifData').value;
-  if (!imp)         { toast('Seleziona un impianto', 'err'); return; }
-  if (!nifTipoSel)  { toast('Seleziona il tipo visita', 'err'); return; }
-  if (!data)        { toast('Inserisci la data', 'err'); return; }
-
-  const btn = document.getElementById('nifSubmit');
-  btn.disabled = true; btn.textContent = 'Invio...';
-
-  try {
-    const r = await apiPost('/crea-intervento', {
-      codiceImpianto: imp,
-      tipoVisita:     nifTipoSel,
-      operaio:        currentUser,
-      dataPrevista:   data,
-      note:           document.getElementById('nifNote').value.trim(),
-      attivitaExtra:  [],
-    });
-    if (!r.ok) { toast('Errore invio', 'err'); btn.disabled=false; btn.textContent='Invia richiesta'; return; }
-    closeNewInt();
-    toast('Intervento creato ✓', 'ok');
-    await caricaDati();
-  } catch(e) {
-    toast('Errore rete', 'err');
-    btn.disabled = false; btn.textContent = 'Invia richiesta';
-  }
-}
+function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
+function closeNewInt(){document.getElementById('newIntOverlay').classList.remove('open')}
+function selNifTipo(tipo){nifTipoSel=tipo;document.getElementById('nifOrd').classList.toggle('sel',tipo==='Ordinaria');document.getElementById('nifStr').classList.toggle('sel',tipo==='Straordinaria');}
+function onNifImpChange(){}
+async function inviaNewInt(){const imp=document.getElementById('nifImp').value;const data=document.getElementById('nifData').value;if(!imp){toast('Seleziona un impianto','err');return;}if(!nifTipoSel){toast('Seleziona il tipo visita','err');return;}if(!data){toast('Inserisci la data','err');return;}const btn=document.getElementById('nifSubmit');btn.disabled=true;btn.textContent='Invio...';try{const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:nifTipoSel,operaio:currentUser,dataPrevista:data,note:document.getElementById('nifNote').value.trim(),attivitaExtra:[]});if(!r.ok){toast('Errore invio','err');btn.disabled=false;btn.textContent='Invia richiesta';return;}closeNewInt();toast('Intervento creato ✓','ok');await caricaDati();}catch(e){toast('Errore rete','err');btn.disabled=false;btn.textContent='Invia richiesta';}}
 
 function openSheet(intId){extraForId=intId||currentIntId;document.getElementById('sheetInp').value='';document.getElementById('sheetOverlay').classList.add('open');setTimeout(()=>document.getElementById('sheetInp').focus(),280)}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('open')}
 async function salvaExtra(){const val=document.getElementById('sheetInp').value.trim();if(!val)return;closeSheet();try{const r=await apiPost('/aggiungi-extra',{idIntervento:extraForId,attivita:val});if(!r.ok){toast('Errore','err');return}S.checklist.push({id:r.id,idIntervento:extraForId,attivita:val,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'});if(document.getElementById('panel').classList.contains('open')&&extraForId===currentIntId){renderChk(extraForId);aggFab(S.interventi.find(i=>i.id===extraForId))}renderLista();toast('Attività aggiunta','ok')}catch(e){toast('Errore rete','err')}}
-// ---- MINI CALENDARIO SETTIMANALE ----
-function openWeekSheet() {
-  const oggi = new Date();
-  const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  const MESI   = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-  let html = '';
-  for (let g = 0; g < 7; g++) {
-    const d = new Date(oggi); d.setDate(oggi.getDate() + g);
-    const ds = d.toISOString().slice(0,10);
-    const isOggi = g === 0;
-    const ints = S.interventi.filter(i =>
-      (i.operaio === currentUser || i.secondoOperaio === currentUser) &&
-      i.dataPrevista === ds && i.stato !== 'Chiuso'
-    );
-    html += `<div class="week-day ${isOggi?'oggi':''}">
-      <div class="week-day-hdr">
-        <span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span>
-        <span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span>
-      </div>`;
-    if (!ints.length) {
-      html += `<div class="week-empty">Nessun intervento</div>`;
-    } else {
-      ints.forEach(i => {
-        const imp = S.impianti.find(x => x.codice === i.codiceImpianto);
-        const nome = imp ? imp.descrizione : i.codiceImpianto;
-        const isSecondo = i.secondoOperaio === currentUser && i.operaio !== currentUser;
-        const colore = isSecondo ? 'var(--orange)' : 'var(--accent)';
-        html += `<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')">
-          <div class="week-dot" style="background:${colore}"></div>
-          <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>
-          ${isSecondo ? '<span style="font-size:11px;color:var(--orange)">+2</span>' : ''}
-        </div>`;
-      });
-    }
-    html += '</div>';
-  }
-  document.getElementById('weekContent').innerHTML = html;
-  document.getElementById('weekSheet').classList.add('open');
-}
-function closeWeekSheet() { document.getElementById('weekSheet').classList.remove('open'); }
 
-// ---- WEB PUSH ----
-async function registraPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('Push non supportata su questo browser');
-    return;
-  }
-  try {
-    // Aspetta che sw.js sia attivo (non usiamo il blob SW)
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
+function openWeekSheet(){const oggi=new Date();const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];let html='';for(let g=0;g<7;g++){const d=new Date(oggi);d.setDate(oggi.getDate()+g);const ds=d.toISOString().slice(0,10);const isOggi=g===0;const ints=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&i.dataPrevista===ds&&i.stato!=='Chiuso');html+=`<div class="week-day ${isOggi?'oggi':''}"><div class="week-day-hdr"><span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span><span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span></div>`;if(!ints.length){html+=`<div class="week-empty">Nessun intervento</div>`;}else{ints.forEach(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const nome=imp?imp.descrizione:i.codiceImpianto;const isSecondo=i.secondoOperaio===currentUser&&i.operaio!==currentUser;const colore=isSecondo?'var(--orange)':'var(--accent)';html+=`<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')"><div class="week-dot" style="background:${colore}"></div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>${isSecondo?'<span style="font-size:11px;color:var(--orange)">+2</span>':''}</div>`;});}html+='</div>';}document.getElementById('weekContent').innerHTML=html;document.getElementById('weekSheet').classList.add('open');}
+function closeWeekSheet(){document.getElementById('weekSheet').classList.remove('open')}
 
-    // Controlla se già sottoscritto
-    const existingSub = await reg.pushManager.getSubscription();
-    if (existingSub) {
-      // Aggiorna comunque il record (operaio potrebbe essere cambiato)
-      await apiPost('/registra-push', { operaio: currentUser, subscription: existingSub.toJSON() });
-      console.log('Push già attiva per', currentUser);
-      return;
-    }
+async function registraPush(){if(!('serviceWorker' in navigator)||!('PushManager' in window)){console.warn('Push non supportata');return;}try{const reg=await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;const existingSub=await reg.pushManager.getSubscription();if(existingSub){await apiPost('/registra-push',{operaio:currentUser,subscription:existingSub.toJSON()});return;}const vapidResp=await apiGet('/vapid-public');const key=vapidResp&&vapidResp.key;if(!key)return;const perm=await Notification.requestPermission();if(perm!=='granted')return;const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});await apiPost('/registra-push',{operaio:currentUser,subscription:sub.toJSON()});}catch(e){console.warn('Push registration failed:',e.message);}}
+function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));}
 
-    // Chiedi chiave VAPID
-    const vapidResp = await apiGet('/vapid-public');
-    const key = vapidResp && vapidResp.key;
-    if (!key) { console.warn('Chiave VAPID non configurata su Render'); return; }
+let rdaIntId=null,rdaTipoSel='';
+const RDA_TIPI=['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
+const RDA_IDS=['rdaTipoSost','rdaTipoTec','rdaTipoMat','rdaTipoAlt'];
+function openRdaSheet(intId){rdaIntId=intId;rdaTipoSel='';const i=S.interventi.find(x=>x.id===intId);const imp=S.impianti.find(x=>x.codice===(i?i.codiceImpianto:''));document.getElementById('rdaImpNome').textContent=imp?imp.descrizione:(i?i.codiceImpianto:'');RDA_IDS.forEach(id=>document.getElementById(id).classList.remove('sel'));document.getElementById('rdaNota').value='';document.getElementById('rdaSheet').classList.add('open');}
+function closeRdaSheet(){document.getElementById('rdaSheet').classList.remove('open')}
+function selRdaTipo(tipo){rdaTipoSel=tipo;RDA_TIPI.forEach((t,idx)=>document.getElementById(RDA_IDS[idx]).classList.toggle('sel',t===tipo));}
+async function inviaRda(){if(!rdaTipoSel){toast('Seleziona il tipo di richiesta','err');return;}const nota=document.getElementById('rdaNota').value.trim();if(!nota){toast('Descrivi cosa serve','err');return;}const i=S.interventi.find(x=>x.id===rdaIntId);closeRdaSheet();try{const r=await apiPost('/crea-rdacat',{idIntervento:rdaIntId,codiceImpianto:i?i.codiceImpianto:'',tipologia:rdaTipoSel,nota,operaio:currentUser});if(!r.ok){toast('Errore invio','err');return;}if(!S.rdacat)S.rdacat=[];S.rdacat.push({id:r.id,idIntervento:rdaIntId,codiceImpianto:i?i.codiceImpianto:'',tipologia:rdaTipoSel,nota,operaio:currentUser,stato:'Inviata',creatoIl:'',aggiornatoIl:''});openPanel(rdaIntId);toast('Richiesta RDA/CAT inviata','ok');}catch(e){toast('Errore rete','err');}}
 
-    // Chiedi permesso
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { console.warn('Permesso notifiche negato'); return; }
+let prevIntId=null;
+function openPrevSheet(intId){prevIntId=intId;const i=S.interventi.find(x=>x.id===intId);const imp=S.impianti.find(x=>x.codice===(i?i.codiceImpianto:''));document.getElementById('prevAttivita').textContent=imp?imp.descrizione:(i?i.codiceImpianto:'');document.getElementById('prevNota').value='';document.getElementById('prevSheet').classList.add('open');setTimeout(()=>document.getElementById('prevNota').focus(),280);}
+function closePrevSheet(){document.getElementById('prevSheet').classList.remove('open')}
+async function inviaPrev(){const nota=document.getElementById('prevNota').value.trim();if(!nota){toast('Descrivi cosa serve','err');return;}const i=S.interventi.find(x=>x.id===prevIntId);const imp=S.impianti.find(x=>x.codice===(i?i.codiceImpianto:''));closePrevSheet();try{const r=await apiPost('/richiedi-preventivo',{idIntervento:prevIntId,idChecklist:'',codiceImpianto:i?i.codiceImpianto:'',attivita:imp?imp.descrizione:(i?i.codiceImpianto:''),notaOperaio:nota,operaio:currentUser});if(!r.ok){toast('Errore invio','err');return;}if(!S.preventivi)S.preventivi=[];S.preventivi.push({id:r.id,idIntervento:prevIntId,idChecklist:'',codiceImpianto:i?i.codiceImpianto:'',attivita:imp?imp.descrizione:'',notaOperaio:nota,operaio:currentUser,stato:'Richiesto',creatoIl:'',aggiornatoIl:''});openPanel(prevIntId);toast('Richiesta inviata al responsabile','ok');}catch(e){toast('Errore rete','err');}}
 
-    // Sottoscrivi
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(key),
-    });
-    const r = await apiPost('/registra-push', { operaio: currentUser, subscription: sub.toJSON() });
-    console.log('Push registrata per', currentUser, r);
-  } catch(e) { console.warn('Push registration failed:', e.message); }
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-// ---- RDA/CAT ----
-let rdaIntId = null, rdaTipoSel = '';
-const RDA_TIPI = ['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
-const RDA_IDS  = ['rdaTipoSost','rdaTipoTec','rdaTipoMat','rdaTipoAlt'];
-
-function openRdaSheet(intId) {
-  rdaIntId = intId; rdaTipoSel = '';
-  const i   = S.interventi.find(x => x.id === intId);
-  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
-  document.getElementById('rdaImpNome').textContent = imp ? imp.descrizione : (i ? i.codiceImpianto : '');
-  RDA_IDS.forEach(id => document.getElementById(id).classList.remove('sel'));
-  document.getElementById('rdaNota').value = '';
-  document.getElementById('rdaSheet').classList.add('open');
-}
-function closeRdaSheet() { document.getElementById('rdaSheet').classList.remove('open'); }
-function selRdaTipo(tipo) {
-  rdaTipoSel = tipo;
-  RDA_TIPI.forEach((t,idx) => document.getElementById(RDA_IDS[idx]).classList.toggle('sel', t === tipo));
-}
-
-async function inviaRda() {
-  if (!rdaTipoSel) { toast('Seleziona il tipo di richiesta','err'); return; }
-  const nota = document.getElementById('rdaNota').value.trim();
-  if (!nota)      { toast('Descrivi cosa serve','err'); return; }
-  const i   = S.interventi.find(x => x.id === rdaIntId);
-  closeRdaSheet();
-  try {
-    const r = await apiPost('/crea-rdacat', {
-      idIntervento:   rdaIntId,
-      codiceImpianto: i ? i.codiceImpianto : '',
-      tipologia:      rdaTipoSel,
-      nota,
-      operaio:        currentUser,
-    });
-    if (!r.ok) { toast('Errore invio','err'); return; }
-    if (!S.rdacat) S.rdacat = [];
-    S.rdacat.push({ id:r.id, idIntervento:rdaIntId, codiceImpianto:i?i.codiceImpianto:'',
-      tipologia:rdaTipoSel, nota, operaio:currentUser, stato:'Inviata', creatoIl:'', aggiornatoIl:'' });
-    openPanel(rdaIntId);
-    toast('Richiesta RDA/CAT inviata','ok');
-  } catch(e) { toast('Errore rete','err'); }
-}
-
-// ---- PREVENTIVO ----
-let prevIntId = null;
-
-function openPrevSheet(intId) {
-  prevIntId = intId;
-  const i = S.interventi.find(x => x.id === intId);
-  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
-  document.getElementById('prevAttivita').textContent =
-    imp ? imp.descrizione : (i ? i.codiceImpianto : '');
-  document.getElementById('prevNota').value = '';
-  document.getElementById('prevSheet').classList.add('open');
-  setTimeout(() => document.getElementById('prevNota').focus(), 280);
-}
-function closePrevSheet() { document.getElementById('prevSheet').classList.remove('open'); }
-
-async function inviaPrev() {
-  const nota = document.getElementById('prevNota').value.trim();
-  if (!nota) { toast('Descrivi cosa serve','err'); return; }
-  const i = S.interventi.find(x => x.id === prevIntId);
-  const imp = S.impianti.find(x => x.codice === (i ? i.codiceImpianto : ''));
-  closePrevSheet();
-  try {
-    const r = await apiPost('/richiedi-preventivo', {
-      idIntervento:   prevIntId,
-      idChecklist:    '',
-      codiceImpianto: i ? i.codiceImpianto : '',
-      attivita:       imp ? imp.descrizione : (i ? i.codiceImpianto : ''),
-      notaOperaio:    nota,
-      operaio:        currentUser,
-    });
-    if (!r.ok) { toast('Errore invio','err'); return; }
-    if (!S.preventivi) S.preventivi = [];
-    S.preventivi.push({ id:r.id, idIntervento:prevIntId, idChecklist:'',
-      codiceImpianto: i?i.codiceImpianto:'', attivita: imp?imp.descrizione:'',
-      notaOperaio:nota, operaio:currentUser, stato:'Richiesto', creatoIl:'', aggiornatoIl:'' });
-    openPanel(prevIntId); // ricarica il panel con il banner
-    toast('Richiesta inviata al responsabile','ok');
-  } catch(e) { toast('Errore rete','err'); }
-}
-
-// ---- SECONDO OPERAIO ----
-function openSecondoSheet(){
-  const i=S.interventi.find(x=>x.id===currentIntId); if(!i) return;
-  const colleghi=Object.keys(USERS).filter(n=>n!==currentUser);
-  document.getElementById('secondoOpzioniList').innerHTML=colleghi.map(n=>{
-    const u=USERS[n];
-    return `<div class="post-option" onclick="segnalaSecondo('${n}')">
-      <div style="width:42px;height:42px;border-radius:50%;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${u.initial}</div>
-      <div><div>${n}</div><div class="post-sub">${u.zona}</div></div>
-    </div>`;
-  }).join('');
-  document.getElementById('secondoSheet').classList.add('open');
-}
+function openSecondoSheet(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;const colleghi=Object.keys(USERS).filter(n=>n!==currentUser);document.getElementById('secondoOpzioniList').innerHTML=colleghi.map(n=>{const u=USERS[n];return`<div class="post-option" onclick="segnalaSecondo('${n}')"><div style="width:42px;height:42px;border-radius:50%;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${u.initial}</div><div><div>${n}</div><div class="post-sub">${u.zona}</div></div></div>`;}).join('');document.getElementById('secondoSheet').classList.add('open');}
 function closeSecondoSheet(){document.getElementById('secondoSheet').classList.remove('open')}
-
-async function segnalaSecondo(nomeCollega){
-  closeSecondoSheet();
-  try{
-    await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:nomeCollega});
-    const i=S.interventi.find(x=>x.id===currentIntId);
-    if(i) i.secondoOperaio=nomeCollega;
-    openPanel(currentIntId); // ricarica il panel con il banner
-    toast(`Segnalato: serve ${nomeCollega}`,'ok');
-  }catch(e){toast('Errore rete','err');}
-}
-
-async function rimuoviSecondo(){
-  try{
-    await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:''});
-    const i=S.interventi.find(x=>x.id===currentIntId);
-    if(i) i.secondoOperaio='';
-    openPanel(currentIntId);
-    toast('Segnalazione rimossa','ok');
-  }catch(e){toast('Errore rete','err');}
-}
+async function segnalaSecondo(nomeCollega){closeSecondoSheet();try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:nomeCollega});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio=nomeCollega;openPanel(currentIntId);toast(`Segnalato: serve ${nomeCollega}`,'ok');}catch(e){toast('Errore rete','err');}}
+async function rimuoviSecondo(){try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:''});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio='';openPanel(currentIntId);toast('Segnalazione rimossa','ok');}catch(e){toast('Errore rete','err');}}
 
 function fmtData(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
 
-// Auto-refresh ogni 5 minuti (solo se non ci sono overlay aperti)
-setInterval(() => {
-  if (!currentUser) return;
-  const overlayAperto = document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open');
-  if (!overlayAperto) caricaDati();
-}, 5 * 60 * 1000);
+setInterval(()=>{if(!currentUser)return;const overlayAperto=document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open');if(!overlayAperto)caricaDati();},5*60*1000);
 </script>
-
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js');
