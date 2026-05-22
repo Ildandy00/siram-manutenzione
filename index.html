@@ -249,10 +249,63 @@ select.nif-input option{background:var(--bg2)}
     <div class="main-scroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
     <button class="fab" onclick="openNewInt()">＋</button>
     <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">📅</button>
-    <!-- PULSANTE I MIEI IMPIANTI -->
-    <a href="/miei-impianti.html" class="fab-imp" title="I miei impianti">🏢</a>
+    <!-- PULSANTE I MIEI IMPIANTI — apre panel interno -->
+    <button class="fab-imp" onclick="openImpiantiPanel()" title="I miei impianti">🏢</button>
   </div>
-  <div class="panel" id="panel">
+
+  <!-- PANEL I MIEI IMPIANTI -->
+  <div class="panel" id="impiantiPanel">
+    <div class="panel-top">
+      <button class="back-btn" onclick="closeImpiantiPanel()">‹</button>
+      <div class="panel-title-wrap">
+        <div class="panel-title">I miei impianti</div>
+        <div class="panel-sub" id="impiantiSub">Stagione 16/04 → 01/10/2026</div>
+      </div>
+      <button onclick="caricaImpianti()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">↻</button>
+    </div>
+
+    <!-- Summary -->
+    <div id="impSummary" style="display:none;background:var(--bg2);border-bottom:1px solid var(--bg3);padding:12px 18px;display:none">
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid var(--bg4)">
+          <div style="font-size:26px;font-weight:700" id="impTot">0</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">Totale</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(63,185,80,.3)">
+          <div style="font-size:26px;font-weight:700;color:var(--green)" id="impFatti">0</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">✓ Fatti</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(200,120,120,.3)">
+          <div style="font-size:26px;font-weight:700;color:var(--red)" id="impDaFare">0</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">✗ Da fare</div>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div style="height:7px;background:var(--red);border-radius:4px;overflow:hidden">
+        <div id="impProgress" style="height:100%;background:var(--green);border-radius:4px;transition:width .5s ease;width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
+        <span id="impProgLeft">0 completati</span>
+        <span id="impProgRight">0%</span>
+      </div>
+    </div>
+
+    <!-- Filtri -->
+    <div style="padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--bg3);display:flex;gap:8px">
+      <input type="search" id="impSearch" placeholder="🔍 Cerca..." oninput="renderImpiantiPanel()"
+        style="flex:1;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--bg4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px"/>
+      <button id="impBtnTutti" onclick="setImpFiltro('tutti')"
+        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg4);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Tutti</button>
+      <button id="impBtnRosso" onclick="setImpFiltro('rosso')"
+        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✗</button>
+      <button id="impBtnVerde" onclick="setImpFiltro('verde')"
+        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✓</button>
+    </div>
+
+    <div class="panel-scroll" id="impLista" style="padding:8px 0">
+      <div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>
+    </div>
+  </div>
     <div class="panel-top"><button class="back-btn" onclick="closePanel()">‹</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">⏱ Posticipa</button></div>
     <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attività</div><div id="panelChk"></div></div>
     <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()">✓ Segna come completato</button>
@@ -506,6 +559,172 @@ async function rimuoviSecondo(){try{await apiPost('/segnala-secondo',{id:current
 
 function fmtData(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
+
+// ── PANEL I MIEI IMPIANTI ──
+const STAGIONE_INIZIO = '2026-04-16';
+const STAGIONE_FINE   = '2026-10-01';
+let IMP = { impianti:[], interventi:[] };
+let impFiltro = 'tutti';
+
+function openImpiantiPanel() {
+  document.getElementById('impiantiPanel').classList.add('open');
+  caricaImpianti();
+}
+function closeImpiantiPanel() {
+  document.getElementById('impiantiPanel').classList.remove('open');
+}
+
+async function caricaImpianti() {
+  document.getElementById('impLista').innerHTML =
+    '<div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>';
+  document.getElementById('impSummary').style.display = 'none';
+  try {
+    // Usa i dati già in memoria S se disponibili, altrimenti ricarica
+    const tuttiImpianti = S.impianti || [];
+    const tuttiInterventi = S.interventi || [];
+
+    // Trova impianti dell'operaio tramite interventi ordinari nel periodo
+    const codiciInterventi = new Set(
+      tuttiInterventi
+        .filter(i =>
+          (i.operaio === currentUser || i.secondoOperaio === currentUser) &&
+          i.tipoVisita === 'Ordinaria' &&
+          i.dataPrevista >= STAGIONE_INIZIO &&
+          i.dataPrevista <= STAGIONE_FINE
+        )
+        .map(i => i.codiceImpianto.toUpperCase())
+    );
+    // Anche impianti con operaioDefault
+    const codiciDefault = new Set(
+      tuttiImpianti
+        .filter(i => i.operaioDefault === currentUser)
+        .map(i => i.codice.toUpperCase())
+    );
+    const codiciTotali = new Set([...codiciInterventi, ...codiciDefault]);
+
+    IMP.impianti   = tuttiImpianti.filter(i => codiciTotali.has(i.codice.toUpperCase()));
+    IMP.interventi = tuttiInterventi;
+
+    // Prova anche il foglio Assegnazione via server
+    try {
+      const dAss = await fetch(PROXY_URL+'/impianti-operaio?operaio='+encodeURIComponent(currentUser)).then(r=>r.json());
+      if(dAss.codici && dAss.codici.length > 0) {
+        const codiciAss = new Set(dAss.codici.map(c=>c.toUpperCase()));
+        const mancanti = tuttiImpianti.filter(i =>
+          codiciAss.has(i.codice.toUpperCase()) && !codiciTotali.has(i.codice.toUpperCase())
+        );
+        IMP.impianti = [...IMP.impianti, ...mancanti];
+      }
+    } catch(e) { /* fallback ok */ }
+
+    document.getElementById('impSummary').style.display = 'block';
+    renderImpiantiPanel();
+  } catch(e) {
+    document.getElementById('impLista').innerHTML =
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">⚠️</div>Errore caricamento</div>';
+  }
+}
+
+function statoImpiantoPanel(codice) {
+  const intStagione = IMP.interventi.filter(i =>
+    i.codiceImpianto === codice &&
+    i.tipoVisita === 'Ordinaria' &&
+    i.dataPrevista >= STAGIONE_INIZIO &&
+    i.dataPrevista <= STAGIONE_FINE
+  );
+  const chiuso = intStagione.find(i => i.stato === 'Chiuso');
+  const aperto = intStagione.find(i => i.stato === 'Aperto');
+  if(chiuso) return { stato:'verde', data: chiuso.dataChiusura||chiuso.dataPrevista, id: chiuso.id };
+  if(aperto) return { stato:'giallo', data: aperto.dataPrevista, id: aperto.id };
+  return { stato:'rosso', data:null, id:null };
+}
+
+function setImpFiltro(f) {
+  impFiltro = f;
+  const stili = {
+    tutti: { bg:'var(--bg4)', color:'var(--text)' },
+    rosso: { bg:'rgba(200,120,120,.15)', color:'var(--red)' },
+    verde: { bg:'rgba(63,185,80,.12)',   color:'var(--green)' },
+  };
+  ['tutti','rosso','verde'].forEach(k => {
+    const btn = document.getElementById('impBtn'+k.charAt(0).toUpperCase()+k.slice(1));
+    if(!btn) return;
+    const s = stili[k];
+    btn.style.background = k===f ? s.bg : 'var(--bg3)';
+    btn.style.color      = k===f ? s.color : 'var(--muted)';
+    btn.style.borderColor= k===f ? (k==='rosso'?'rgba(200,120,120,.4)':k==='verde'?'rgba(63,185,80,.4)':'rgba(255,255,255,.15)') : 'var(--bg4)';
+  });
+  renderImpiantiPanel();
+}
+
+function renderImpiantiPanel() {
+  const search = (document.getElementById('impSearch')||{}).value||'';
+  const stati  = IMP.impianti.map(i => ({ imp:i, s: statoImpiantoPanel(i.codice) }));
+
+  // Summary
+  const nTot   = stati.length;
+  const nVerdi = stati.filter(x=>x.s.stato==='verde').length;
+  const nRossi = stati.filter(x=>x.s.stato!=='verde').length;
+  const pct    = nTot>0 ? Math.round(nVerdi/nTot*100) : 0;
+  document.getElementById('impTot').textContent     = nTot;
+  document.getElementById('impFatti').textContent   = nVerdi;
+  document.getElementById('impDaFare').textContent  = nRossi;
+  document.getElementById('impProgress').style.width= pct+'%';
+  document.getElementById('impProgLeft').textContent= nVerdi+' completati';
+  document.getElementById('impProgRight').textContent= pct+'%';
+  document.getElementById('impiantiSub').textContent = nVerdi+'/'+nTot+' completati · stagione 2026';
+
+  let lista = stati;
+  if(impFiltro==='verde') lista = lista.filter(x=>x.s.stato==='verde');
+  if(impFiltro==='rosso') lista = lista.filter(x=>x.s.stato!=='verde');
+  if(search) lista = lista.filter(x=>
+    (x.imp.codice+x.imp.descrizione+x.imp.comune).toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Ordina: da fare prima, poi pianificati, poi fatti; poi per comune
+  const ord = {rosso:0, giallo:1, verde:2};
+  lista.sort((a,b) => (ord[a.s.stato]-ord[b.s.stato]) || (a.imp.comune||'').localeCompare(b.imp.comune||''));
+
+  if(!lista.length) {
+    document.getElementById('impLista').innerHTML =
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">🏢</div>Nessun impianto trovato</div>';
+    return;
+  }
+
+  // Raggruppa per comune
+  let html='', ultimoComune=null;
+  lista.forEach(({imp, s}) => {
+    if(imp.comune !== ultimoComune) {
+      html += `<div style="padding:10px 18px 4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">📍 ${imp.comune||'—'}</div>`;
+      ultimoComune = imp.comune;
+    }
+    const icon     = s.stato==='verde' ? '✓' : s.stato==='giallo' ? '→' : '✗';
+    const colStr   = s.stato==='verde' ? 'var(--green)' : s.stato==='giallo' ? 'var(--yellow)' : 'var(--red)';
+    const colBg    = s.stato==='verde' ? 'rgba(63,185,80,.12)' : s.stato==='giallo' ? 'rgba(200,180,100,.1)' : 'rgba(200,120,120,.1)';
+    const stripCol = s.stato==='verde' ? 'var(--green)' : 'var(--red)';
+    const dataLbl  = s.data
+      ? (s.stato==='verde' ? 'Fatto il '+s.data : 'Prev. '+s.data)
+      : 'Non pianificato';
+    const clickable = s.id ? `onclick="closeImpiantiPanel();openPanel('${s.id}')"` : '';
+    html += `<div ${clickable} style="margin:0 12px 8px;background:var(--bg2);border:1.5px solid var(--bg4);border-radius:18px;overflow:hidden;display:flex;align-items:stretch;${s.id?'cursor:pointer':''}">
+      <div style="width:5px;flex-shrink:0;background:${stripCol}"></div>
+      <div style="flex:1;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:12px;background:${colBg};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:${colStr};flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${imp.descrizione}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${imp.codice}</div>
+          <div style="margin-top:5px">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${colBg};color:${colStr}">${dataLbl}</span>
+          </div>
+        </div>
+        ${s.id ? `<div style="color:var(--muted);font-size:20px">›</div>` : ''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('impLista').innerHTML = html;
+}
+
+setImpFiltro('tutti'); // inizializza stili bottoni
 
 setInterval(()=>{if(!currentUser)return;const overlayAperto=document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open');if(!overlayAperto)caricaDati();},5*60*1000);
 </script>
