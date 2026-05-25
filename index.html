@@ -480,24 +480,46 @@ function renderLista(){const oggi=new Date().toISOString().slice(0,10);const mie
 
 function cardHTML(i,isSosp){const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const chk=S.checklist.filter(c=>c.idIntervento===i.id);const done=chk.filter(c=>c.eseguita==='SI').length;const pct=chk.length>0?Math.round(done/chk.length*100):0;const cls=['int-card',isSosp?'sospeso':'',i.stato==='Chiuso'?'chiuso':''].filter(Boolean).join(' ');return`<div class="${cls}" onclick="openPanel('${i.id}')"><div class="int-head"><div class="int-code">${i.codiceImpianto}${isSosp?' · ⚠ SOSPESO':''}</div><div class="int-name">${imp?imp.descrizione:i.codiceImpianto}</div><div class="int-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span style="font-size:14px;color:var(--muted)">${imp.comune}</span>`:''}${i.stato==='Chiuso'?'<span class="badge badge-ok">✓ Completato</span>':''}</div></div><div class="int-prog"><div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div><span class="prog-txt">${done}/${chk.length}</span></div></div>`}
 
-function openPanel(id){currentIntId=id;expandedNota={};const i=S.interventi.find(x=>x.id===id);const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const oggi=new Date().toISOString().slice(0,10);document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+(i.dataPrevista<oggi?' · ⚠ Sospeso':'');document.getElementById('panelInfo').innerHTML=`
+function openPanel(id){
+  currentIntId=id;expandedNota={};
+  const i=S.interventi.find(x=>x.id===id);
+  if(!i){toast('Intervento non trovato','err');return;}
+  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  const oggi=new Date().toISOString().slice(0,10);
+
+  document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
+  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+(i.dataPrevista<oggi?' · ⚠ Sospeso':'');
+  document.getElementById('panelInfo').innerHTML=`
     <div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
     <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
-  const notaEl = document.getElementById('panelNote');
+
+  // Note intervento
   let noteHtml = i.note ? `<div class="note-box">📋 ${i.note}</div>` : '';
-  if (i.secondoOperaio) {
-    noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
-  } else if (i.stato !== 'Chiuso') {
-    noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
-  const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
-  if (rdaCorrente) {
-    noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
-  } else if (i.stato !== 'Chiuso') {
-    noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
+
+  if(i.stato !== 'Chiuso') {
+    // Banner secondo operaio
+    if(i.secondoOperaio) {
+      noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
+    } else {
+      noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
+    }
+
+    // RDA/CAT
+    const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
+    if(rdaCorrente) {
+      noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
+    } else {
+      noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
+    }
   }
-  }
-  notaEl.innerHTML = noteHtml;
-  renderChk(id);aggFab(i);document.getElementById('panelFab').style.display='';document.getElementById('panel').classList.add('open');document.getElementById('panelScroll').scrollTop=0}
+
+  document.getElementById('panelNote').innerHTML = noteHtml;
+  renderChk(id);
+  aggFab(i);
+  document.getElementById('panelFab').style.display='';
+  document.getElementById('panel').classList.add('open');
+  document.getElementById('panelScroll').scrollTop=0;
+}
 
 function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
 
@@ -520,7 +542,23 @@ function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);r
 async function posticipa(tipo){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;let nuovaData;if(tipo==='domani')nuovaData=addDays(new Date(),1).toISOString().slice(0,10);else if(tipo==='settimana')nuovaData=addDays(new Date(),7).toISOString().slice(0,10);else if(tipo==='custom'){nuovaData=document.getElementById('postDateInp').value;if(!nuovaData){toast('Seleziona una data','err');return;}}closePostSheet();try{await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});i.dataPrevista=nuovaData;document.getElementById('panelInfo').innerHTML=`<div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div><div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(nuovaData)}</div></div>`;renderLista();toast('Posticipato a '+fmtData(nuovaData),'ok');}catch(e){toast('Errore rete','err');}}
 async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
 function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
-async function confermaChiusura(){const nota=document.getElementById('mcNota').value.trim();closeModalChiusura();const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;i.stato='Chiuso';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Chiuso';renderLista();}}toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');}
+async function confermaChiusura(){
+  const nota=document.getElementById('mcNota').value.trim();
+  closeModalChiusura();
+  const i=S.interventi.find(x=>x.id===currentIntId);
+  if(!i)return;
+  i.stato='Chiuso';
+  aggFab(i);
+  // Ricarica il panel per aggiornare note e bottoni
+  openPanel(currentIntId);
+  renderLista();
+  await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});
+  if(i.interventoCollegato){
+    const coll=S.interventi.find(x=>x.id===i.interventoCollegato);
+    if(coll){coll.stato='Chiuso';renderLista();}
+  }
+  toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');
+}
 
 let nifTipoSel = '';
 function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
