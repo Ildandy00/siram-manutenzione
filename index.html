@@ -381,7 +381,7 @@ select.nif-input option{background:var(--bg2)}
     <div class="modal-chiusura">
       <div class="mc-title">Chiudi ordine di lavoro</div>
       <div class="mc-sub" id="mcSub"></div>
-      <textarea class="mc-textarea" id="mcNota" placeholder="Note finali (opzionale) — es. sostituito filtro, pressione ok, anomalia risolta..."></textarea>
+      <textarea class="mc-textarea" id="mcNota" placeholder="Descrivi cosa è stato fatto — es. sostituito filtro, pressione ok, anomalia risolta... (obbligatorio)"></textarea>
       <div class="mc-btns">
         <button class="mc-btn annulla" onclick="closeModalChiusura()">Annulla</button>
         <button class="mc-btn conferma" onclick="confermaChiusura()">✓ Conferma chiusura</button>
@@ -573,12 +573,18 @@ async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);
 function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
 async function confermaChiusura(){
   const nota=document.getElementById('mcNota').value.trim();
+  if(!nota){
+    document.getElementById('mcNota').style.borderColor='var(--red)';
+    document.getElementById('mcNota').placeholder='⚠ Campo obbligatorio — descrivi cosa è stato fatto';
+    document.getElementById('mcNota').focus();
+    return;
+  }
+  document.getElementById('mcNota').style.borderColor='';
   closeModalChiusura();
   const i=S.interventi.find(x=>x.id===currentIntId);
   if(!i)return;
   i.stato='Chiuso';
   aggFab(i);
-  // Ricarica il panel per aggiornare note e bottoni
   openPanel(currentIntId);
   renderLista();
   await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Chiuso',notaChiusura:nota});
