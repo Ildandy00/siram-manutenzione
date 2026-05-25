@@ -306,6 +306,9 @@ select.nif-input option{background:var(--bg2)}
       <div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>
     </div>
   </div>
+
+  <!-- PANEL DETTAGLIO INTERVENTO -->
+  <div class="panel" id="panel">
     <div class="panel-top"><button class="back-btn" onclick="closePanel()">‹</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">⏱ Posticipa</button></div>
     <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attività</div><div id="panelChk"></div></div>
     <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()" style="display:none">✓ Segna come completato</button>
