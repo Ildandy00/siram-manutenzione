@@ -99,9 +99,21 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 .ev-stefano { background: rgba(139,92,246,.2);  color: #c4b5fd; }
 .ev-michele { background: rgba(34,197,94,.2);   color: #86efac; }
 .ev-ezio    { background: rgba(249,115,22,.2);  color: #fdba74; }
-.ev-ferie   { background: rgba(14,165,233,.15); color: #7dd3fc; border-left: 2px solid #0ea5e9; border-radius: 0 5px 5px 0; }
-.ev-permesso{ background: rgba(168,85,247,.15); color: #d8b4fe; border-left: 2px solid #a855f7; border-radius: 0 5px 5px 0; }
-.ev-malattia{ background: rgba(239,68,68,.15);  color: #fca5a5; border-left: 2px solid #ef4444; border-radius: 0 5px 5px 0; }
+.ev-ferie   {
+  background: repeating-linear-gradient(45deg, rgba(14,165,233,.08), rgba(14,165,233,.08) 3px, rgba(14,165,233,.18) 3px, rgba(14,165,233,.18) 6px);
+  color: #7dd3fc; border: 1px dashed rgba(14,165,233,.5); border-radius: 5px;
+  font-style: italic; font-size: 10px; opacity: .85;
+}
+.ev-permesso{
+  background: repeating-linear-gradient(45deg, rgba(168,85,247,.08), rgba(168,85,247,.08) 3px, rgba(168,85,247,.18) 3px, rgba(168,85,247,.18) 6px);
+  color: #d8b4fe; border: 1px dashed rgba(168,85,247,.5); border-radius: 5px;
+  font-style: italic; font-size: 10px; opacity: .85;
+}
+.ev-malattia{
+  background: repeating-linear-gradient(45deg, rgba(239,68,68,.08), rgba(239,68,68,.08) 3px, rgba(239,68,68,.18) 3px, rgba(239,68,68,.18) 6px);
+  color: #fca5a5; border: 1px dashed rgba(239,68,68,.5); border-radius: 5px;
+  font-style: italic; font-size: 10px; opacity: .85;
+}
 .ev.completato { text-decoration: line-through; opacity: .45; }
 
 /* TABELLA */
@@ -1235,7 +1247,11 @@ function renderSettimana() {
           onclick="openDettaglio('${i.id}')">${nome} · ${i.operaio}${praDot}</div>`;
       }
     }).join('');
-    cell.innerHTML=intsHtml+ass.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
+    const ICONS_ASS = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
+    cell.innerHTML=intsHtml+ass.map(a=>{
+      const icon = ICONS_ASS[a.tipo]||'📅';
+      return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
+    }).join('');
   }
 }
 
@@ -1300,7 +1316,11 @@ function renderCalendario() {
       }
     }).join('');
     const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
-    const assHtml=assGiorno.map(a=>`<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${a.operaio} · ${a.tipo}</div>`).join('');
+    const ICONS_ASS2 = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
+    const assHtml=assGiorno.map(a=>{
+      const icon = ICONS_ASS2[a.tipo]||'📅';
+      return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
+    }).join('');
     cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}<span class="day-add">+</span></div>${evHtml}${assHtml}</div>`;
   }
   const totCells=startDow+nGiorni;
