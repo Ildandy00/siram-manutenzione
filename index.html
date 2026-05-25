@@ -521,7 +521,33 @@ function openPanel(id){
   document.getElementById('panelScroll').scrollTop=0;
 }
 
-function renderChk(id){const chk=S.checklist.filter(c=>c.idIntervento===id);if(!chk.length){document.getElementById('panelChk').innerHTML='<div style="color:var(--muted);font-size:17px;padding:20px 0">Nessuna attività.</div>';return}const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');const html=[...norm,...ext].map(c=>{const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];return`<div class="chk-item ${isDone?'done':''}"><div class="chk-main" onclick="toggleChk('${c.id}','${id}')"><div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div><div class="chk-txt">${c.attivita}</div>${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}<button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button></div>${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}<div class="nota-area ${isExp?'open':''}"><textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea><button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button></div></div>`}).join('');document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`}
+function renderChk(id){
+  const chk=S.checklist.filter(c=>c.idIntervento===id);
+  if(!chk.length){
+    document.getElementById('panelChk').innerHTML=`
+      <div style="color:var(--muted);font-size:16px;padding:16px 0 8px">Nessuna attività in checklist.</div>
+      <button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
+    return;
+  }
+  const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');
+  const html=[...norm,...ext].map(c=>{
+    const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];
+    return`<div class="chk-item ${isDone?'done':''}">
+      <div class="chk-main" onclick="toggleChk('${c.id}','${id}')">
+        <div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div>
+        <div class="chk-txt">${c.attivita}</div>
+        ${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}
+        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button>
+      </div>
+      ${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}
+      <div class="nota-area ${isExp?'open':''}">
+        <textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea>
+        <button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
+}
 
 function closePanel(){document.getElementById('panel').classList.remove('open');document.getElementById('panelFab').style.display='none';expandedNota={};renderLista()}
 function toggleNota(id){expandedNota[id]=!expandedNota[id];renderChk(currentIntId)}
