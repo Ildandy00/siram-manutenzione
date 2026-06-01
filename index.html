@@ -479,9 +479,116 @@ async function caricaDati(){
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
-function renderLista(){const oggi=new Date().toISOString().slice(0,10);const miei=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&(i.dataPrevista===oggi||(i.dataPrevista<oggi&&i.stato==='Aperto'))).sort((a,b)=>{const aS=a.dataPrevista<oggi,bS=b.dataPrevista<oggi;return aS&&!bS?-1:!aS&&bS?1:0});const sospesi=miei.filter(i=>i.dataPrevista<oggi),diOggi=miei.filter(i=>i.dataPrevista===oggi),chiusi=miei.filter(i=>i.stato==='Chiuso').length;document.getElementById('cntTot').textContent=miei.length;document.getElementById('cntSosp').textContent=sospesi.length;document.getElementById('cntFatti').textContent=chiusi;let html='';if(sospesi.length){html+='<div class="sec-lbl">In sospeso</div>'+sospesi.map(i=>cardHTML(i,true)).join('')+'<div style="height:10px"></div>'}if(diOggi.length){html+='<div class="sec-lbl">Oggi</div>'+diOggi.map(i=>cardHTML(i,false)).join('')}if(!miei.length){html='<div class="empty"><div class="empty-ico">☀️</div><div class="empty-txt">Nessun intervento oggi</div><div class="empty-sub">Usa + per attività extra</div></div>'}document.getElementById('listaEl').innerHTML=html}
+function renderLista(){
+  const oggi=new Date().toISOString().slice(0,10);
+  const miei=S.interventi.filter(i=>
+    (i.operaio===currentUser||i.secondoOperaio===currentUser)&&
+    (i.dataPrevista===oggi||(i.dataPrevista<oggi&&i.stato==='Aperto'))
+  );
 
-function cardHTML(i,isSosp){const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const chk=S.checklist.filter(c=>c.idIntervento===i.id);const done=chk.filter(c=>c.eseguita==='SI').length;const pct=chk.length>0?Math.round(done/chk.length*100):0;const cls=['int-card',isSosp?'sospeso':'',i.stato==='Chiuso'?'chiuso':''].filter(Boolean).join(' ');return`<div class="${cls}" onclick="openPanel('${i.id}')"><div class="int-head"><div class="int-code">${i.codiceImpianto}${isSosp?' · ⚠ SOSPESO':''}</div><div class="int-name">${imp?imp.descrizione:i.codiceImpianto}</div><div class="int-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span style="font-size:14px;color:var(--muted)">${imp.comune}</span>`:''}${i.stato==='Chiuso'?'<span class="badge badge-ok">✓ Completato</span>':''}</div></div><div class="int-prog"><div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div><span class="prog-txt">${done}/${chk.length}</span></div></div>`}
+  // Ordine: sospesi prima, poi per tipo (Straordinaria prima), poi per data
+  miei.sort((a,b)=>{
+    const aS=a.dataPrevista<oggi, bS=b.dataPrevista<oggi;
+    if(aS&&!bS) return -1;
+    if(!aS&&bS) return 1;
+    // Stesso gruppo: Straordinaria prima
+    const aStr=a.tipoVisita==='Straordinaria', bStr=b.tipoVisita==='Straordinaria';
+    if(aStr&&!bStr) return -1;
+    if(!aStr&&bStr) return 1;
+    return 0;
+  });
+
+  const sospesi=miei.filter(i=>i.dataPrevista<oggi);
+  const diOggi =miei.filter(i=>i.dataPrevista===oggi);
+  const chiusi =miei.filter(i=>i.stato==='Chiuso').length;
+  const nStr   =miei.filter(i=>i.tipoVisita==='Straordinaria'&&i.stato==='Aperto').length;
+
+  document.getElementById('cntTot').textContent=miei.length;
+  document.getElementById('cntSosp').textContent=sospesi.length;
+  document.getElementById('cntFatti').textContent=chiusi;
+
+  let html='';
+  if(sospesi.length){
+    // Sospesi: straordinari prima
+    const sStr=sospesi.filter(i=>i.tipoVisita==='Straordinaria');
+    const sOrd=sospesi.filter(i=>i.tipoVisita!=='Straordinaria');
+    html+='<div class="sec-lbl">In sospeso</div>';
+    if(sStr.length) html+=sStr.map(i=>cardHTML(i,true)).join('');
+    if(sOrd.length) html+=sOrd.map(i=>cardHTML(i,true)).join('');
+    html+='<div style="height:10px"></div>';
+  }
+  if(diOggi.length){
+    const dStr=diOggi.filter(i=>i.tipoVisita==='Straordinaria');
+    const dOrd=diOggi.filter(i=>i.tipoVisita!=='Straordinaria');
+    if(dStr.length){
+      html+='<div class="sec-lbl">🔧 Straordinari</div>';
+      html+=dStr.map(i=>cardHTML(i,false)).join('');
+    }
+    if(dOrd.length){
+      html+=`<div class="sec-lbl" style="margin-top:${dStr.length?'8px':'0'}">Ordinari (${dOrd.length})</div>`;
+      html+=dOrd.map(i=>cardHTML(i,false)).join('');
+    }
+  }
+  if(!miei.length){
+    html='<div class="empty"><div class="empty-ico">☀️</div><div class="empty-txt">Nessun intervento oggi</div><div class="empty-sub">Usa + per attività extra</div></div>';
+  }
+  document.getElementById('listaEl').innerHTML=html;
+}
+
+function cardHTML(i,isSosp){
+  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  const chk=S.checklist.filter(c=>c.idIntervento===i.id);
+  const done=chk.filter(c=>c.eseguita==='SI').length;
+  const pct=chk.length>0?Math.round(done/chk.length*100):0;
+  const isStr=i.tipoVisita==='Straordinaria';
+  const isChiuso=i.stato==='Chiuso';
+
+  if(!isStr){
+    // ORDINARIA — compatta, discreta
+    return`<div class="int-card ${isChiuso?'chiuso':''}"
+      style="border-color:${isSosp?'rgba(200,180,100,.3)':'var(--bg4)'};opacity:${isChiuso?'.5':'.75'};margin-bottom:8px"
+      onclick="openPanel('${i.id}')">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px;margin-bottom:2px">
+            ${i.codiceImpianto}${isSosp?' · ⚠ SOSPESO':''}
+          </div>
+          <div style="font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${imp?imp.descrizione:i.codiceImpianto}
+          </div>
+          ${imp&&imp.comune?`<div style="font-size:12px;color:var(--muted);margin-top:1px">${imp.comune}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          ${isChiuso
+            ? `<span class="badge badge-ok" style="font-size:12px">✓</span>`
+            : `<span style="font-size:12px;font-weight:700;color:${pct===100?'var(--green)':'var(--muted)'}">${done}/${chk.length}</span>`
+          }
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // STRAORDINARIA — prominente, in evidenza
+  return`<div class="int-card ${isSosp?'sospeso':''} ${isChiuso?'chiuso':''}"
+    style="border-color:${isSosp?'var(--yellow)':'rgba(251,143,68,.35)'};border-left:4px solid var(--orange);margin-bottom:12px"
+    onclick="openPanel('${i.id}')">
+    <div class="int-head">
+      <div class="int-code" style="color:var(--orange)">
+        ${i.codiceImpianto}${isSosp?' · ⚠ SOSPESO':''}
+      </div>
+      <div class="int-name">${imp?imp.descrizione:i.codiceImpianto}</div>
+      <div class="int-meta">
+        <span class="badge badge-str">🔧 Straordinaria</span>
+        ${imp&&imp.comune?`<span style="font-size:14px;color:var(--muted)">${imp.comune}</span>`:''}
+        ${isChiuso?'<span class="badge badge-ok">✓ Completato</span>':''}
+      </div>
+    </div>
+    <div class="int-prog">
+      <div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div>
+      <span class="prog-txt">${done}/${chk.length}</span>
+    </div>
+  </div>`;
+}
 
 function openPanel(id){
   currentIntId=id;expandedNota={};
