@@ -37,7 +37,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .pin-dot.on{background:var(--accent);border-color:var(--accent)}
 .pin-dot.err{background:var(--red);border-color:var(--red)}
 .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}
-.pin-key{background:var(--bg3);border:1.5px solid var(--bg4);border-radius:18px;min-height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:var(--text);line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .07s,border-color .07s,transform .07s}
+.pin-key{background:var(--bg3);border:1.5px solid var(--bg4);border-radius:18px;min-height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:var(--text);line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .04s,border-color .04s,transform .04s}
 .pin-key:active{background:var(--accent);border-color:var(--accent);transform:scale(.9)}
 .pin-key.del{font-size:26px;color:var(--muted)}
 .pin-key.del:active{background:var(--bg4);color:var(--text)}
@@ -449,7 +449,7 @@ async function gasCall(action,payload){
 }
 
 function selUser(n){currentUser=n;pinBuf='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('tile-'+n).classList.add('selected');document.getElementById('pinLabel').textContent='PIN per '+n;document.getElementById('pinSection').style.display='block';document.getElementById('pinErr').textContent='';aggDots();setTimeout(()=>document.getElementById('pinSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80)}
-function addPin(d){if(pinBuf.length>=4)return;pinBuf+=d;aggDots();if(pinBuf.length===4)setTimeout(verifica,60)}
+function addPin(d){if(pinBuf.length>=4)return;pinBuf+=d;aggDots();if(pinBuf.length===4)setTimeout(verifica,30)}
 function delPin(){pinBuf=pinBuf.slice(0,-1);aggDots();document.getElementById('pinErr').textContent=''}
 function aggDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);d.classList.toggle('on',i<pinBuf.length);d.classList.remove('err')}}
 function verifica(){if(pinBuf===USERS[currentUser].pin){entra()}else{for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.add('err');document.getElementById('pinErr').textContent='PIN errato, riprova';setTimeout(()=>{pinBuf='';aggDots()},900)}}
