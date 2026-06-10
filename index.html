@@ -668,9 +668,73 @@ async function salvaExtra(){const val=document.getElementById('sheetInp').value.
 function openWeekSheet(){const oggi=new Date();const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];let html='';for(let g=0;g<7;g++){const d=new Date(oggi);d.setDate(oggi.getDate()+g);const ds=d.toISOString().slice(0,10);const isOggi=g===0;const ints=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&i.dataPrevista===ds&&i.stato!=='Chiuso');html+=`<div class="week-day ${isOggi?'oggi':''}"><div class="week-day-hdr"><span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span><span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span></div>`;if(!ints.length){html+=`<div class="week-empty">Nessun intervento</div>`;}else{ints.forEach(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const nome=imp?imp.descrizione:i.codiceImpianto;const isSecondo=i.secondoOperaio===currentUser&&i.operaio!==currentUser;const colore=isSecondo?'var(--orange)':'var(--accent)';html+=`<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')"><div class="week-dot" style="background:${colore}"></div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>${isSecondo?'<span style="font-size:11px;color:var(--orange)">+2</span>':''}</div>`;});}html+='</div>';}document.getElementById('weekContent').innerHTML=html;document.getElementById('weekSheet').classList.add('open');}
 function closeWeekSheet(){document.getElementById('weekSheet').classList.remove('open')}
 
-async function registraPush(){if(!('serviceWorker' in navigator)||!('PushManager' in window)){console.warn('Push non supportata');return;}try{const reg=await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;const existingSub=await reg.pushManager.getSubscription();if(existingSub){await apiPost('/registra-push',{operaio:currentUser,subscription:existingSub.toJSON()});return;}const vapidResp=await apiGet('/vapid-public');const key=vapidResp&&vapidResp.key;if(!key)return;const perm=await Notification.requestPermission();if(perm!=='granted')return;const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});await apiPost('/registra-push',{operaio:currentUser,subscription:sub.toJSON()});}catch(e){console.warn('Push registration failed:',e.message);}}
-function urlBase64ToUint8Array(base64String){const padding='='.repeat((4-base64String.length%4)%4);const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));}
+async function registraPush() {
+  // Se siamo in app Capacitor, usa il plugin nativo
+  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+    try {
+      const { PushNotifications } = window.Capacitor.Plugins;
+      if (!PushNotifications) return;
 
+      // Richiedi permesso
+      const perm = await PushNotifications.requestPermissions();
+      if (perm.receive !== 'granted') {
+        console.warn('[Push] Permesso negato');
+        return;
+      }
+
+      // Registra e ottieni token FCM
+      await PushNotifications.register();
+
+      // Ricevi token FCM
+      PushNotifications.addListener('registration', async (token) => {
+        console.log('[Push] Token FCM:', token.value);
+        await apiPost('/registra-push', {
+          operaio: currentUser,
+          fcmToken: token.value
+        });
+      });
+
+      PushNotifications.addListener('registrationError', (err) => {
+        console.warn('[Push] Errore registrazione:', err);
+      });
+
+      // Gestione notifica ricevuta con app aperta
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        toast(notification.title + ' — ' + notification.body, 'ok');
+      });
+
+      // Click sulla notifica
+      PushNotifications.addListener('pushNotificationActionPerformed', () => {
+        // già in app, non serve fare nulla
+      });
+
+    } catch(e) {
+      console.warn('[Push] Errore Capacitor push:', e.message);
+    }
+    return; // non eseguire il codice web push sotto
+  }
+
+  // Fallback web push (browser desktop)
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const existingSub = await reg.pushManager.getSubscription();
+    if (existingSub) {
+      await apiPost('/registra-push', { operaio: currentUser, subscription: existingSub.toJSON() });
+      return;
+    }
+    const vapidResp = await apiGet('/vapid-public');
+    const key = vapidResp && vapidResp.key;
+    if (!key) return;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) });
+    await apiPost('/registra-push', { operaio: currentUser, subscription: sub.toJSON() });
+  } catch(e) {
+    console.warn('Push registration failed:', e.message);
+  }
+}
 let rdaIntId=null,rdaTipoSel='';
 const RDA_TIPI=['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
 const RDA_IDS=['rdaTipoSost','rdaTipoTec','rdaTipoMat','rdaTipoAlt'];
