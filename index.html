@@ -672,46 +672,46 @@ async function registraPush() {
   // Se siamo in app Capacitor, usa il plugin nativo
   if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
     try {
+      toast('Push: avvio nativo...', 'ok');
       const { PushNotifications } = window.Capacitor.Plugins;
-      if (!PushNotifications) return;
-
-      // Richiedi permesso
-      const perm = await PushNotifications.requestPermissions();
-      if (perm.receive !== 'granted') {
-        console.warn('[Push] Permesso negato');
+      if (!PushNotifications) {
+        toast('Push: plugin NON trovato', 'err');
         return;
       }
+      toast('Push: plugin trovato', 'ok');
 
-      // Registra e ottieni token FCM
-      await PushNotifications.register();
-
-      // Ricevi token FCM
+      // Listener registrati PRIMA di register()
       PushNotifications.addListener('registration', async (token) => {
-        console.log('[Push] Token FCM:', token.value);
-        await apiPost('/registra-push', {
-          operaio: currentUser,
-          fcmToken: token.value
-        });
+        toast('Token ricevuto ✓', 'ok');
+        try {
+          const r = await apiPost('/registra-push', { operaio: currentUser, fcmToken: token.value });
+          toast(r && r.ok ? 'Token salvato sul server ✓' : 'Server ha rifiutato', r && r.ok ? 'ok' : 'err');
+        } catch(e) {
+          toast('Errore invio token: ' + e.message, 'err');
+        }
       });
 
       PushNotifications.addListener('registrationError', (err) => {
-        console.warn('[Push] Errore registrazione:', err);
+        toast('Errore registrazione FCM: ' + JSON.stringify(err), 'err');
       });
 
-      // Gestione notifica ricevuta con app aperta
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        toast(notification.title + ' — ' + notification.body, 'ok');
+        toast((notification.title || '') + ' — ' + (notification.body || ''), 'ok');
       });
 
-      // Click sulla notifica
-      PushNotifications.addListener('pushNotificationActionPerformed', () => {
-        // già in app, non serve fare nulla
-      });
+      // Richiedi permesso
+      const perm = await PushNotifications.requestPermissions();
+      toast('Permesso: ' + perm.receive, perm.receive === 'granted' ? 'ok' : 'err');
+      if (perm.receive !== 'granted') return;
+
+      // Registra
+      await PushNotifications.register();
+      toast('register() chiamato', 'ok');
 
     } catch(e) {
-      console.warn('[Push] Errore Capacitor push:', e.message);
+      toast('Push exception: ' + e.message, 'err');
     }
-    return; // non eseguire il codice web push sotto
+    return;
   }
 
   // Fallback web push (browser desktop)
