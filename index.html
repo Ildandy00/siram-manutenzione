@@ -434,7 +434,7 @@ select.nif-input option{background:var(--bg2)}
 <script>
 const PROXY_URL = 'https://siram-proxy.onrender.com';
 
-(function(){var l=0;document.addEventListener('touchstart',function(e){var n=Date.now();if(n-l<320)e.preventDefault();l=n},{passive:false});document.addEventListener('touchmove',function(e){if(e.touches.length>1)e.preventDefault()},{passive:false})})();
+(function(){var l=0;document.addEventListener('touchstart',function(e){var n=Date.now();if(n-l<80)e.preventDefault();l=n},{passive:false});document.addEventListener('touchmove',function(e){if(e.touches.length>1)e.preventDefault()},{passive:false})})();
 
 async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(); }
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
