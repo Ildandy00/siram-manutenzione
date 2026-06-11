@@ -119,12 +119,21 @@
     }
   }, 3000);
 
-  // Avvia OneSignal: il deviceready di Cordova garantisce che il plugin sia caricato.
-  document.addEventListener('deviceready', initOneSignal, false);
-  // Fallback: se deviceready è già passato, prova dopo un attimo.
-  setTimeout(function () {
-    if (!oneSignalPronto) initOneSignal();
-  }, 2500);
+  // Avvio robusto: in Capacitor l'evento 'deviceready' può non scattare,
+  // quindi non ci affidiamo ad esso. Facciamo retry finché il plugin
+  // OneSignal è disponibile e l'init va a buon fine.
+  var tentativiInit = 0;
+  var initTimer = setInterval(function () {
+    tentativiInit++;
+    if (oneSignalPronto) { clearInterval(initTimer); return; }
+    var OneSignal = getOneSignal();
+    if (OneSignal) {
+      initOneSignal();
+      if (oneSignalPronto) clearInterval(initTimer);
+    }
+    // Smetti di provare dopo ~30 secondi (15 tentativi da 2s)
+    if (tentativiInit >= 15) clearInterval(initTimer);
+  }, 2000);
 
 
   // ==========================================================
