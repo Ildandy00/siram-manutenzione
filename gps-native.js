@@ -33,10 +33,22 @@
     return (typeof window.currentUser === 'string' && window.currentUser) ? window.currentUser : null;
   }
 
-  // Trova l'oggetto OneSignal esposto dal plugin (5.x)
+  // Trova l'oggetto OneSignal esposto dal plugin (5.x).
+  // Il plugin espone l'API reale sotto la proprietà `default` (ES module),
+  // con fallback agli altri percorsi per sicurezza.
   function getOneSignal() {
-    if (window.OneSignal) return window.OneSignal;
-    if (window.plugins && window.plugins.OneSignal) return window.plugins.OneSignal;
+    if (window.OneSignal && window.OneSignal.default && typeof window.OneSignal.default.initialize === 'function') {
+      return window.OneSignal.default;
+    }
+    if (window.OneSignal && typeof window.OneSignal.initialize === 'function') {
+      return window.OneSignal;
+    }
+    if (window.plugins && window.plugins.OneSignal && typeof window.plugins.OneSignal.initialize === 'function') {
+      return window.plugins.OneSignal;
+    }
+    if (window.plugins && window.plugins.OneSignal && window.plugins.OneSignal.default) {
+      return window.plugins.OneSignal.default;
+    }
     return null;
   }
 
