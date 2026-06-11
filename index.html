@@ -454,6 +454,7 @@ function delPin(){pinBuf=pinBuf.slice(0,-1);aggDots();document.getElementById('p
 function aggDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);d.classList.toggle('on',i<pinBuf.length);d.classList.remove('err')}}
 function verifica(){if(pinBuf===USERS[currentUser].pin){entra()}else{for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.add('err');document.getElementById('pinErr').textContent='PIN errato, riprova';setTimeout(()=>{pinBuf='';aggDots()},900)}}
 function entra(){
+  window.currentUser = currentUser;
   const u=USERS[currentUser];
   const av=document.getElementById('mainAv');
   av.style.background=u.color;av.textContent=u.initial;
@@ -467,7 +468,8 @@ function entra(){
   const openId = sessionStorage.getItem('openInterventoId');
   if(openId){ sessionStorage.removeItem('openInterventoId'); setTimeout(()=>openPanel(openId),800); }
 }
-function logout(){currentUser=null;pinBuf='';S={impianti:[],interventi:[],checklist:[]};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
+function logout(){currentUser=null;pinBuf=''; window.currentUser=null;
+                  S={impianti:[],interventi:[],checklist:[]};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
 
 async function caricaDati(){
   try{
