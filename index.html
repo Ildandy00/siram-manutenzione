@@ -476,7 +476,7 @@ const COMMESSE=[
   {key:'Misano',      label:'Misano',          color:'#d9a066', match:['misano']},
   {key:'Verucchio',   label:'Verucchio',       color:'#7ab87a', match:['verucchio']},
   {key:'Gabicce',     label:'Gabicce',         color:'#b08fd8', match:['gabicce']},
-  {key:'Capitaneria', label:'Capitaneria',     color:'#5cc0c8', match:['capitaneria','cattolica']},
+  {key:'Capitaneria', label:'Capitaneria',     color:'#5cc0c8', match:['rimini']},
   {key:'Morciano',    label:'Morciano',        color:'#d98a9e', match:['morciano']},
   {key:'Altri',       label:'Altri Impianti',  color:'#9aa0a8', match:[]},
 ];
@@ -484,8 +484,8 @@ const COMMESSE_BY_KEY=Object.fromEntries(COMMESSE.map(c=>[c.key,c]));
 function commessaDi(imp){
   const comune=((imp&&imp.comune)||'').toLowerCase();
   const desc=((imp&&imp.descrizione)||'').toLowerCase();
-  // Capitaneria non è un comune: la riconosco da comune/descrizione
-  if(comune.includes('capitaneria')||desc.includes('capitaneria'))return COMMESSE_BY_KEY['Capitaneria'];
+  // Capitaneria = impianti di Rimini (o con "capitaneria" nella descrizione)
+  if(comune.includes('rimini')||comune.includes('capitaneria')||desc.includes('capitaneria'))return COMMESSE_BY_KEY['Capitaneria'];
   for(const co of COMMESSE){
     if(co.key==='Altri'||co.key==='Capitaneria')continue;
     if(co.match.some(m=>comune.includes(m)))return co;
