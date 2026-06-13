@@ -52,33 +52,57 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .uzona-top{font-size:14px;color:var(--muted);margin-top:2px}
 .logout-btn{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--muted);padding:10px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif}
 .logout-btn:active{color:var(--red);border-color:var(--red)}
-.date-pill{display:inline-block;background:var(--bg3);border:1px solid var(--bg4);border-radius:20px;padding:8px 16px;font-size:15px;color:var(--muted);font-weight:500;margin-bottom:12px}
-.sum-row{display:flex;gap:10px}
-.sum-chip{flex:1;background:var(--bg3);border-radius:14px;padding:12px 8px;text-align:center;border:1px solid var(--bg4)}
-.sum-num{font-size:32px;font-weight:700;line-height:1}
-.sum-lbl{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* === FILTRI COMMESSA + VISTE === */
+.filtri-commesse{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;margin-bottom:10px}
+.filtri-commesse::-webkit-scrollbar{display:none}
+.fc-btn{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:22px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;transition:transform .1s}
+.fc-btn:active{transform:scale(.95)}
+.fc-btn.active{color:#1a1a1a;border-color:transparent}
+.fc-count{background:var(--bg4);color:var(--text);padding:1px 8px;border-radius:11px;font-size:12px;font-weight:700}
+.fc-btn.active .fc-count{background:rgba(0,0,0,.22);color:inherit}
+.vista-row{display:flex;gap:8px}
+.vista-btn{flex:1;padding:12px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.vista-btn:active{transform:scale(.97)}
+.vista-btn.active{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+
 .main-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .main-inner{padding:16px;padding-bottom:max(90px,calc(80px + env(safe-area-inset-bottom,0px)))}
 .sec-lbl{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .sec-lbl::after{content:'';flex:1;height:1px;background:var(--bg3)}
-.int-card{background:var(--bg2);border:1.5px solid var(--bg4);border-radius:20px;margin-bottom:14px;overflow:hidden;cursor:pointer}
-.int-card:active{transform:scale(.982)}
-.int-card.sospeso{border-left:5px solid var(--yellow)}
-.int-card.chiuso{opacity:.55}
-.int-head{padding:20px 18px 12px}
-.int-code{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;margin-bottom:5px}
-.int-name{font-size:20px;font-weight:700;margin-bottom:10px;line-height:1.25}
-.int-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.badge{display:inline-flex;align-items:center;padding:5px 12px;border-radius:12px;font-size:14px;font-weight:600;line-height:1}
-.badge-ord{background:rgba(125,133,144,.15);color:#8b949e}
-.badge-str{background:rgba(251,143,68,.12);color:var(--orange)}
-.badge-ok{background:rgba(63,185,80,.12);color:var(--green)}
-.int-prog{padding:0 18px 18px;display:flex;align-items:center;gap:14px}
-.prog-bar{flex:1;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden}
-.prog-fill{height:100%;border-radius:4px}
-.prog-fill.wip{background:var(--accent)}
-.prog-fill.done{background:var(--green)}
-.prog-txt{font-size:16px;color:var(--muted);font-weight:700;min-width:44px;text-align:right}
+
+/* === REQ CARDS === */
+.req-card{border:1.5px solid var(--bg4);border-radius:20px;margin-bottom:14px;overflow:hidden}
+.req-card .req-body{padding:18px 18px 14px;cursor:pointer}
+.req-card .req-body:active{background:rgba(0,0,0,.08)}
+.req-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.req-commessa{font-size:12px;font-weight:700;padding:4px 11px;border-radius:11px;letter-spacing:.3px;color:#1a1a1a}
+.req-sosp{font-size:13px;font-weight:700;color:var(--yellow)}
+.req-name{font-size:20px;font-weight:700;line-height:1.25;margin-bottom:6px}
+.req-name-sm{font-size:16px;font-weight:700;line-height:1.25}
+.req-meta{font-size:13px;color:var(--muted)}
+.req-note{margin-top:10px;background:rgba(0,0,0,.2);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
+.req-take{width:100%;border:none;padding:15px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#1a1a1a;cursor:pointer;line-height:1}
+.req-take:active{filter:brightness(.92)}
+.req-card.presa{background:var(--bg2)}
+.req-card.presa .req-presa-row{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+.req-card.presa .req-presa-row:active{background:var(--bg3)}
+.req-card.presa.chiusa{opacity:.5}
+.req-presa-info{flex:1;min-width:0}
+.req-presa-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.req-incarico{font-size:13px;font-weight:700;color:var(--muted);background:var(--bg3);border:1px solid var(--bg4);padding:4px 10px;border-radius:10px;white-space:nowrap}
+.req-incarico.mio{color:var(--green);border-color:rgba(143,190,122,.4);background:rgba(143,190,122,.1)}
+.req-prog-sm{font-size:13px;color:var(--muted);font-weight:700}
+
+/* carico banner nel panel */
+.carico-banner{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;margin-bottom:18px;font-size:15px}
+.carico-banner.libera{background:rgba(200,180,100,.1);border:1.5px solid rgba(200,180,100,.3);color:var(--yellow)}
+.carico-banner.mio{background:rgba(143,190,122,.1);border:1.5px solid rgba(143,190,122,.3);color:var(--green)}
+.carico-banner.altri{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--muted)}
+.carico-btn{width:100%;padding:14px;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;cursor:pointer;line-height:1;background:var(--accent);color:#1a1a1a}
+.carico-btn:active{transform:scale(.98)}
+.carico-btn.ghost{background:var(--bg4);color:var(--text)}
+
 .empty{text-align:center;padding:80px 20px;color:var(--muted)}
 .empty-ico{font-size:64px;margin-bottom:20px;opacity:.3}
 .empty-txt{font-size:20px;margin-bottom:8px}
@@ -87,7 +111,6 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .fab:active{transform:scale(.88)}
 .fab-cal{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:22px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .fab-cal:active{transform:scale(.90);background:var(--bg3)}
-/* FAB impianti — posizionato accanto al fab-cal */
 .fab-imp{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:84px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3);text-decoration:none}
 .fab-imp:active{transform:scale(.90);background:var(--bg3)}
 .panel{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;z-index:10;overflow:hidden}
@@ -243,13 +266,15 @@ select.nif-input option{background:var(--bg2)}
   <div class="screen" id="mainScreen">
     <div class="topbar">
       <div class="tb-row"><div class="user-chip"><div class="av-sm" id="mainAv"></div><div><div class="uname-top" id="mainNome"></div><div class="uzona-top" id="mainZona"></div></div></div><button class="logout-btn" onclick="logout()">Esci</button></div>
-      <div class="date-pill" id="mainData"></div>
-      <div class="sum-row"><div class="sum-chip"><div class="sum-num" id="cntTot">0</div><div class="sum-lbl">Impianti</div></div><div class="sum-chip"><div class="sum-num" style="color:var(--yellow)" id="cntSosp">0</div><div class="sum-lbl">Sospesi</div></div><div class="sum-chip"><div class="sum-num" style="color:var(--green)" id="cntFatti">0</div><div class="sum-lbl">Fatti</div></div></div>
+      <div class="filtri-commesse" id="filtriCommesse"></div>
+      <div class="vista-row">
+        <button class="vista-btn active" id="vistaContenitore" onclick="setVista('contenitore')">📦 Contenitore</button>
+        <button class="vista-btn" id="vistaMie" onclick="setVista('mie')">👷 Le mie</button>
+      </div>
     </div>
     <div class="main-scroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
     <button class="fab" onclick="openNewInt()">＋</button>
     <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">📅</button>
-    <!-- PULSANTE I MIEI IMPIANTI — apre panel interno -->
     <button class="fab-imp" onclick="openImpiantiPanel()" title="I miei impianti">🏢</button>
   </div>
 
@@ -263,8 +288,6 @@ select.nif-input option{background:var(--bg2)}
       </div>
       <button onclick="caricaImpianti()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">↻</button>
     </div>
-
-    <!-- Summary -->
     <div id="impSummary" style="display:none;background:var(--bg2);border-bottom:1px solid var(--bg3);padding:12px 18px;display:none">
       <div style="display:flex;gap:10px;margin-bottom:10px">
         <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid var(--bg4)">
@@ -280,7 +303,6 @@ select.nif-input option{background:var(--bg2)}
           <div style="font-size:12px;color:var(--muted);margin-top:2px">✗ Da fare</div>
         </div>
       </div>
-      <!-- Progress bar -->
       <div style="height:7px;background:var(--red);border-radius:4px;overflow:hidden">
         <div id="impProgress" style="height:100%;background:var(--green);border-radius:4px;transition:width .5s ease;width:0%"></div>
       </div>
@@ -289,8 +311,6 @@ select.nif-input option{background:var(--bg2)}
         <span id="impProgRight">0%</span>
       </div>
     </div>
-
-    <!-- Filtri -->
     <div style="padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--bg3);display:flex;gap:8px">
       <input type="search" id="impSearch" placeholder="🔍 Cerca..." oninput="renderImpiantiPanel()"
         style="flex:1;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--bg4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px"/>
@@ -301,7 +321,6 @@ select.nif-input option{background:var(--bg2)}
       <button id="impBtnVerde" onclick="setImpFiltro('verde')"
         style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✓</button>
     </div>
-
     <div class="panel-scroll" id="impLista" style="padding:8px 0">
       <div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>
     </div>
@@ -317,7 +336,7 @@ select.nif-input option{background:var(--bg2)}
     <div class="new-int-top">
       <button class="back-btn" onclick="closeNewInt()">‹</button>
       <div class="panel-title-wrap">
-        <div class="panel-title">Nuovo intervento</div>
+        <div class="panel-title">Nuova richiesta</div>
         <div class="panel-sub">Segnala un'attività</div>
       </div>
     </div>
@@ -398,6 +417,16 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
+  <!-- SHEET RIASSEGNA -->
+  <div class="sheet-overlay" id="riassegnaSheet">
+    <div class="sheet">
+      <div class="sheet-title">Riassegna a un collega</div>
+      <p style="font-size:15px;color:var(--muted);margin-bottom:18px">La richiesta passerà in carico al collega scelto:</p>
+      <div id="riassegnaList"></div>
+      <button class="sheet-btn cancel" style="width:100%;margin-top:4px" onclick="closeRiassegnaSheet()">Annulla</button>
+    </div>
+  </div>
+
   <div class="sheet-overlay" id="rdaSheet">
     <div class="sheet">
       <div class="sheet-title">🛒 RDA / CAT</div>
@@ -440,13 +469,34 @@ async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
 const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'}};
-let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[]},currentIntId=null,extraForId=null,expandedNota={};
-document.getElementById('mainData').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
 
-async function gasCall(action,payload){
-  const r=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,payload:payload||null}),redirect:'follow'});
-  return r.json();
+// === COMMESSE (ricavate dal comune dell'impianto) ===
+const COMMESSE=[
+  {key:'Pesaro',      label:'Pesaro',          color:'#7a9ec8', match:['pesaro']},
+  {key:'Misano',      label:'Misano',          color:'#d9a066', match:['misano']},
+  {key:'Verucchio',   label:'Verucchio',       color:'#7ab87a', match:['verucchio']},
+  {key:'Gabicce',     label:'Gabicce',         color:'#b08fd8', match:['gabicce']},
+  {key:'Capitaneria', label:'Capitaneria',     color:'#5cc0c8', match:['capitaneria','cattolica']},
+  {key:'Morciano',    label:'Morciano',        color:'#d98a9e', match:['morciano']},
+  {key:'Altri',       label:'Altri Impianti',  color:'#9aa0a8', match:[]},
+];
+const COMMESSE_BY_KEY=Object.fromEntries(COMMESSE.map(c=>[c.key,c]));
+function commessaDi(imp){
+  const comune=((imp&&imp.comune)||'').toLowerCase();
+  const desc=((imp&&imp.descrizione)||'').toLowerCase();
+  // Capitaneria non è un comune: la riconosco da comune/descrizione
+  if(comune.includes('capitaneria')||desc.includes('capitaneria'))return COMMESSE_BY_KEY['Capitaneria'];
+  for(const co of COMMESSE){
+    if(co.key==='Altri'||co.key==='Capitaneria')continue;
+    if(co.match.some(m=>comune.includes(m)))return co;
+  }
+  return COMMESSE_BY_KEY['Altri'];
 }
+// Una richiesta è "presa in carico" se ha un operaio valorizzato
+function isPresa(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
+
+let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[]},currentIntId=null,extraForId=null,expandedNota={};
+let vista='contenitore', commessaSel='';
 
 function selUser(n){currentUser=n;pinBuf='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('tile-'+n).classList.add('selected');document.getElementById('pinLabel').textContent='PIN per '+n;document.getElementById('pinSection').style.display='block';document.getElementById('pinErr').textContent='';aggDots();setTimeout(()=>document.getElementById('pinSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80)}
 function addPin(d){if(pinBuf.length>=4)return;pinBuf+=d;aggDots();if(pinBuf.length===4)setTimeout(verifica,30)}
@@ -463,8 +513,6 @@ function entra(){
   document.getElementById('loginScreen').classList.remove('active');
   document.getElementById('mainScreen').classList.add('active');
   caricaDati();
-  setTimeout(registraPush,1500);
-  // Controlla se c'è un intervento da aprire (da miei-impianti.html)
   const openId = sessionStorage.getItem('openInterventoId');
   if(openId){ sessionStorage.removeItem('openInterventoId'); setTimeout(()=>openPanel(openId),800); }
 }
@@ -481,67 +529,154 @@ async function caricaDati(){
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
+// === VISTE E FILTRI ===
+function setVista(v){
+  vista=v;
+  document.getElementById('vistaContenitore').classList.toggle('active',v==='contenitore');
+  document.getElementById('vistaMie').classList.toggle('active',v==='mie');
+  renderLista();
+}
+function setCommessa(key){
+  commessaSel = (commessaSel===key ? '' : key);
+  renderLista();
+}
+
+function renderFiltriCommesse(){
+  // Conta le richieste LIBERE (nel contenitore) per commessa
+  const libere = S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato==='Aperto' && !isPresa(i));
+  const cont={};
+  libere.forEach(i=>{ const co=commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)); cont[co.key]=(cont[co.key]||0)+1; });
+  const el=document.getElementById('filtriCommesse');
+  el.innerHTML=COMMESSE.map(co=>{
+    const n=cont[co.key]||0;
+    const active=commessaSel===co.key;
+    const style=active?`background:${co.color};border-color:${co.color}`:'';
+    return `<button class="fc-btn ${active?'active':''}" style="${style}" onclick="setCommessa('${co.key}')">${co.label}${n?`<span class="fc-count">${n}</span>`:''}</button>`;
+  }).join('');
+}
+
 function renderLista(){
+  renderFiltriCommesse();
   const oggi=new Date().toISOString().slice(0,10);
-  const miei=S.interventi.filter(i=>
-    (i.operaio===currentUser||i.secondoOperaio===currentUser)&&
-    i.tipoVisita==='Straordinaria'&&
-    (i.dataPrevista===oggi||(i.dataPrevista<oggi&&i.stato==='Aperto'))
-  );
 
-  const apertiOggi  = miei.filter(i=>i.dataPrevista===oggi&&i.stato==='Aperto');
-  const chiusiOggi  = miei.filter(i=>i.dataPrevista===oggi&&i.stato==='Chiuso');
-  const sospesi     = miei.filter(i=>i.dataPrevista<oggi&&i.stato==='Aperto');
+  // Solo straordinarie, escluso il backlog del responsabile
+  let straord=S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato!=='DaAssegnare');
 
-  // Contatori topbar — usa tutti gli interventi (anche ordinari) per i numeri
-  const tuttiMiei=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&(i.dataPrevista===oggi||(i.dataPrevista<oggi&&i.stato==='Aperto')));
-  document.getElementById('cntTot').textContent=tuttiMiei.length;
-  document.getElementById('cntSosp').textContent=tuttiMiei.filter(i=>i.dataPrevista<oggi).length;
-  document.getElementById('cntFatti').textContent=tuttiMiei.filter(i=>i.stato==='Chiuso').length;
+  // Vista
+  if(vista==='mie') straord=straord.filter(i=>i.operaio===currentUser||i.secondoOperaio===currentUser);
+
+  // Filtro commessa
+  if(commessaSel) straord=straord.filter(i=>commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)).key===commessaSel);
+
+  const libere    = straord.filter(i=>!isPresa(i) && i.stato==='Aperto');
+  const prese      = straord.filter(i=>isPresa(i) && i.stato==='Aperto');
+  const chiuseOggi = straord.filter(i=>i.stato==='Chiuso' && (i.dataChiusura===oggi || i.dataPrevista===oggi));
+
+  // Oggi sopra, passate sotto
+  const byDate=(a,b)=>{
+    const ao=a.dataPrevista===oggi?0:1, bo=b.dataPrevista===oggi?0:1;
+    return ao-bo || (b.dataPrevista||'').localeCompare(a.dataPrevista||'');
+  };
+  libere.sort(byDate); prese.sort(byDate);
 
   let html='';
-
-  if(apertiOggi.length){
-    html+='<div class="sec-lbl">🔧 Straordinari oggi</div>';
-    html+=apertiOggi.map(i=>cardHTML(i,false)).join('');
+  if(libere.length){
+    html+='<div class="sec-lbl">📦 Nel contenitore</div>';
+    html+=libere.map(i=>cardHTML(i)).join('');
   }
-  if(chiusiOggi.length){
-    html+='<div class="sec-lbl">✓ Completati oggi</div>';
-    html+=chiusiOggi.map(i=>cardHTML(i,false)).join('');
+  if(prese.length){
+    html+='<div class="sec-lbl" style="margin-top:8px">👷 Prese in carico</div>';
+    html+=prese.map(i=>cardHTML(i)).join('');
   }
-  if(sospesi.length){
-    html+='<div class="sec-lbl" style="margin-top:8px">⚠ In sospeso</div>';
-    html+=sospesi.map(i=>cardHTML(i,true)).join('');
+  if(chiuseOggi.length){
+    html+='<div class="sec-lbl" style="margin-top:8px">✓ Completate oggi</div>';
+    html+=chiuseOggi.map(i=>cardHTML(i)).join('');
   }
-  if(!miei.length){
-    html='<div class="empty"><div class="empty-ico">✅</div><div class="empty-txt">Nessuna richiesta straordinaria</div><div class="empty-sub">Usa + per segnalarne una nuova</div></div>';
+  if(!libere.length && !prese.length && !chiuseOggi.length){
+    const msg = vista==='mie'
+      ? '<div class="empty-txt">Nessuna richiesta tua</div><div class="empty-sub">Prendine una dal contenitore</div>'
+      : (commessaSel
+          ? '<div class="empty-txt">Nessuna richiesta per '+COMMESSE_BY_KEY[commessaSel].label+'</div><div class="empty-sub">Cambia commessa o vista</div>'
+          : '<div class="empty-txt">Contenitore vuoto</div><div class="empty-sub">Nessuna richiesta straordinaria al momento</div>');
+    html='<div class="empty"><div class="empty-ico">✅</div>'+msg+'</div>';
   }
   document.getElementById('listaEl').innerHTML=html;
 }
 
-function cardHTML(i,isSosp){
+function cardHTML(i){
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  const co=commessaDi(imp);
+  const oggi=new Date().toISOString().slice(0,10);
+  const isPast=(i.dataPrevista||'')<oggi;
+  const preso=isPresa(i);
+  const mio=i.operaio===currentUser;
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
-  const pct=chk.length>0?Math.round(done/chk.length*100):0;
   const isChiuso=i.stato==='Chiuso';
-  return`<div class="int-card ${isSosp?'sospeso':''} ${isChiuso?'chiuso':''}" onclick="openPanel('${i.id}')">
-    <div class="int-head">
-      <div class="int-code" style="${isSosp?'color:var(--yellow)':''}">
-        ${i.codiceImpianto}${isSosp?' · ⚠ SOSPESO':''}
+
+  if(!preso){
+    // CARD LIBERA — piena, sfondo colore commessa
+    return `<div class="req-card libera" style="background:${co.color}22;border-color:${co.color}66">
+      <div class="req-body" onclick="openPanel('${i.id}')">
+        <div class="req-top">
+          <span class="req-commessa" style="background:${co.color}">${co.label}</span>
+          ${isPast?'<span class="req-sosp">⚠ in attesa</span>':''}
+        </div>
+        <div class="req-name">${imp?imp.descrizione:i.codiceImpianto}</div>
+        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' · '+imp.comune:''}</div>
+        ${i.note?`<div class="req-note">📋 ${i.note}</div>`:''}
       </div>
-      <div class="int-name">${imp?imp.descrizione:i.codiceImpianto}</div>
-      <div class="int-meta">
-        <span class="badge badge-str">🔧 Straordinaria</span>
-        ${imp&&imp.comune?`<span style="font-size:14px;color:var(--muted)">${imp.comune}</span>`:''}
-        ${isChiuso?'<span class="badge badge-ok">✓ Completato</span>':''}
+      <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">✋ Prendi in carico</button>
+    </div>`;
+  }
+
+  // CARD PRESA — più piccola, desaturata, con "in carico a X"
+  return `<div class="req-card presa ${isChiuso?'chiusa':''}" style="border-left:4px solid ${co.color}">
+    <div class="req-presa-row" onclick="openPanel('${i.id}')">
+      <div class="req-presa-info">
+        <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
+        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' · '+imp.comune:''}${isPast&&!isChiuso?' · ⚠ sospeso':''}</div>
       </div>
-    </div>
-    <div class="int-prog">
-      <div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div>
-      <span class="prog-txt">${done}/${chk.length}</span>
+      <div class="req-presa-right">
+        <span class="req-incarico ${mio?'mio':''}">${isChiuso?'✓ ':'👷 '}${i.operaio}</span>
+        <span class="req-prog-sm">${done}/${chk.length}</span>
+      </div>
     </div>
   </div>`;
+}
+
+// === PRESA IN CARICO / RIASSEGNA ===
+async function prendiInCarico(id){
+  const i=S.interventi.find(x=>x.id===id); if(!i)return;
+  i.operaio=currentUser;
+  renderLista();
+  try{ await apiPost('/aggiorna-intervento',{id,stato:i.stato||'Aperto',operaio:currentUser}); toast('Preso in carico ✓','ok'); }
+  catch(e){ toast('Errore rete','err'); }
+}
+async function prendiInCaricoDaPanel(){
+  const i=S.interventi.find(x=>x.id===currentIntId); if(!i)return;
+  i.operaio=currentUser;
+  try{ await apiPost('/aggiorna-intervento',{id:currentIntId,stato:i.stato||'Aperto',operaio:currentUser}); }
+  catch(e){ toast('Errore rete','err'); }
+  openPanel(currentIntId);
+  renderLista();
+  toast('Preso in carico ✓','ok');
+}
+function openRiassegnaSheet(){
+  const colleghi=Object.keys(USERS).filter(n=>n!==currentUser);
+  document.getElementById('riassegnaList').innerHTML=colleghi.map(n=>{const u=USERS[n];return`<div class="post-option" onclick="riassegnaA('${n}')"><div style="width:42px;height:42px;border-radius:50%;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0">${u.initial}</div><div><div>${n}</div><div class="post-sub">${u.zona}</div></div></div>`;}).join('');
+  document.getElementById('riassegnaSheet').classList.add('open');
+}
+function closeRiassegnaSheet(){document.getElementById('riassegnaSheet').classList.remove('open')}
+async function riassegnaA(nome){
+  closeRiassegnaSheet();
+  const i=S.interventi.find(x=>x.id===currentIntId); if(!i)return;
+  i.operaio=nome;
+  try{ await apiPost('/aggiorna-intervento',{id:currentIntId,stato:i.stato||'Aperto',operaio:nome}); }
+  catch(e){ toast('Errore rete','err'); }
+  openPanel(currentIntId);
+  renderLista();
+  toast('Riassegnata a '+nome,'ok');
 }
 
 function openPanel(id){
@@ -550,27 +685,40 @@ function openPanel(id){
   if(!i){toast('Intervento non trovato','err');return;}
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   const oggi=new Date().toISOString().slice(0,10);
+  const preso=isPresa(i);
+  const mio=i.operaio===currentUser;
 
   document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+(i.dataPrevista<oggi?' · ⚠ Sospeso':'');
+  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+((i.dataPrevista<oggi&&i.stato==='Aperto')?' · ⚠ Sospeso':'');
   document.getElementById('panelInfo').innerHTML=`
     <div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
     <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
 
-  // Note intervento
-  let noteHtml = i.note ? `<div class="note-box">📋 ${i.note}</div>` : '';
+  let noteHtml='';
 
-  if(i.stato !== 'Chiuso') {
-    // Banner secondo operaio
-    if(i.secondoOperaio) {
+  // Banner stato presa in carico (solo se non chiuso)
+  if(i.stato!=='Chiuso'){
+    if(!preso){
+      noteHtml += `<div class="carico-banner libera"><div>📦 Nel contenitore — non ancora presa in carico</div><button class="carico-btn" onclick="prendiInCaricoDaPanel()">✋ Prendi in carico</button></div>`;
+    } else if(mio){
+      noteHtml += `<div class="carico-banner mio"><div>👷 In carico a <strong>te</strong></div><button class="carico-btn ghost" onclick="openRiassegnaSheet()">↪ Riassegna a un collega</button></div>`;
+    } else {
+      noteHtml += `<div class="carico-banner altri"><div>👷 In carico a <strong>${i.operaio}</strong></div><button class="carico-btn ghost" onclick="prendiInCaricoDaPanel()">↪ Passa a me</button></div>`;
+    }
+  }
+
+  // Note intervento
+  if(i.note) noteHtml += `<div class="note-box">📋 ${i.note}</div>`;
+
+  // Secondo operaio + RDA: solo se la richiesta è presa in carico
+  if(i.stato!=='Chiuso' && preso){
+    if(i.secondoOperaio){
       noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
     } else {
       noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
     }
-
-    // RDA/CAT
     const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
-    if(rdaCorrente) {
+    if(rdaCorrente){
       noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
     } else {
       noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
@@ -580,7 +728,6 @@ function openPanel(id){
   document.getElementById('panelNote').innerHTML = noteHtml;
   renderChk(id);
   aggFab(i);
-  document.getElementById('panelFab').style.display='';
   document.getElementById('panel').classList.add('open');
   document.getElementById('panelScroll').scrollTop=0;
 }
@@ -617,13 +764,27 @@ function closePanel(){document.getElementById('panel').classList.remove('open');
 function toggleNota(id){expandedNota[id]=!expandedNota[id];renderChk(currentIntId)}
 async function toggleChk(chkId,intId){const item=S.checklist.find(c=>c.id===chkId);if(!item)return;const nv=item.eseguita==='SI'?'NO':'SI';item.eseguita=nv;renderChk(intId);aggFab(S.interventi.find(i=>i.id===intId));renderLista();try{await apiPost('/aggiorna-voce',{id:chkId,eseguita:nv})}catch(e){item.eseguita=nv==='SI'?'NO':'SI';renderChk(intId);toast('Errore rete','err')}}
 async function salvaNota(chkId,intId){const nota=document.getElementById('ni-'+chkId).value.trim();const item=S.checklist.find(c=>c.id===chkId);if(!item)return;item.note=nota;expandedNota[chkId]=false;renderChk(intId);toast(nota?'Nota salvata':'Nota rimossa','ok');await apiPost('/aggiorna-voce',{id:chkId,note:nota})}
+
 function aggFab(i){
   if(!i)return;
+  const preso=isPresa(i);
+  const fab=document.getElementById('panelFab');
+  const pb=document.getElementById('postBtn');
+  // Richiesta nel contenitore: niente completa/posticipa finché non è presa
+  if(i.stato!=='Chiuso' && !preso){
+    fab.style.display='none';
+    if(pb)pb.style.display='none';
+    return;
+  }
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
-  const fab=document.getElementById('panelFab');
-  if(i.stato==='Chiuso'){fab.textContent='↺ Riapri intervento';fab.className='panel-fab riapri';const pb=document.getElementById('postBtn');if(pb)pb.style.display='none';}
-  else{fab.textContent=`✓ Completato (${done}/${chk.length})`;fab.className='panel-fab completa';const pb=document.getElementById('postBtn');if(pb)pb.style.display='';}
+  if(i.stato==='Chiuso'){
+    fab.style.display='';fab.textContent='↺ Riapri intervento';fab.className='panel-fab riapri';
+    if(pb)pb.style.display='none';
+  } else {
+    fab.style.display='';fab.textContent=`✓ Completato (${done}/${chk.length})`;fab.className='panel-fab completa';
+    if(pb)pb.style.display='';
+  }
 }
 function openPostSheet(){const domani=addDays(new Date(),1);const sett=addDays(new Date(),7);document.getElementById('postDomaniData').textContent=fmtData(domani.toISOString().slice(0,10));document.getElementById('postSettData').textContent=fmtData(sett.toISOString().slice(0,10));document.getElementById('postDateWrap').style.display='none';document.getElementById('postDateInp').value='';document.getElementById('postSheet').classList.add('open')}
 function closePostSheet(){document.getElementById('postSheet').classList.remove('open')}
@@ -661,7 +822,23 @@ function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML=
 function closeNewInt(){document.getElementById('newIntOverlay').classList.remove('open')}
 function selNifTipo(tipo){nifTipoSel=tipo;document.getElementById('nifOrd').classList.toggle('sel',tipo==='Ordinaria');document.getElementById('nifStr').classList.toggle('sel',tipo==='Straordinaria');}
 function onNifImpChange(){}
-async function inviaNewInt(){const imp=document.getElementById('nifImp').value;const data=document.getElementById('nifData').value;if(!imp){toast('Seleziona un impianto','err');return;}if(!nifTipoSel){toast('Seleziona il tipo visita','err');return;}if(!data){toast('Inserisci la data','err');return;}const btn=document.getElementById('nifSubmit');btn.disabled=true;btn.textContent='Invio...';try{const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:nifTipoSel,operaio:currentUser,dataPrevista:data,note:document.getElementById('nifNote').value.trim(),attivitaExtra:[]});if(!r.ok){toast('Errore invio','err');btn.disabled=false;btn.textContent='Invia richiesta';return;}closeNewInt();toast('Intervento creato ✓','ok');await caricaDati();}catch(e){toast('Errore rete','err');btn.disabled=false;btn.textContent='Invia richiesta';}}
+async function inviaNewInt(){
+  const imp=document.getElementById('nifImp').value;const data=document.getElementById('nifData').value;
+  if(!imp){toast('Seleziona un impianto','err');return;}
+  if(!nifTipoSel){toast('Seleziona il tipo visita','err');return;}
+  if(!data){toast('Inserisci la data','err');return;}
+  const btn=document.getElementById('nifSubmit');btn.disabled=true;btn.textContent='Invio...';
+  try{
+    // Straordinaria → entra nel CONTENITORE (operaio vuoto). Ordinaria → resta a chi la crea.
+    const operaioNew = nifTipoSel==='Straordinaria' ? '' : currentUser;
+    const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:nifTipoSel,operaio:operaioNew,dataPrevista:data,note:document.getElementById('nifNote').value.trim(),attivitaExtra:[]});
+    if(!r.ok){toast('Errore invio','err');btn.disabled=false;btn.textContent='Invia richiesta';return;}
+    closeNewInt();
+    toast(nifTipoSel==='Straordinaria'?'Richiesta aggiunta al contenitore ✓':'Intervento creato ✓','ok');
+    await caricaDati();
+  }catch(e){toast('Errore rete','err');btn.disabled=false;btn.textContent='Invia richiesta';}
+  finally{btn.disabled=false;btn.textContent='Invia richiesta';}
+}
 
 function openSheet(intId){extraForId=intId||currentIntId;document.getElementById('sheetInp').value='';document.getElementById('sheetOverlay').classList.add('open');setTimeout(()=>document.getElementById('sheetInp').focus(),280)}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('open')}
@@ -670,73 +847,6 @@ async function salvaExtra(){const val=document.getElementById('sheetInp').value.
 function openWeekSheet(){const oggi=new Date();const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];let html='';for(let g=0;g<7;g++){const d=new Date(oggi);d.setDate(oggi.getDate()+g);const ds=d.toISOString().slice(0,10);const isOggi=g===0;const ints=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&i.dataPrevista===ds&&i.stato!=='Chiuso');html+=`<div class="week-day ${isOggi?'oggi':''}"><div class="week-day-hdr"><span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span><span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span></div>`;if(!ints.length){html+=`<div class="week-empty">Nessun intervento</div>`;}else{ints.forEach(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const nome=imp?imp.descrizione:i.codiceImpianto;const isSecondo=i.secondoOperaio===currentUser&&i.operaio!==currentUser;const colore=isSecondo?'var(--orange)':'var(--accent)';html+=`<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')"><div class="week-dot" style="background:${colore}"></div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>${isSecondo?'<span style="font-size:11px;color:var(--orange)">+2</span>':''}</div>`;});}html+='</div>';}document.getElementById('weekContent').innerHTML=html;document.getElementById('weekSheet').classList.add('open');}
 function closeWeekSheet(){document.getElementById('weekSheet').classList.remove('open')}
 
-async function registraPush() {
-  // Se siamo in app Capacitor, usa il plugin nativo
-  if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-    try {
-      toast('Push: avvio nativo...', 'ok');
-      const { PushNotifications } = window.Capacitor.Plugins;
-      if (!PushNotifications) {
-        toast('Push: plugin NON trovato', 'err');
-        return;
-      }
-      toast('Push: plugin trovato', 'ok');
-
-      // Listener registrati PRIMA di register()
-      PushNotifications.addListener('registration', async (token) => {
-        toast('Token ricevuto ✓', 'ok');
-        try {
-          const r = await apiPost('/registra-push', { operaio: currentUser, fcmToken: token.value });
-          toast(r && r.ok ? 'Token salvato sul server ✓' : 'Server ha rifiutato', r && r.ok ? 'ok' : 'err');
-        } catch(e) {
-          toast('Errore invio token: ' + e.message, 'err');
-        }
-      });
-
-      PushNotifications.addListener('registrationError', (err) => {
-        toast('Errore registrazione FCM: ' + JSON.stringify(err), 'err');
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        toast((notification.title || '') + ' — ' + (notification.body || ''), 'ok');
-      });
-
-      // Richiedi permesso
-      const perm = await PushNotifications.requestPermissions();
-      toast('Permesso: ' + perm.receive, perm.receive === 'granted' ? 'ok' : 'err');
-      if (perm.receive !== 'granted') return;
-
-      // Registra
-      await PushNotifications.register();
-      toast('register() chiamato', 'ok');
-
-    } catch(e) {
-      toast('Push exception: ' + e.message, 'err');
-    }
-    return;
-  }
-
-  // Fallback web push (browser desktop)
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  try {
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    const existingSub = await reg.pushManager.getSubscription();
-    if (existingSub) {
-      await apiPost('/registra-push', { operaio: currentUser, subscription: existingSub.toJSON() });
-      return;
-    }
-    const vapidResp = await apiGet('/vapid-public');
-    const key = vapidResp && vapidResp.key;
-    if (!key) return;
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) });
-    await apiPost('/registra-push', { operaio: currentUser, subscription: sub.toJSON() });
-  } catch(e) {
-    console.warn('Push registration failed:', e.message);
-  }
-}
 let rdaIntId=null,rdaTipoSel='';
 const RDA_TIPI=['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
 const RDA_IDS=['rdaTipoSost','rdaTipoTec','rdaTipoMat','rdaTipoAlt'];
@@ -765,7 +875,7 @@ let IMP = { impianti:[], interventi:[] };
 let impFiltro = 'tutti';
 
 function openImpiantiPanel() {
-  setImpFiltro('tutti'); // inizializza stili bottoni solo quando si apre
+  setImpFiltro('tutti');
   document.getElementById('impiantiPanel').classList.add('open');
   caricaImpianti();
 }
@@ -778,11 +888,8 @@ async function caricaImpianti() {
     '<div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>';
   document.getElementById('impSummary').style.display = 'none';
   try {
-    // Usa i dati già in memoria S se disponibili, altrimenti ricarica
     const tuttiImpianti = S.impianti || [];
     const tuttiInterventi = S.interventi || [];
-
-    // Trova impianti dell'operaio tramite interventi ordinari nel periodo
     const codiciInterventi = new Set(
       tuttiInterventi
         .filter(i =>
@@ -793,7 +900,6 @@ async function caricaImpianti() {
         )
         .map(i => i.codiceImpianto.toUpperCase())
     );
-    // Anche impianti con operaioDefault
     const codiciDefault = new Set(
       tuttiImpianti
         .filter(i => i.operaioDefault === currentUser)
@@ -804,7 +910,6 @@ async function caricaImpianti() {
     IMP.impianti   = tuttiImpianti.filter(i => codiciTotali.has(i.codice.toUpperCase()));
     IMP.interventi = tuttiInterventi;
 
-    // Prova anche il foglio Assegnazione via server
     try {
       const dAss = await fetch(PROXY_URL+'/impianti-operaio?operaio='+encodeURIComponent(currentUser)).then(r=>r.json());
       if(dAss.codici && dAss.codici.length > 0) {
@@ -860,7 +965,6 @@ function renderImpiantiPanel() {
   const search = (document.getElementById('impSearch')||{}).value||'';
   const stati  = IMP.impianti.map(i => ({ imp:i, s: statoImpiantoPanel(i.codice) }));
 
-  // Summary
   const nTot   = stati.length;
   const nVerdi = stati.filter(x=>x.s.stato==='verde').length;
   const nRossi = stati.filter(x=>x.s.stato!=='verde').length;
@@ -880,7 +984,6 @@ function renderImpiantiPanel() {
     (x.imp.codice+x.imp.descrizione+x.imp.comune).toLowerCase().includes(search.toLowerCase())
   );
 
-  // Ordina: da fare prima, poi pianificati, poi fatti; poi per comune
   const ord = {rosso:0, giallo:1, verde:2};
   lista.sort((a,b) => (ord[a.s.stato]-ord[b.s.stato]) || (a.imp.comune||'').localeCompare(b.imp.comune||''));
 
@@ -890,7 +993,6 @@ function renderImpiantiPanel() {
     return;
   }
 
-  // Raggruppa per comune
   let html='', ultimoComune=null;
   lista.forEach(({imp, s}) => {
     if(imp.comune !== ultimoComune) {
