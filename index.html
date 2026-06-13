@@ -56,7 +56,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 /* === FILTRI COMMESSA + VISTE === */
 .filtri-commesse{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;margin-bottom:10px}
 .filtri-commesse::-webkit-scrollbar{display:none}
-.fc-btn{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:22px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;transition:transform .1s}
+.fc-btn{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:22px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s,transform .1s}
 .fc-btn:active{transform:scale(.95)}
 .fc-btn.active{color:#1a1a1a;border-color:transparent}
 .fc-count{background:var(--bg4);color:var(--text);padding:1px 8px;border-radius:11px;font-size:12px;font-weight:700}
@@ -550,8 +550,14 @@ function renderFiltriCommesse(){
   el.innerHTML=COMMESSE.map(co=>{
     const n=cont[co.key]||0;
     const active=commessaSel===co.key;
-    const style=active?`background:${co.color};border-color:${co.color}`:'';
-    return `<button class="fc-btn ${active?'active':''}" style="${style}" onclick="setCommessa('${co.key}')">${co.label}${n?`<span class="fc-count">${n}</span>`:''}</button>`;
+    // Spento: tinta tenue nel colore commessa. Selezionato: stesso colore pieno e saturo.
+    const style=active
+      ? `background:${co.color};border-color:${co.color};color:#1a1a1a`
+      : `background:${co.color}22;border-color:${co.color}55;color:${co.color}`;
+    const badge=active
+      ? `background:rgba(0,0,0,.2);color:#1a1a1a`
+      : `background:${co.color}33;color:${co.color}`;
+    return `<button class="fc-btn ${active?'active':''}" style="${style}" onclick="setCommessa('${co.key}')">${co.label}${n?`<span class="fc-count" style="${badge}">${n}</span>`:''}</button>`;
   }).join('');
 }
 
