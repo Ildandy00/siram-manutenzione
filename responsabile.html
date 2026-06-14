@@ -1104,7 +1104,7 @@ async function caricaDati() {
     // Backlog
     const nBacklog = S.interventi.filter(i => i.stato === 'DaAssegnare').length;
     const backlogSec = document.getElementById('backlogSection');
-    if (backlogSec) { backlogSec.style.display = nBacklog > 0 ? 'block' : 'none'; document.getElementById('backlogCount').textContent = nBacklog; renderBacklog(); }
+    if (backlogSec) { backlogSec.style.display = nBacklog > 0 ? 'block' : 'none'; document.getElementById('backlogCount').textContent = nBacklog; try { renderBacklog(); } catch(err){ console.error('Errore renderBacklog:',err); } }
     document.getElementById('badgeAperti').textContent = S.interventi.filter(i => i.stato==='Aperto').length;
 
     popolaSelectImpianti();
@@ -1135,7 +1135,9 @@ async function caricaDati() {
     const selComune = document.getElementById('reportComune');
     selComune.innerHTML = '<option value="">Tutti i comuni</option>' + comuniSet.map(c=>`<option value="${c}">${c}</option>`).join('');
 
-    renderCalendario(); renderInterventi(); renderImpianti(); renderCatalogo();
+    [['calendario',renderCalendario],['interventi',renderInterventi],['impianti',renderImpianti],['catalogo',renderCatalogo]].forEach(([nome,fn])=>{
+      try { fn(); } catch(err) { console.error('Errore render '+nome+':', err); }
+    });
     document.getElementById('loadingCal').style.display = 'none';
     document.getElementById('calContent').style.display = 'block';
   } catch(e) {
@@ -1433,8 +1435,8 @@ function renderReport() {
   document.getElementById('reportTitolo').textContent=`Manutenzioni ordinarie ${anno}`;
   const righe=S.impianti.map(imp=>{
     const intAnno=S.interventi.filter(i=>i.codiceImpianto===imp.codice&&i.tipoVisita==='Ordinaria'&&i.dataPrevista>=`${anno}-01-01`&&i.dataPrevista<=`${anno}-12-31`);
-    const chiusi=intAnno.filter(i=>i.stato==='Chiuso').sort((a,b)=>b.dataChiusura.localeCompare(a.dataChiusura));
-    const aperti=intAnno.filter(i=>i.stato==='Aperto').sort((a,b)=>a.dataPrevista.localeCompare(b.dataPrevista));
+    const chiusi=intAnno.filter(i=>i.stato==='Chiuso').sort((a,b)=>(b.dataChiusura||'').localeCompare(a.dataChiusura||''));
+    const aperti=intAnno.filter(i=>i.stato==='Aperto').sort((a,b)=>(a.dataPrevista||'').localeCompare(b.dataPrevista||''));
     let stato,statoLbl,dataInfo,operaioInfo;
     if(chiusi.length>0){stato='completato';statoLbl='✓ Completato';dataInfo=chiusi[0].dataChiusura||chiusi[0].dataPrevista;operaioInfo=chiusi[0].operaio;}
     else if(aperti.length>0){stato='assegnato';statoLbl='→ Assegnato';dataInfo=aperti[0].dataPrevista;operaioInfo=aperti[0].operaio;}
@@ -1449,7 +1451,7 @@ function renderReport() {
   if(reportFilterCorrente!=='tutti')lista=lista.filter(r=>r.stato===reportFilterCorrente);
   if(comune)lista=lista.filter(r=>r.imp.comune===comune);
   if(search)lista=lista.filter(r=>(r.imp.codice+r.imp.descrizione+r.imp.comune).toLowerCase().includes(search.toLowerCase()));
-  lista.sort((a,b)=>({dafare:0,assegnato:1,completato:2}[a.stato]-{dafare:0,assegnato:1,completato:2}[b.stato])||a.imp.comune.localeCompare(b.imp.comune));
+  lista.sort((a,b)=>({dafare:0,assegnato:1,completato:2}[a.stato]-{dafare:0,assegnato:1,completato:2}[b.stato])||((a.imp&&a.imp.comune)||'').localeCompare((b.imp&&b.imp.comune)||''));
   const el=document.getElementById('tblReport');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun impianto trovato</div>';return;}
   el.innerHTML=`<table><thead><tr><th>Stato</th><th>Codice</th><th>Impianto</th><th>Comune</th><th>Operaio</th><th>Data</th><th>N.</th><th></th></tr></thead><tbody>`+
@@ -1679,7 +1681,7 @@ function renderPratiche() {
   lista.sort((a,b)=>{
     const da=a.stato==='Chiusa'?99:praticaStepIdx(a.stato);
     const db=b.stato==='Chiusa'?99:praticaStepIdx(b.stato);
-    return da-db||b.creatoIl.localeCompare(a.creatoIl);
+    return da-db||(b.creatoIl||'').localeCompare(a.creatoIl||'');
   });
   const el=document.getElementById('tblPratiche');
   if(!lista.length){el.innerHTML='<div class="empty">Nessuna pratica trovata</div>';return;}
@@ -2193,7 +2195,7 @@ function openModalNuovaPratica(idIntervento) {
   selImp.innerHTML='<option value="">Seleziona impianto...</option>'+
     S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
   const selInt=document.getElementById('npIntervento');
-  const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
+  const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>(b.dataPrevista||'').localeCompare(a.dataPrevista||''));
   selInt.innerHTML='<option value="">— Nessun collegamento —</option>'+
     intsAperti.map(i=>{
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
@@ -2252,7 +2254,7 @@ function renderRdacat() {
   const el=document.getElementById('tblRdacat');
   if(!S.rdacat.length){el.innerHTML='<div class="empty">Nessuna richiesta RDA/CAT</div>';return;}
   const ordine={Inviata:0,'In lavorazione':1,Completata:2,Annullata:3};
-  const lista=[...S.rdacat].sort((a,b)=>ordine[a.stato]-ordine[b.stato]||b.creatoIl.localeCompare(a.creatoIl));
+  const lista=[...S.rdacat].sort((a,b)=>ordine[a.stato]-ordine[b.stato]||(b.creatoIl||'').localeCompare(a.creatoIl||''));
   const tipoIcon={'Sostituzione apparecchiatura':'🔧','Supporto tecnico':'👨‍🔧','Materiali/Ricambi':'📦','Altro':'📋'};
   el.innerHTML=lista.map(r=>{
     const imp=S.impianti.find(x=>x.codice===r.codiceImpianto);
@@ -2329,7 +2331,7 @@ async function salvaBacklog() {
 }
 
 function renderBacklog() {
-  const list=S.interventi.filter(i=>i.stato==='DaAssegnare').sort((a,b)=>a.creatoIl.localeCompare(b.creatoIl));
+  const list=S.interventi.filter(i=>i.stato==='DaAssegnare').sort((a,b)=>(a.creatoIl||'').localeCompare(b.creatoIl||''));
   const el=document.getElementById('tblBacklog');
   if(!list.length){el.innerHTML='<div class="empty">Nessun lavoro in attesa</div>';return;}
   el.innerHTML=list.map(i=>{
@@ -2395,7 +2397,7 @@ function renderInterventi() {
   });
   lista.sort((a,b)=>{
     if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1;
-    return b.dataPrevista.localeCompare(a.dataPrevista);
+    return (b.dataPrevista||'').localeCompare(a.dataPrevista||'');
   });
   const el=document.getElementById('tblInterventi');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
@@ -2702,7 +2704,7 @@ function renderImpianti() {
   const search=(document.getElementById('searchImp')||{}).value.toLowerCase()||'';
   let lista=S.impianti;
   if(search) lista=lista.filter(i=>(i.codice+i.descrizione+(i.comune||'')+(i.indirizzo||'')).toLowerCase().includes(search));
-  lista=[...lista].sort((a,b)=>(a.comune||'').localeCompare(b.comune||'')||a.descrizione.localeCompare(b.descrizione));
+  lista=[...lista].sort((a,b)=>(a.comune||'').localeCompare(b.comune||'')||(a.descrizione||'').localeCompare(b.descrizione||''));
   const el=document.getElementById('impGrid');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun impianto trovato</div>';return;}
   el.innerHTML=lista.map(i=>{
@@ -2729,7 +2731,7 @@ function renderCatalogo() {
   let lista=[...S.catalogo];
   if(filtImp) lista=lista.filter(c=>c.codiceImpianto===filtImp);
   if(filtTipo) lista=lista.filter(c=>c.tipo===filtTipo);
-  lista.sort((a,b)=>a.codiceImpianto.localeCompare(b.codiceImpianto)||a.tipo.localeCompare(b.tipo)||(a.ordine||0)-(b.ordine||0));
+  lista.sort((a,b)=>(a.codiceImpianto||'').localeCompare(b.codiceImpianto||'')||(a.tipo||'').localeCompare(b.tipo||'')||(a.ordine||0)-(b.ordine||0));
   const el=document.getElementById('tblCatalogo');
   if(!lista.length){el.innerHTML='<div class="empty">Nessuna voce in catalogo</div>';return;}
   el.innerHTML=`<table><thead><tr><th>Impianto</th><th>Tipo</th><th>Attività</th><th>Ordine</th><th>Obbligatoria</th><th></th></tr></thead><tbody>`+
@@ -2773,7 +2775,7 @@ async function elimCatVoce(id) {
 function openStorico(codiceImpianto) {
   const imp=S.impianti.find(x=>x.codice===codiceImpianto);
   document.getElementById('storicoTitle').textContent=(imp?imp.descrizione:codiceImpianto)+' — Storico';
-  const ints=S.interventi.filter(i=>i.codiceImpianto===codiceImpianto&&i.stato!=='DaAssegnare').sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
+  const ints=S.interventi.filter(i=>i.codiceImpianto===codiceImpianto&&i.stato!=='DaAssegnare').sort((a,b)=>(b.dataPrevista||'').localeCompare(a.dataPrevista||''));
   const el=document.getElementById('storicoBody');
   if(!ints.length){el.innerHTML='<div class="empty">Nessun intervento registrato</div>';document.getElementById('modalStorico').classList.add('open');return;}
   el.innerHTML=ints.map(i=>{
