@@ -434,6 +434,13 @@ tr.int-completato td * { text-decoration: line-through; }
 .ev-str:hover { opacity: .85; }
 .ev-str.completato { opacity: .4; text-decoration: line-through; }
 
+/* riga evento con operaio a destra */
+.ev-row { display: flex; align-items: center; gap: 4px; }
+.ev-row .ev-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-row .ev-op { flex-shrink: 0; font-weight: 700; }
+.ev-row .ev-op.libera { opacity: .65; font-weight: 400; }
+.ev-row .ev-op.ord-op { color: var(--muted); font-weight: 600; }
+
 /* toggle nascondi ordinari */
 .toggle-ord-btn {
   display: inline-flex; align-items: center; gap: 5px;
@@ -533,6 +540,7 @@ tr.int-completato td * { text-decoration: line-through; }
             <div class="leg-item"><div class="leg-dot" style="background:#d98a9e"></div>Morciano</div>
             <div class="leg-item"><div class="leg-dot" style="background:#9aa0a8"></div>Altri</div>
             <div style="width:1px;background:var(--border);margin:0 4px"></div>
+            <div class="leg-item"><div class="leg-dot" style="background:#4ade80"></div>In carico</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--ferie)"></div>Ferie</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--permesso)"></div>Permesso</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--malattia)"></div>Malattia</div>
@@ -1160,7 +1168,8 @@ const MESI       = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Lug
 const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
-  // Commesse dal comune dell'impianto — stesso schema dell'app operaio
+
+// Commesse ricavate dal comune dell'impianto — stesso schema dell'app operaio
 const COMMESSE_R = [
   {key:'Pesaro',color:'#7a9ec8',match:['pesaro']},
   {key:'Misano',color:'#d9a066',match:['misano']},
@@ -1177,8 +1186,11 @@ function commessaDi(imp){
   for(const co of COMMESSE_R){ if(co.key==='Altri'||co.key==='Capitaneria')continue; if(co.match.some(m=>comune.includes(m)))return co; }
   return COMMESSE_R.find(c=>c.key==='Altri');
 }
+// Una richiesta straordinaria è "presa in carico" se ha un operaio valorizzato
 function isPresaR(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
-function isPresaR(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
+// Colore "In carico" — verde acceso, sempre ben visibile sopra qualsiasi sfondo commessa
+const COL_IN_CARICO = '#4ade80';
+
 const ASSENZA_COLOR = { Ferie:'ev-ferie', Permesso:'ev-permesso', Malattia:'ev-malattia' };
 
 function toLocaleDateStr(d) {
@@ -1225,6 +1237,23 @@ function getLunediSettimana(offset) {
   return lun;
 }
 
+// Riga evento: nome impianto a sinistra, operaio spinto a destra.
+// - Ordinarie: operaio in grigio (var(--muted))
+// - Straordinarie prese in carico: operaio/i in verde acceso
+// - Straordinarie libere (contenitore): icona 📦 tenue
+function evRowHtml(nome, isOrd, i, extra) {
+  let opHtml;
+  if (isOrd) {
+    opHtml = i.operaio ? `<span class="ev-op ord-op">${i.operaio}</span>` : '';
+  } else if (isPresaR(i)) {
+    const nomi = i.operaio + (i.secondoOperaio ? '+'+i.secondoOperaio : '');
+    opHtml = `<span class="ev-op" style="color:${COL_IN_CARICO}">${nomi}</span>`;
+  } else {
+    opHtml = `<span class="ev-op libera">📦</span>`;
+  }
+  return `<div class="ev-row"><span class="ev-name">${nome}${extra||''}</span>${opHtml}</div>`;
+}
+
 function renderSettimana() {
   const lun  = getLunediSettimana(settOffset);
   const oggi = toLocaleDateStr(new Date());
@@ -1264,13 +1293,12 @@ function renderSettimana() {
         return `<div class="ev-ord ${completo?'completato':''}"
           style="background:${col}18;color:${col}"
           onclick="openDettaglio('${i.id}')"
-          title="${imp?imp.descrizione:i.codiceImpianto}">${nome} · ${i.operaio}${praDot}</div>`;
+          title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,true,i,praDot)}</div>`;
       } else {
-        const prefisso = isPresaR(i) ? `In carico: ${i.operaio}${i.secondoOperaio?'+'+i.secondoOperaio:''} · ` : '📦 ';
         return `<div class="ev-str ${completo?'completato':''}"
           style="background:${col}28;color:${col};border-color:${col}"
           onclick="openDettaglio('${i.id}')"
-          title="${imp?imp.descrizione:i.codiceImpianto}">${prefisso}${nome}${praDot}</div>`;
+          title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,praDot)}</div>`;
       }
     }).join('');
     const ICONS_ASS = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
@@ -1328,19 +1356,19 @@ function renderCalendario() {
       const isOrd = i.tipoVisita === 'Ordinaria';
 
       if(isOrd) {
-        // Ordinari: colore commessa, operaio nel testo
+        // Ordinari: colore commessa a sinistra, operaio in grigio a destra
         if(!mostraOrdinari) return '';
         return `<div class="ev-ord ${tuttiDone?'completato':''}"
           style="background:${col}18;color:${col}"
           onclick="event.stopPropagation();openDettaglio('${i.id}')"
-          title="${imp?imp.descrizione:i.codiceImpianto}">${nome}${i.operaio?' · '+i.operaio:''}${praDot}</div>`;
+          title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,true,i,praDot)}</div>`;
       } else {
-        // Straordinari (richieste): colore commessa + "In carico" se presi
-        const prefisso = isPresaR(i) ? `In carico: ${i.operaio}${i.secondoOperaio?'+'+i.secondoOperaio:''} · ` : '📦 ';
+        // Straordinari (richieste): colore commessa, "In carico" in verde a destra o 📦 se libera
+        const extra=(isMulti?' 📅':'')+praDot;
         return `<div class="ev-str ${tuttiDone?'completato':''}"
           style="background:${col}28;color:${col};border-color:${col};${isMulti?'border-right:2px solid '+col+';':''}"
           onclick="event.stopPropagation();openDettaglio('${i.id}')"
-          title="${imp?imp.descrizione:i.codiceImpianto}">${prefisso}${nome}${isMulti?' 📅':''}${praDot}</div>`;
+          title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,extra)}</div>`;
       }
     }).join('');
     const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
@@ -1375,7 +1403,7 @@ function openGiorno(dateStr) {
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
         <div><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${i.operaio} · ${i.tipoVisita} · ${done}/${chk.length}</div></div>
+        <div style="font-size:11px;color:var(--muted)">${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}</div></div>
         <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
       </div>`;
     }).join('');
@@ -1465,16 +1493,12 @@ function renderAvanzamento() {
     { nome:'Ezio',    zona:'Misano · Gabicce', cls:'ezio',   col:'var(--ezio)' },
   ];
 
-  // Mappa codice impianto → operaio dal foglio Assegnazione (via S.interventi)
-  // Calcola per ogni impianto lo stato nella stagione per ogni operaio
   function statOperaio(nomeOperaio) {
-    // Impianti assegnati all'operaio = quelli con almeno un ordinario nel periodo
     const impAssegnati = [...new Set(
       S.impianti
         .filter(i => i.operaioDefault === nomeOperaio)
         .map(i => i.codice)
     )];
-    // Aggiungi impianti con interventi ordinari nel periodo assegnati all'operaio
     S.interventi.forEach(i => {
       if((i.operaio===nomeOperaio||i.secondoOperaio===nomeOperaio) &&
          i.tipoVisita==='Ordinaria' &&
@@ -1505,7 +1529,6 @@ function renderAvanzamento() {
 
   const statsPerOp = OPERAI_INFO.map(op => ({ ...op, ...statOperaio(op.nome) }));
 
-  // Totale generale
   const totTot  = statsPerOp.reduce((a,o)=>a+o.totale,0);
   const totFatti= statsPerOp.reduce((a,o)=>a+o.fatti,0);
   const totPian = statsPerOp.reduce((a,o)=>a+o.pianificati,0);
@@ -1515,7 +1538,6 @@ function renderAvanzamento() {
   document.getElementById('avanzamentoSub').textContent =
     `${totFatti}/${totTot} completati · stagione 16/04→01/10/${anno}`;
 
-  // Card totale
   document.getElementById('avanzamentoTotale').innerHTML = `
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -1533,7 +1555,6 @@ function renderAvanzamento() {
       </div>
     </div>`;
 
-  // Card per operaio
   document.getElementById('avanzamentoOperai').innerHTML = statsPerOp.map(op => {
     const pct = op.totale>0 ? Math.round(op.fatti/op.totale*100) : 0;
     const barColor = pct===100?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
@@ -1569,13 +1590,11 @@ function renderAvanzamento() {
     </div>`;
   }).join('');
 
-  // Sezione impianti da fare per operaio (ordinati per data pianificata)
   let daFareHtml = '';
   statsPerOp.forEach(op => {
     const daFare = op.dettaglio
       .filter(d => d.stato !== 'verde')
       .sort((a,b) => {
-        // pianificati prima (hanno data), poi da fare
         if(a.stato==='giallo' && b.stato!=='giallo') return -1;
         if(b.stato==='giallo' && a.stato!=='giallo') return 1;
         return (a.comune||'').localeCompare(b.comune||'');
@@ -1636,7 +1655,6 @@ function renderPratiche() {
   const search=(document.getElementById('praticaSearch')||{}).value||'';
   const comuneSel=(document.getElementById('praticaComuneFilter')||{}).value||'';
 
-  // Popola select comuni con i comuni presenti nelle pratiche caricate
   const selComune = document.getElementById('praticaComuneFilter');
   if(selComune) {
     const comuniSet = [...new Set(
@@ -1658,7 +1676,6 @@ function renderPratiche() {
     const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
     return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase());
   });
-  // Ordina: aperte prima (per indice stato), poi chiuse
   lista.sort((a,b)=>{
     const da=a.stato==='Chiusa'?99:praticaStepIdx(a.stato);
     const db=b.stato==='Chiusa'?99:praticaStepIdx(b.stato);
@@ -1670,7 +1687,6 @@ function renderPratiche() {
     const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
     const interv=S.interventi.find(x=>x.id===p.idIntervento);
     const stepCorrente=praticaStepIdx(p.stato);
-    // Mini timeline
     const timelineHtml=PRATICA_STEPS.map((s,i)=>{
       const isDone=i<stepCorrente;
       const isCurr=i===stepCorrente;
@@ -1687,7 +1703,6 @@ function renderPratiche() {
         ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
       </div>`;
     }).join('');
-    // Colore badge comune per distinguerli visivamente
     const COMUNI_COLORS = {
       'Pesaro':           'rgba(122,176,216,.15);color:#7ab0d8',
       'Misano Adriatico': 'rgba(154,132,200,.15);color:#c4b5fd',
@@ -1724,7 +1739,6 @@ function renderPratiche() {
   }).join('');
 }
 
-// Apri modal dettaglio pratica
 function openPratica(id) {
   currentPraticaId=id;
   const p=S.pratiche.find(x=>x.id===id);
@@ -1736,7 +1750,6 @@ function openPratica(id) {
     (interv?'Intervento '+interv.dataPrevista+' · '+interv.tipoVisita:'Pratica standalone')+
     ' · Aperta il '+p.creatoIl;
 
-  // Timeline visiva
   const stepCorrente=praticaStepIdx(p.stato);
   document.getElementById('praticaTimeline').innerHTML=PRATICA_STEPS.map((s,i)=>{
     const isDone=i<stepCorrente, isCurr=i===stepCorrente;
@@ -1754,7 +1767,6 @@ function openPratica(id) {
     </div>`;
   }).join('');
 
-  // Toggle Lavoro in gestione — sempre visibile sotto la timeline
   document.getElementById('praticaGestioneToggle').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
       background:${p.inGestione?'rgba(122,176,216,.1)':'var(--bg3)'};
@@ -1780,17 +1792,14 @@ function openPratica(id) {
       </div>
     </div>`;
 
-  // Box pianifica intervento di realizzazione
   const OPERAI_LIST = [
     { nome:'Matteo',  colore:'#7a9ec8', iniziale:'M'  },
     { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
     { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
     { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
   ];
-  // Interventi già collegati a questa pratica
   const intCollegati = S.interventi.filter(i=>i.id===p.idIntervento||
     S.pratiche.filter(x=>x.id===p.id).some(()=>i.note&&i.note.includes('[PRA:'+p.id+']')));
-  // Cerca interventi che hanno nel campo note il riferimento alla pratica
   const intPratica = S.interventi.filter(i=>
     (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento
   );
@@ -1806,7 +1815,7 @@ function openPratica(id) {
           padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:6px;
           border-left:3px solid ${col}">
           <div>
-            <div style="font-size:13px;font-weight:600;color:${col}">${i.operaio}</div>
+            <div style="font-size:13px;font-weight:600;color:${col}">${i.operaio||'— contenitore'}</div>
             <div style="font-size:11px;color:var(--muted)">📅 ${i.dataPrevista} · ${done}/${chk.length} attività
               <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}" style="margin-left:6px">${i.stato}</span>
             </div>
@@ -1821,7 +1830,6 @@ function openPratica(id) {
         🔨 Interventi di realizzazione
       </div>
       ${intListHtml}
-      <!-- Form aggiungi intervento -->
       <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pianifica nuovo intervento</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
@@ -1845,7 +1853,6 @@ function openPratica(id) {
       </div>
     </div>`;
 
-  // Step panels
   document.getElementById('praticaSteps').innerHTML=PRATICA_STEPS.map((s,i)=>{
     const isDone=i<stepCorrente, isCurr=i===stepCorrente;
     const cls=isDone?'done':isCurr?'current':'';
@@ -1886,7 +1893,6 @@ function openPratica(id) {
               </div>
             </div>
           </div>`).join('');
-      // Pulsante "Procedi" visibile solo se c'è almeno un'offerta selezionata
       const btnProcedi = offSelezionata
         ? `<div style="margin-bottom:14px;padding:10px 14px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
             <div style="font-size:13px">
@@ -1964,7 +1970,6 @@ function openPratica(id) {
         <button class="btn btn-primary btn-sm" onclick="salvaStep('chiuso')" style="background:var(--green);color:#1a1a1a">✓ Chiudi pratica</button>`;
     }
 
-    // Auto-apri il pannello corrente
     const bodyOpen=isCurr?'open':'';
     return `<div class="step-panel">
       <div class="step-panel-head ${cls}" onclick="toggleStepPanel(this)">
@@ -2012,13 +2017,10 @@ async function salvaStep(step) {
   try {
     const r=await apiPost('/aggiorna-pratica',{id:currentPraticaId,step,dati});
     if(!r.ok){toast('Errore salvataggio','err');return;}
-    // Aggiorna localmente
     Object.assign(p,dati);
-    // Avanza stato se necessario
     const statiMap={richiesta:'Richiesta',preventivo:'Preventivo',bdo:'BdO',ddt:'DDT',chiuso:'Chiusa'};
     const statoNuovo=statiMap[step];
     if(statoNuovo&&praticaStepIdx(statoNuovo)>praticaStepIdx(p.stato)) p.stato=statoNuovo;
-    // Aggiorna badge
     const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
     const bpra=document.getElementById('badgePratiche');
     bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
@@ -2027,7 +2029,6 @@ async function salvaStep(step) {
   } catch(e){toast('Errore','err');}
 }
 
-// ── Gestione offerte ──
 async function aggiungiOfferta(idPratica) {
   const fornitore = document.getElementById('off_fornitore').value.trim();
   if(!fornitore){toast('Inserisci il nome del fornitore','err');return;}
@@ -2039,9 +2040,7 @@ async function aggiungiOfferta(idPratica) {
   try {
     const r = await apiPost('/crea-offerta',{idPratica,fornitore,descrizione,importo,data,linkDrive,note});
     if(!r.ok){toast('Errore creazione offerta','err');return;}
-    // Aggiorna localmente
     S.offerte.push({id:r.id,idPratica,fornitore,descrizione,importo,data,linkDrive,selezionata:false,note});
-    // Aggiorna stato pratica se era Richiesta
     const p=S.pratiche.find(x=>x.id===idPratica);
     if(p&&p.stato==='Richiesta'){p.stato='Offerta';}
     toast('Offerta aggiunta','ok');
@@ -2052,7 +2051,6 @@ async function aggiungiOfferta(idPratica) {
 async function selezionaOfferta(idOfferta, idPratica) {
   try {
     const offerta = S.offerte.find(o=>o.id===idOfferta);
-    // Se già selezionata → deseleziona (toggle)
     const nuovaSelezionata = offerta && offerta.selezionata ? null : idOfferta;
     const r = await apiPost('/seleziona-offerta',{id:nuovaSelezionata, idPratica});
     if(!r.ok){toast('Errore','err');return;}
@@ -2075,7 +2073,6 @@ async function eliminaOfferta(idOfferta, idPratica) {
 }
 
 async function avanzaAPreventivo(idPratica) {
-  // Avanza lo stato della pratica da Offerta a Preventivo
   try {
     const r = await apiPost('/aggiorna-pratica',{id:idPratica, step:'preventivo', dati:{}});
     if(!r.ok){toast('Errore','err');return;}
@@ -2086,8 +2083,7 @@ async function avanzaAPreventivo(idPratica) {
   } catch(e){toast('Errore','err');}
 }
 
-// Chip selezione operai per pianificazione intervento pratica
-const _pintChipSel = {}; // { idPratica: Set<nomeOperaio> }
+const _pintChipSel = {};
 
 function togglePintChip(idPratica, nomeOperaio) {
   if(!_pintChipSel[idPratica]) _pintChipSel[idPratica] = new Set();
@@ -2123,11 +2119,9 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
 
   try {
     const operai = [...sel];
-    // Nota = note richiesta della pratica + riferimento PRA per il collegamento
     const p2 = S.pratiche.find(x=>x.id===idPratica);
     const notaBase = p2 && p2.noteRichiesta ? p2.noteRichiesta.trim() : '';
     const nota = (notaBase ? notaBase + ' ' : '') + '[PRA:'+idPratica+']';
-    // Crea un intervento per ogni operaio selezionato
     const ids = [];
     for(const operaio of operai) {
       const r = await apiPost('/crea-intervento',{
@@ -2137,14 +2131,12 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
       if(r.ok) ids.push(r.id);
     }
     if(ids.length===0) { toast('Errore creazione','err'); return; }
-    // Se più operai, collegali tra loro
     if(ids.length>1) {
       for(let k=1;k<ids.length;k++) {
         await apiPost('/imposta-collegamento',{id:ids[k],interventoCollegato:ids[0]});
         await apiPost('/imposta-collegamento',{id:ids[0],interventoCollegato:ids[k]});
       }
     }
-    // Aggiorna stato globale con i nuovi interventi
     const oggi = new Date().toISOString().slice(0,10);
     operai.forEach((operaio,i)=>{
       S.interventi.push({
@@ -2155,7 +2147,6 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
         linkDrive:'', dataFine:'', operaioSecondario2:''
       });
     });
-    // Reset chip
     _pintChipSel[idPratica] = new Set();
     toast(operai.length>1?`${operai.length} interventi pianificati`:'Intervento pianificato','ok');
     openPratica(idPratica);
@@ -2187,7 +2178,6 @@ async function eliminaPratica() {
     S.pratiche=S.pratiche.filter(p=>p.id!==currentPraticaId);
     closeModal('modalPratica');
     renderPratiche();
-    // Aggiorna badge
     const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
     const bpra=document.getElementById('badgePratiche');
     bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
@@ -2195,16 +2185,13 @@ async function eliminaPratica() {
   } catch(e){toast('Errore','err');}
 }
 
-// Apri nuova pratica
 function openModalNuovaPratica(idIntervento) {
   document.getElementById('npNote').value='';
   document.getElementById('npLink').value='';
   document.getElementById('npTipo').value='';
-  // Popola impianti
   const selImp=document.getElementById('npImp');
   selImp.innerHTML='<option value="">Seleziona impianto...</option>'+
     S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
-  // Popola interventi collegabili
   const selInt=document.getElementById('npIntervento');
   const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
   selInt.innerHTML='<option value="">— Nessun collegamento —</option>'+
@@ -2241,12 +2228,10 @@ async function creaPratica() {
     closeModal('modalNuovaPratica');
     toast('Pratica creata','ok');
     renderPratiche();
-    // Apri subito la pratica
     setTimeout(()=>openPratica(r.id),300);
   } catch(e){toast('Errore','err');}
 }
 
-// Bottone "Gestisci pratica" dal dettaglio intervento
 function aproPraticaDaIntervento() {
   const praticaEsistente=S.pratiche.find(p=>p.idIntervento===currentDetId);
   if(praticaEsistente){
@@ -2395,35 +2380,49 @@ async function eliminaBacklog() {
 }
 
 // ============================================================
-//  INTERVENTI TABELLA
+//  INTERVENTI (tabella)
 // ============================================================
 function renderInterventi() {
-  const search=(document.getElementById('searchInt')||{}).value||'';
-  const stato=(document.getElementById('filtStato')||{}).value||'';
-  const op=(document.getElementById('filtOp')||{}).value||'';
-  let list=S.interventi.filter(i=>i.stato!=='DaAssegnare');
-  if(stato)list=list.filter(i=>i.stato===stato);
-  if(op)list=list.filter(i=>i.operaio===op);
-  if(search)list=list.filter(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);return (i.codiceImpianto+(imp?imp.descrizione+imp.comune:'')+i.operaio).toLowerCase().includes(search.toLowerCase());});
-  list=list.sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
+  const search=(document.getElementById('searchInt')||{}).value.toLowerCase()||'';
+  const filtStato=(document.getElementById('filtStato')||{}).value||'';
+  const filtOp=(document.getElementById('filtOp')||{}).value||'';
+  let lista=S.interventi.filter(i=>i.stato!=='DaAssegnare');
+  if(filtStato) lista=lista.filter(i=>i.stato===filtStato);
+  if(filtOp) lista=lista.filter(i=>i.operaio===filtOp||i.secondoOperaio===filtOp||i.operaioSecondario2===filtOp);
+  if(search) lista=lista.filter(i=>{
+    const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+    return (i.codiceImpianto+(imp?imp.descrizione:'')+(i.operaio||'')+(i.note||'')).toLowerCase().includes(search);
+  });
+  lista.sort((a,b)=>{
+    if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1;
+    return b.dataPrevista.localeCompare(a.dataPrevista);
+  });
   const el=document.getElementById('tblInterventi');
-  if(!list.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Data</th><th>Impianto</th><th>Operaio</th><th>Tipo</th><th>Stato</th><th>Avanzamento</th><th></th></tr></thead><tbody>`+
-    list.map(i=>{
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Stato</th><th>Impianto</th><th>Tipo</th><th>Operaio</th><th>Data</th><th>Checklist</th><th></th></tr></thead><tbody>`+
+    lista.map(i=>{
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
       const done=chk.filter(c=>c.eseguita==='SI').length;
-      const pct=chk.length>0?Math.round(done/chk.length*100):0;
-      const tuttiDone=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
+      const pct=chk.length?Math.round(done/chk.length*100):0;
+      const isChiuso=i.stato==='Chiuso';
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
-      return `<tr class="${tuttiDone?'int-completato':''}">
-        <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}</td>
-        <td><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div><div style="font-size:11px;color:var(--muted)">${i.codiceImpianto}</div></td>
-        <td>${i.operaio}</td>
+      const operaioTxt = i.operaio
+        ? i.operaio+(i.secondoOperaio?'+'+i.secondoOperaio:'')+(i.operaioSecondario2?'+'+i.operaioSecondario2:'')
+        : '<span style="color:#4ade80;font-style:italic">— contenitore</span>';
+      return `<tr class="${isChiuso?'int-completato':''}" style="cursor:pointer" onclick="openDettaglio('${i.id}')">
+        <td><span class="badge ${isChiuso?'badge-chiuso':'badge-aperto'}">${i.stato}</span></td>
+        <td style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</td>
         <td><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span></td>
-        <td><span class="badge ${i.stato==='Aperto'?'badge-aperto':'badge-chiuso'}">${i.stato}</span></td>
-        <td><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${pct===100?'done':'wip'}" style="width:${pct}%"></div></div><span class="prog-txt">${done}/${chk.length}</span></div></td>
-        <td><button class="btn btn-ghost btn-sm" onclick="openDettaglio('${i.id}')">Apri</button></td>
+        <td>${operaioTxt}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}${i.dataFine&&i.dataFine>i.dataPrevista?' → '+i.dataFine:''}</td>
+        <td>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill ${isChiuso?'done':'wip'}" style="width:${pct}%"></div></div>
+            <div class="prog-txt">${done}/${chk.length}</div>
+          </div>
+        </td>
+        <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDettaglio('${i.id}')">Apri</button></td>
       </tr>`;
     }).join('')+'</tbody></table>';
 }
@@ -2434,84 +2433,71 @@ function renderInterventi() {
 function openDettaglio(id) {
   currentDetId=id;
   const i=S.interventi.find(x=>x.id===id);
+  if(!i) return;
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   document.getElementById('detTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('detStato').value=i.stato;
-  document.getElementById('detNuovaData').value='';
 
-  // Note
-  const tutteNote=i.note||'';
-  const primoSep=tutteNote.indexOf(' | Chiusura:');
-  const notaNormale=primoSep>=0?tutteNote.slice(0,primoSep).trim():tutteNote.trim();
-  const tuttiPezzi=tutteNote.split(' | ');
-  const eventiCrono=tuttiPezzi.filter(p=>p.indexOf('Chiusura:')===0||p.indexOf('Riaperto')===0);
-  const notaChiusura=eventiCrono.join('\n');
+  const operaioLbl = i.operaio
+    ? i.operaio+(i.secondoOperaio?' + '+i.secondoOperaio:'')
+    : '<span style="color:#4ade80">— contenitore (non assegnato)</span>';
 
   document.getElementById('detInfo').innerHTML=`
-    <div><span style="color:var(--muted)">Codice</span><br>${i.codiceImpianto}</div>
-    <div><span style="color:var(--muted)">Data</span><br>${i.dataPrevista}</div>
-    <div><span style="color:var(--muted)">Operaio</span><br>
-      <select id="detOperaio" class="fc" style="margin-top:4px;padding:4px 8px;font-size:13px">
-        ${['Matteo','Stefano','Michele','Ezio'].map(n=>`<option value="${n}" ${i.operaio===n?'selected':''}>${n}</option>`).join('')}
-      </select></div>
-    <div><span style="color:var(--muted)">Tipo</span><br>${i.tipoVisita}</div>
-    ${notaNormale?`<div style="grid-column:1/-1"><span style="color:var(--muted)">Note</span><br>${notaNormale}</div>`:''}
-    ${notaChiusura?`<div style="grid-column:1/-1;margin-top:4px;padding:14px 16px;background:rgba(63,185,80,.15);border:2px solid rgba(63,185,80,.45);border-left:5px solid #3fb950;border-radius:0 10px 10px 0">
-      <div style="font-size:11px;font-weight:700;color:#3fb950;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📋 Cronologia</div>
-      <div style="font-size:13px;color:#e6edf3;line-height:1.8;white-space:pre-line">${notaChiusura}</div>
-    </div>`:''}`;
+    <div><strong>Codice:</strong> ${i.codiceImpianto}</div>
+    <div><strong>Comune:</strong> ${imp?imp.comune||'—':'—'}</div>
+    <div><strong>Tipo:</strong> ${i.tipoVisita}</div>
+    <div><strong>Operaio:</strong> ${operaioLbl}</div>
+    <div><strong>Data prevista:</strong> ${i.dataPrevista}</div>
+    <div><strong>Creato il:</strong> ${i.creatoIl||'—'}</div>
+    ${i.dataChiusura?`<div><strong>Chiuso il:</strong> ${i.dataChiusura}</div>`:''}
+    ${i.dataFine&&i.dataFine>i.dataPrevista?`<div><strong>Fine lavori:</strong> ${i.dataFine}</div>`:''}
+  `;
+
+  document.getElementById('detNote').innerHTML = i.note
+    ? `<div style="font-size:13px;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-style:italic">📝 ${i.note}</div>`
+    : '';
 
   // Pratica collegata
-  const praticaBox=document.getElementById('detPraticaBox');
-  const pratica=S.pratiche.find(p=>p.idIntervento===id);
-  if(pratica){
-    const stepCorrente=praticaStepIdx(pratica.stato);
-    praticaBox.style.display='block';
-    praticaBox.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(200,180,100,.08);border:1px solid rgba(200,180,100,.2);border-radius:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:16px">📄</span>
-        <div>
-          <div style="font-size:13px;font-weight:700">Pratica in corso</div>
-          <div style="font-size:11px;color:var(--muted)">Step: <span class="pra-stato ${pratica.stato}" style="font-size:10px;padding:1px 6px">${pratica.stato}</span>
-          ${(()=>{ const sel=S.offerte.find(o=>o.idPratica===pratica.id&&o.selezionata); return sel&&sel.importo?` · Offerta € ${parseFloat(sel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''; })()}
-          ${pratica.importoPreventivo?` · Prev. € ${parseFloat(pratica.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}`:''}
-        </div>
-      </div>
-      <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="closeModal('modalDettaglio');openPratica('${pratica.id}')">Apri pratica →</button>
+  const praticaCollegata=S.pratiche.find(p=>p.idIntervento===i.id);
+  const praBox=document.getElementById('detPraticaBox');
+  if(praticaCollegata){
+    praBox.style.display='block';
+    praBox.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(200,180,100,.08);border:1px solid rgba(200,180,100,.25);border-radius:10px">
+      <div style="font-size:13px"><span class="pra-stato ${praticaCollegata.stato}">${praticaCollegata.stato}</span> Pratica collegata</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modalDettaglio');openPratica('${praticaCollegata.id}')">Apri pratica →</button>
     </div>`;
   } else {
-    praticaBox.style.display='none';
+    praBox.style.display='none'; praBox.innerHTML='';
   }
 
-  // Campi multi-giorno
+  const chk=S.checklist.filter(c=>c.idIntervento===i.id);
+  document.getElementById('detChk').innerHTML = chk.length===0
+    ? '<div style="font-size:13px;color:var(--muted)">Nessuna attività in checklist</div>'
+    : chk.map(c=>`<div class="chk-prev-item">
+        <span class="chk-prev-dot" style="background:${c.eseguita==='SI'?'var(--green)':'var(--border)'}"></span>
+        <span style="flex:1;${c.eseguita==='SI'?'text-decoration:line-through;opacity:.6':''}">${c.attivita}</span>
+        ${c.eseguita==='SI'?'<span style="color:var(--green);font-size:11px">✓ fatto</span>':'<span style="color:var(--muted);font-size:11px">da fare</span>'}
+      </div>`).join('');
+
+  document.getElementById('detStato').value=i.stato==='DaAssegnare'?'Aperto':i.stato;
+  document.getElementById('detNuovaData').value='';
   document.getElementById('detDataFine').value=i.dataFine||'';
   document.getElementById('detOpSecondario2').value=i.operaioSecondario2||'';
 
-  // Drive
-  const driveBox=document.getElementById('detDriveBox');
-  driveBox.style.display='block';
-  document.getElementById('detLinkDrive').value=i.linkDrive||'';
-  const driveBtn=document.getElementById('detDriveBtn');
-  if(i.linkDrive){driveBtn.href=i.linkDrive;driveBtn.style.display='';}else{driveBtn.style.display='none';}
-
-  // Secondo operaio
-  const secEl=document.getElementById('detSecondo');
+  const detSec=document.getElementById('detSecondo');
   if(i.secondoOperaio){
-    secEl.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(154,132,200,.1);border:1px solid rgba(154,132,200,.25);border-radius:10px;font-size:13px">
-      <span>👥</span><div><span style="color:var(--muted)">Secondo richiesto:</span> <strong>${i.secondoOperaio}</strong></div>
-      <button onclick="rimuoviSecondoResp('${id}')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer">✕</button></div>`;
-  } else { secEl.innerHTML=''; }
+    detSec.innerHTML=`<div style="font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:8px;padding:8px 12px">
+      <span>👥 2° operaio: <strong>${i.secondoOperaio}</strong></span>
+      <button class="btn btn-danger btn-sm" onclick="rimuoviSecondoResp()">Rimuovi</button>
+    </div>`;
+  } else { detSec.innerHTML=''; }
 
-  // Checklist
-  const chk=S.checklist.filter(c=>c.idIntervento===id);
-  document.getElementById('detChk').innerHTML=chk.length===0
-    ?'<p style="color:var(--muted);font-size:12px">Nessuna attività</p>'
-    :chk.map(c=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:7px;margin-bottom:5px;font-size:13px;opacity:${c.eseguita==='SI'?'.55':'1'}">
-        <div style="width:8px;height:8px;border-radius:50%;background:${c.eseguita==='SI'?'var(--green)':'var(--border)'}"></div>
-        <div style="flex:1;text-decoration:${c.eseguita==='SI'?'line-through':'none'}">${c.attivita}</div>
-        ${c.extra==='SI'?'<span style="font-size:10px;color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:1px 6px;border-radius:4px">EXTRA</span>':''}
-        ${c.note?`<span style="font-size:11px;color:var(--yellow)">⚠ ${c.note}</span>`:''}
-      </div>`).join('');
+  const driveBox=document.getElementById('detDriveBox');
+  const driveBtn=document.getElementById('detDriveBtn');
+  document.getElementById('detLinkDrive').value=i.linkDrive||'';
+  if(i.tipoVisita==='Straordinaria'){
+    driveBox.style.display='block';
+    if(i.linkDrive){ driveBtn.href=i.linkDrive; driveBtn.style.display='inline-flex'; } else { driveBtn.style.display='none'; }
+  } else { driveBox.style.display='none'; }
 
   document.getElementById('modalDettaglio').classList.add('open');
 }
@@ -2519,49 +2505,57 @@ function openDettaglio(id) {
 async function salvaDettaglio() {
   const stato=document.getElementById('detStato').value;
   const nuovaData=document.getElementById('detNuovaData').value;
-  const operaio=document.getElementById('detOperaio')?.value;
+  const dataFine=document.getElementById('detDataFine').value;
+  const opSec2=document.getElementById('detOpSecondario2').value;
+  const i=S.interventi.find(x=>x.id===currentDetId);
   try {
-    await apiPost('/aggiorna-intervento',{id:currentDetId,stato,operaio});
-    const i=S.interventi.find(x=>x.id===currentDetId);
-    if(i){i.stato=stato;if(operaio)i.operaio=operaio;}
-    if(nuovaData){await apiPost('/posticipa-intervento',{id:currentDetId,nuovaData});if(i)i.dataPrevista=nuovaData;}
-    const dataFine=document.getElementById('detDataFine')?.value||'';
-    const opSec2=document.getElementById('detOpSecondario2')?.value||'';
-    const hadMulti=i&&(i.dataFine||i.operaioSecondario2);
-    if(dataFine||opSec2||hadMulti){
-      await apiPost('/aggiorna-multigiorno',{id:currentDetId,dataFine,operaioSecondario2:opSec2});
-      if(i){i.dataFine=dataFine;i.operaioSecondario2=opSec2;}
-    }
+    const body={id:currentDetId,stato};
+    if(nuovaData) body.dataPrevista=nuovaData;
+    if(dataFine!==undefined) body.dataFine=dataFine;
+    body.operaioSecondario2=opSec2;
+    if(stato==='Chiuso'&&!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
+    const r=await apiPost('/aggiorna-intervento',body);
+    if(!r.ok){toast('Errore salvataggio','err');return;}
+    Object.assign(i,body);
+    if(body.dataChiusura) i.dataChiusura=body.dataChiusura;
     closeModal('modalDettaglio');
     toast('Salvato','ok');
     renderCalendario(); renderInterventi();
-    const nBacklog=S.interventi.filter(i=>i.stato==='DaAssegnare').length;
-    const bSec=document.getElementById('backlogSection');
-    if(bSec){bSec.style.display=nBacklog>0?'block':'none';document.getElementById('backlogCount').textContent=nBacklog;renderBacklog();}
-    document.getElementById('badgeAperti').textContent=S.interventi.filter(i=>i.stato==='Aperto').length;
+    document.getElementById('badgeAperti').textContent=S.interventi.filter(x=>x.stato==='Aperto').length;
   } catch(e){toast('Errore','err');}
 }
 
-async function rimuoviSecondoResp(id) {
-  try { await apiPost('/segnala-secondo',{id,secondoOperaio:''}); const i=S.interventi.find(x=>x.id===id);if(i)i.secondoOperaio=''; openDettaglio(id); toast('Rimosso','ok'); } catch(e){toast('Errore','err');}
+async function rimuoviSecondoResp() {
+  if(!confirm('Rimuovere il secondo operaio da questo intervento?'))return;
+  try {
+    await apiPost('/aggiorna-intervento',{id:currentDetId,secondoOperaio:''});
+    const i=S.interventi.find(x=>x.id===currentDetId); if(i)i.secondoOperaio='';
+    toast('Secondo operaio rimosso','ok');
+    openDettaglio(currentDetId);
+    renderCalendario();
+  } catch(e){toast('Errore','err');}
 }
+
 async function eliminaIntervento() {
-  if(!confirm('Eliminare questo intervento?'))return;
+  if(!confirm("Eliminare questo intervento? L'azione è irreversibile."))return;
   try {
     await apiPost('/elimina-intervento',{id:currentDetId});
-    S.interventi=S.interventi.filter(i=>i.id!==currentDetId);
+    S.interventi=S.interventi.filter(x=>x.id!==currentDetId);
     S.checklist=S.checklist.filter(c=>c.idIntervento!==currentDetId);
-    closeModal('modalDettaglio'); toast('Eliminato','ok'); renderCalendario(); renderInterventi();
+    closeModal('modalDettaglio');
+    toast('Intervento eliminato','ok');
+    renderCalendario(); renderInterventi();
+    document.getElementById('badgeAperti').textContent=S.interventi.filter(x=>x.stato==='Aperto').length;
   } catch(e){toast('Errore','err');}
 }
 
 async function salvaLinkDrive() {
   const link=document.getElementById('detLinkDrive').value.trim();
   try {
-    await apiPost('/salva-link-drive',{id:currentDetId,tipo:'intervento',linkDrive:link});
-    const i=S.interventi.find(x=>x.id===currentDetId);if(i)i.linkDrive=link;
-    const btn=document.getElementById('detDriveBtn');
-    if(link){btn.href=link;btn.style.display='';}else btn.style.display='none';
+    await apiPost('/aggiorna-intervento',{id:currentDetId,linkDrive:link});
+    const i=S.interventi.find(x=>x.id===currentDetId); if(i)i.linkDrive=link;
+    const driveBtn=document.getElementById('detDriveBtn');
+    if(link){ driveBtn.href=link; driveBtn.style.display='inline-flex'; } else { driveBtn.style.display='none'; }
     toast('Link salvato','ok');
   } catch(e){toast('Errore','err');}
 }
@@ -2570,70 +2564,95 @@ async function salvaLinkDrive() {
 //  NUOVO INTERVENTO
 // ============================================================
 function popolaSelectImpianti() {
-  const opts=S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');
-  ['nImp','catFiltImp','catNewImp','blImp'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    const prev=el.value;
-    el.innerHTML=(id==='catFiltImp'?'<option value="">Tutti</option>':'<option value="">Seleziona...</option>')+opts;
-    if(prev)el.value=prev;
-  });
+  const opts='<option value="">Seleziona...</option>'+
+    S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
+  ['nImp','blImp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  const optsAll='<option value="">Tutti gli impianti</option>'+
+    S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');
+  ['catFiltImp','catNewImp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsAll.replace('Tutti gli impianti','Seleziona impianto...'); });
+  const catFilt=document.getElementById('catFiltImp'); if(catFilt) catFilt.innerHTML=optsAll;
 }
 
-function openModalIntervento(dateStr) {
-  nExtraItems=[];
+let opSelezionati=new Set();
+
+function openModalIntervento(dataPreimpostata) {
   document.getElementById('nImp').value='';
   document.getElementById('nTipo').value='';
-  document.getElementById('nData').value=dateStr||new Date().toISOString().slice(0,10);
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+  document.getElementById('nData').value=dataPreimpostata||toLocaleDateStr(new Date());
+  document.getElementById('nDataFine').value='';
+  document.getElementById('nOpSecondario2').value='';
   document.getElementById('nNote').value='';
   document.getElementById('nAnteprima').style.display='none';
   document.getElementById('nAntEmpty').style.display='none';
-  closeModal('modalGiorno');
+  opSelezionati=new Set();
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+  nExtraItems=[];
+  renderExtraList();
   document.getElementById('modalIntervento').classList.add('open');
 }
 
-function onImpChange() {
-  const imp=S.impianti.find(i=>i.codice===document.getElementById('nImp').value);
-  if(imp&&imp.operaioDefault){ ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected')); const chip=document.getElementById('chip-'+imp.operaioDefault);if(chip)chip.classList.add('selected'); }
-  onTipoChange();
+function toggleOpChip(nome) {
+  const chip=document.getElementById('chip-'+nome);
+  if(opSelezionati.has(nome)){ opSelezionati.delete(nome); chip.classList.remove('selected'); }
+  else { opSelezionati.add(nome); chip.classList.add('selected'); }
 }
-function toggleOpChip(nome) { document.getElementById('chip-'+nome).classList.toggle('selected'); }
-function getOperaiSelezionati() { return ['Matteo','Stefano','Michele','Ezio'].filter(n=>document.getElementById('chip-'+n).classList.contains('selected')); }
+
+function onImpChange() { onTipoChange(); }
 
 function onTipoChange() {
-  const codice=document.getElementById('nImp').value, tipo=document.getElementById('nTipo').value;
-  if(!codice||!tipo){document.getElementById('nAnteprima').style.display='none';return;}
-  const voci=S.catalogo.filter(c=>c.codiceImpianto===codice&&c.tipoVisita===tipo).sort((a,b)=>a.ordine-b.ordine);
-  nExtraItems=[];
-  if(!voci.length){document.getElementById('nAnteprima').style.display='none';document.getElementById('nAntEmpty').style.display='block';}
-  else{document.getElementById('nAntEmpty').style.display='none';document.getElementById('nAnteprima').style.display='block';document.getElementById('nAntList').innerHTML=voci.map(v=>`<div class="chk-prev-item"><div class="chk-prev-dot"></div>${v.attivita}</div>`).join('');renderExtraList();}
+  const codice=document.getElementById('nImp').value;
+  const tipo=document.getElementById('nTipo').value;
+  if(!codice||!tipo){ document.getElementById('nAnteprima').style.display='none'; document.getElementById('nAntEmpty').style.display='none'; return; }
+  const voci=S.catalogo.filter(c=>c.codiceImpianto===codice&&c.tipo===tipo).sort((a,b)=>(a.ordine||0)-(b.ordine||0));
+  if(voci.length===0){
+    document.getElementById('nAnteprima').style.display='block';
+    document.getElementById('nAntList').innerHTML='';
+    document.getElementById('nAntEmpty').style.display='block';
+  } else {
+    document.getElementById('nAnteprima').style.display='block';
+    document.getElementById('nAntEmpty').style.display='none';
+    document.getElementById('nAntList').innerHTML=voci.map(v=>`<div class="chk-prev-item"><span class="chk-prev-dot"></span><span>${v.attivita}</span>${v.obbligatoria==='NO'?'<span style="color:var(--muted);font-size:11px;margin-left:auto">opzionale</span>':''}</div>`).join('');
+  }
 }
-function addExtra() { const v=document.getElementById('nExtraInp').value.trim();if(!v)return;nExtraItems.push(v);document.getElementById('nExtraInp').value='';renderExtraList(); }
-function renderExtraList() { document.getElementById('nExtraList').innerHTML=nExtraItems.map((e,i)=>`<div class="chk-prev-item" style="border-left:2px solid var(--yellow)"><div class="chk-prev-dot" style="background:var(--yellow)"></div>${e}<button onclick="nExtraItems.splice(${i},1);renderExtraList()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer">✕</button></div>`).join(''); }
+
+function addExtra() {
+  const inp=document.getElementById('nExtraInp');
+  const val=inp.value.trim();
+  if(!val) return;
+  nExtraItems.push(val);
+  inp.value='';
+  renderExtraList();
+}
+function renderExtraList() {
+  document.getElementById('nExtraList').innerHTML=nExtraItems.map((v,idx)=>`<div class="chk-prev-item"><span class="chk-prev-dot" style="background:var(--yellow)"></span><span style="flex:1">${v}</span><button class="btn btn-danger btn-sm" onclick="removeExtra(${idx})">✕</button></div>`).join('');
+}
+function removeExtra(idx) { nExtraItems.splice(idx,1); renderExtraList(); }
 
 async function salvaIntervento() {
-  const imp=document.getElementById('nImp').value, tipo=document.getElementById('nTipo').value;
-  const operai=getOperaiSelezionati(), data=document.getElementById('nData').value;
-  if(!imp||!tipo||!data){toast('Seleziona impianto, tipo e data','err');return;}
-  if(!operai.length){toast('Seleziona almeno un operaio','err');return;}
+  const codice=document.getElementById('nImp').value;
+  const tipo=document.getElementById('nTipo').value;
+  const data=document.getElementById('nData').value;
+  const dataFine=document.getElementById('nDataFine').value;
+  const opSec2=document.getElementById('nOpSecondario2').value;
+  const note=document.getElementById('nNote').value.trim();
+  const operai=[...opSelezionati];
+  if(!codice||!tipo||!data){toast('Compila i campi obbligatori','err');return;}
+  if(operai.length===0){toast('Seleziona almeno un operaio','err');return;}
   try {
-    toast('Creazione...');
-    const nota=document.getElementById('nNote').value;
-    if(operai.length===1){
-      const nDataFine=document.getElementById('nDataFine')?.value||'';
-      const nOpSec2=document.getElementById('nOpSecondario2')?.value||'';
-      const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:tipo,operaio:operai[0],dataPrevista:data,note:nota,attivitaExtra:nExtraItems,dataFine:nDataFine,operaioSecondario2:nOpSec2});
-      if(!r.ok){toast('Errore','err');return;}
-    } else {
-      const results=await Promise.all(operai.map(op=>apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:tipo,operaio:op,dataPrevista:data,note:nota,attivitaExtra:nExtraItems})));
-      if(results.some(r=>!r.ok)){toast('Errore su alcuni interventi','err');return;}
-      const ids=results.map(r=>r.id);
+    const ids=[];
+    for(const operaio of operai){
+      const r=await apiPost('/crea-intervento',{codiceImpianto:codice,tipoVisita:tipo,operaio,dataPrevista:data,dataFine,operaioSecondario2:opSec2,note,attivitaExtra:nExtraItems});
+      if(r.ok) ids.push(r.id);
+    }
+    if(ids.length===0){toast('Errore creazione','err');return;}
+    if(ids.length>1){
       for(let k=1;k<ids.length;k++){
         await apiPost('/imposta-collegamento',{id:ids[k],interventoCollegato:ids[0]});
         await apiPost('/imposta-collegamento',{id:ids[0],interventoCollegato:ids[k]});
       }
     }
-    closeModal('modalIntervento'); toast(operai.length>1?`${operai.length} interventi collegati!`:'Intervento creato!','ok');
+    closeModal('modalIntervento');
+    toast(operai.length>1?`${operai.length} interventi creati`:'Intervento creato','ok');
     await caricaDati();
   } catch(e){toast('Errore','err');}
 }
@@ -2641,109 +2660,136 @@ async function salvaIntervento() {
 // ============================================================
 //  ASSENZE
 // ============================================================
-function openModalAssenza(dateStr) {
+function openModalAssenza(dataPreimpostata) {
   document.getElementById('aOp').value='';
   document.getElementById('aTipo').value='Ferie';
-  document.getElementById('aDal').value=dateStr||new Date().toISOString().slice(0,10);
-  document.getElementById('aAl').value=dateStr||new Date().toISOString().slice(0,10);
+  document.getElementById('aDal').value=dataPreimpostata||toLocaleDateStr(new Date());
+  document.getElementById('aAl').value=dataPreimpostata||toLocaleDateStr(new Date());
   document.getElementById('aNote').value='';
-  closeModal('modalGiorno');
   document.getElementById('modalAssenza').classList.add('open');
 }
 async function salvaAssenza() {
-  const op=document.getElementById('aOp').value, dal=document.getElementById('aDal').value, al=document.getElementById('aAl').value;
-  if(!op||!dal||!al){toast('Compila tutti i campi','err');return;}
-  if(al<dal){toast('Data fine >= data inizio','err');return;}
+  const operaio=document.getElementById('aOp').value;
+  const tipo=document.getElementById('aTipo').value;
+  const dal=document.getElementById('aDal').value;
+  const al=document.getElementById('aAl').value;
+  const note=document.getElementById('aNote').value.trim();
+  if(!operaio||!dal||!al){toast('Compila i campi obbligatori','err');return;}
   try {
-    const r=await apiPost('/crea-assenza',{operaio:op,dataInizio:dal,dataFine:al,tipo:document.getElementById('aTipo').value,note:document.getElementById('aNote').value});
+    const r=await apiPost('/crea-assenza',{operaio,tipo,dataInizio:dal,dataFine:al,note});
     if(!r.ok){toast('Errore','err');return;}
-    closeModal('modalAssenza'); toast('Assenza salvata','ok'); await caricaDati();
+    S.assenze.push({id:r.id,operaio,tipo,dataInizio:dal,dataFine:al,note});
+    closeModal('modalAssenza');
+    toast('Assenza salvata','ok');
+    renderCalendario();
   } catch(e){toast('Errore','err');}
 }
 async function eliminaAssenza(id) {
   if(!confirm('Eliminare questa assenza?'))return;
-  try { await apiPost('/elimina-assenza',{id}); S.assenze=S.assenze.filter(a=>a.id!==id); closeModal('modalGiorno'); toast('Eliminata','ok'); renderCalendario(); } catch(e){toast('Errore','err');}
+  try {
+    await apiPost('/elimina-assenza',{id});
+    S.assenze=S.assenze.filter(a=>a.id!==id);
+    toast('Assenza eliminata','ok');
+    renderCalendario();
+    if(currentGiornoDate) openGiorno(currentGiornoDate);
+  } catch(e){toast('Errore','err');}
 }
 
 // ============================================================
 //  IMPIANTI
 // ============================================================
 function renderImpianti() {
-  const search=(document.getElementById('searchImp')||{}).value||'';
-  let list=S.impianti;
-  if(search)list=list.filter(i=>(i.codice+i.descrizione+i.comune).toLowerCase().includes(search.toLowerCase()));
-  document.getElementById('impGrid').innerHTML=list.map(i=>{
-    const nAp=S.interventi.filter(x=>x.codiceImpianto===i.codice&&x.stato==='Aperto').length;
-    const nPrat=S.pratiche.filter(p=>p.codiceImpianto===i.codice&&p.stato!=='Chiusa').length;
+  const search=(document.getElementById('searchImp')||{}).value.toLowerCase()||'';
+  let lista=S.impianti;
+  if(search) lista=lista.filter(i=>(i.codice+i.descrizione+(i.comune||'')+(i.indirizzo||'')).toLowerCase().includes(search));
+  lista=[...lista].sort((a,b)=>(a.comune||'').localeCompare(b.comune||'')||a.descrizione.localeCompare(b.descrizione));
+  const el=document.getElementById('impGrid');
+  if(!lista.length){el.innerHTML='<div class="empty">Nessun impianto trovato</div>';return;}
+  el.innerHTML=lista.map(i=>{
+    const co=commessaDi(i);
     return `<div class="imp-card">
       <div class="imp-code">${i.codice}</div>
       <div class="imp-name">${i.descrizione}</div>
-      <div class="imp-meta">${i.comune}${i.indirizzo?' · '+i.indirizzo:''}${i.operaioDefault?' → '+i.operaioDefault:''}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">${nAp} aperti${nPrat>0?` · <span style="color:var(--yellow)">${nPrat} pratiche</span>`:''}</div>
+      <div class="imp-meta">${i.comune||'—'}${i.indirizzo?' · '+i.indirizzo:''}</div>
+      <div class="imp-meta" style="margin-top:4px"><span style="color:${co.color}">● ${co.key}</span>${i.operaioDefault?` · Default: ${i.operaioDefault}`:''}</div>
       <div class="imp-actions">
         <button class="btn btn-ghost btn-sm" onclick="openStorico('${i.codice}')">Storico</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--yellow);border-color:rgba(200,180,100,.3)" onclick="openModalNuovaPratica();document.getElementById('npImp').value='${i.codice}'">+ Pratica</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalIntervento(null);document.getElementById('nImp').value='${i.codice}';onImpChange()">+ Intervento</button>
       </div>
     </div>`;
-  }).join('')||'<div class="empty">Nessun impianto</div>';
+  }).join('');
 }
 
 // ============================================================
 //  CATALOGO
 // ============================================================
 function renderCatalogo() {
-  const imp=(document.getElementById('catFiltImp')||{}).value||'';
-  const tipo=(document.getElementById('catFiltTipo')||{}).value||'';
-  let list=S.catalogo;
-  if(imp)list=list.filter(c=>c.codiceImpianto===imp);
-  if(tipo)list=list.filter(c=>c.tipoVisita===tipo);
-  list=list.sort((a,b)=>a.codiceImpianto.localeCompare(b.codiceImpianto)||(a.ordine-b.ordine));
+  const filtImp=(document.getElementById('catFiltImp')||{}).value||'';
+  const filtTipo=(document.getElementById('catFiltTipo')||{}).value||'';
+  let lista=[...S.catalogo];
+  if(filtImp) lista=lista.filter(c=>c.codiceImpianto===filtImp);
+  if(filtTipo) lista=lista.filter(c=>c.tipo===filtTipo);
+  lista.sort((a,b)=>a.codiceImpianto.localeCompare(b.codiceImpianto)||a.tipo.localeCompare(b.tipo)||(a.ordine||0)-(b.ordine||0));
   const el=document.getElementById('tblCatalogo');
-  if(!list.length){el.innerHTML='<div class="empty">Nessuna voce</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Impianto</th><th>Tipo</th><th>Attività</th><th>Ord.</th><th>Obbl.</th><th></th></tr></thead><tbody>`+
-    list.map(c=>`<tr>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${c.codiceImpianto}</td>
-      <td><span class="badge ${c.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${c.tipoVisita}</span></td>
-      <td>${c.attivita}</td>
-      <td style="color:var(--muted)">${c.ordine}</td>
-      <td><span style="font-size:11px;color:${c.obbligatoria==='SI'?'var(--green)':'var(--muted)'}">${c.obbligatoria}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="elimCatVoce('${c.codiceImpianto}','${c.tipoVisita}','${escJs(c.attivita)}')">✕</button></td>
-    </tr>`).join('')+'</tbody></table>';
+  if(!lista.length){el.innerHTML='<div class="empty">Nessuna voce in catalogo</div>';return;}
+  el.innerHTML=`<table><thead><tr><th>Impianto</th><th>Tipo</th><th>Attività</th><th>Ordine</th><th>Obbligatoria</th><th></th></tr></thead><tbody>`+
+    lista.map(c=>{
+      const imp=S.impianti.find(x=>x.codice===c.codiceImpianto);
+      return `<tr>
+        <td>${imp?imp.descrizione:c.codiceImpianto} <span style="color:var(--muted);font-size:11px">${c.codiceImpianto}</span></td>
+        <td><span class="badge ${c.tipo==='Ordinaria'?'badge-ord':'badge-str'}">${c.tipo}</span></td>
+        <td>${c.attivita}</td>
+        <td style="text-align:center">${c.ordine||1}</td>
+        <td>${c.obbligatoria==='NO'?'<span style="color:var(--muted)">No</span>':'Sì'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="elimCatVoce('${c.id}')">✕</button></td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
 }
+
 async function salvaCatVoce() {
-  const d={codiceImpianto:document.getElementById('catNewImp').value,tipoVisita:document.getElementById('catNewTipo').value,attivita:document.getElementById('catNewAtt').value.trim(),ordine:parseInt(document.getElementById('catNewOrd').value)||1,obbligatoria:document.getElementById('catNewObbl').value};
-  if(!d.codiceImpianto||!d.attivita){toast('Seleziona impianto e scrivi attività','err');return;}
-  try { await apiPost('/salva-catalogo',d); toast('Aggiunta','ok'); document.getElementById('catNewAtt').value=''; await caricaDati(); } catch(e){toast('Errore','err');}
+  const codice=document.getElementById('catNewImp').value;
+  const tipo=document.getElementById('catNewTipo').value;
+  const attivita=document.getElementById('catNewAtt').value.trim();
+  const ordine=document.getElementById('catNewOrd').value;
+  const obbligatoria=document.getElementById('catNewObbl').value;
+  if(!codice||!attivita){toast('Compila i campi obbligatori','err');return;}
+  try {
+    const r=await apiPost('/crea-catalogo',{codiceImpianto:codice,tipo,attivita,ordine,obbligatoria});
+    if(!r.ok){toast('Errore','err');return;}
+    S.catalogo.push({id:r.id,codiceImpianto:codice,tipo,attivita,ordine,obbligatoria});
+    document.getElementById('catNewAtt').value='';
+    toast('Voce aggiunta','ok');
+    renderCatalogo();
+  } catch(e){toast('Errore','err');}
 }
-async function elimCatVoce(codice,tipo,att) {
-  if(!confirm('Eliminare "'+att+'"?'))return;
-  try { await apiPost('/elimina-catalogo',{codice,tipoVisita:tipo,attivita:att}); toast('Eliminata','ok'); await caricaDati(); } catch(e){toast('Errore','err');}
+async function elimCatVoce(id) {
+  if(!confirm('Eliminare questa voce dal catalogo?'))return;
+  try { await apiPost('/elimina-catalogo',{id}); S.catalogo=S.catalogo.filter(c=>c.id!==id); toast('Eliminata','ok'); renderCatalogo(); } catch(e){toast('Errore','err');}
 }
 
 // ============================================================
 //  STORICO IMPIANTO
 // ============================================================
-function openStorico(codice) {
-  const imp=S.impianti.find(i=>i.codice===codice);
-  document.getElementById('storicoTitle').textContent='Storico — '+(imp?imp.descrizione:codice);
-  const ints=S.interventi.filter(i=>i.codiceImpianto===codice).sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
-  if(!ints.length){document.getElementById('storicoBody').innerHTML='<div class="empty">Nessun intervento registrato</div>';}
-  else{document.getElementById('storicoBody').innerHTML=ints.map(i=>{
+function openStorico(codiceImpianto) {
+  const imp=S.impianti.find(x=>x.codice===codiceImpianto);
+  document.getElementById('storicoTitle').textContent=(imp?imp.descrizione:codiceImpianto)+' — Storico';
+  const ints=S.interventi.filter(i=>i.codiceImpianto===codiceImpianto&&i.stato!=='DaAssegnare').sort((a,b)=>b.dataPrevista.localeCompare(a.dataPrevista));
+  const el=document.getElementById('storicoBody');
+  if(!ints.length){el.innerHTML='<div class="empty">Nessun intervento registrato</div>';document.getElementById('modalStorico').classList.add('open');return;}
+  el.innerHTML=ints.map(i=>{
     const chk=S.checklist.filter(c=>c.idIntervento===i.id);
-    const done=chk.filter(c=>c.eseguita==='SI').length;
-    const hasPrat=S.pratiche.some(p=>p.idIntervento===i.id);
-    return `<div class="stor-entry ${i.stato.toLowerCase()}">
+    const isChiuso=i.stato==='Chiuso';
+    return `<div class="stor-entry ${isChiuso?'chiuso':'aperto'}">
       <div class="stor-head">
-        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${i.dataPrevista}</span>
-        <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}">${i.stato}</span>
+        <span class="badge ${isChiuso?'badge-chiuso':'badge-aperto'}">${i.stato}</span>
         <span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>
-        <span style="font-size:12px;color:var(--muted)">${i.operaio}</span>
-        ${hasPrat?'<span class="pra-dot"></span>':''}
-        <span style="font-size:12px;color:var(--muted);margin-left:auto">${done}/${chk.length}</span>
+        <span style="font-weight:600">${i.operaio||'— contenitore'}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto">${i.dataPrevista}${i.dataChiusura?' → '+i.dataChiusura:''}</span>
       </div>
-      <div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'✗'} ${c.attivita}</span>`).join('')}</div>
+      ${i.note?`<div style="font-size:13px;font-style:italic;color:var(--muted);margin-bottom:6px">📝 ${i.note}</div>`:''}
+      ${chk.length?`<div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'○'} ${c.attivita}</span>`).join('')}</div>`:''}
     </div>`;
-  }).join('');}
+  }).join('');
   document.getElementById('modalStorico').classList.add('open');
 }
 
@@ -2751,35 +2797,38 @@ function openStorico(codice) {
 //  REPERIBILITÀ
 // ============================================================
 function renderRepWidget() {
-  const rep=S.reperibilita; if(!rep)return;
-  document.getElementById('repNome').textContent=rep.corrente&&rep.corrente.operaio?rep.corrente.operaio:'—';
-  const oggi=new Date(), dow=oggi.getDay()===0?6:oggi.getDay()-1;
-  const lunCorrente=new Date(oggi); lunCorrente.setDate(oggi.getDate()-dow); lunCorrente.setHours(0,0,0,0);
-  const lunStr=toLocaleDateStr(lunCorrente);
-  document.getElementById('repSettimane').innerHTML=rep.settimane.map(s=>{
-    const d=new Date(s.data+'T00:00:00'), dom=new Date(d); dom.setDate(d.getDate()+6);
-    const label=d.getDate()+' '+MESI_SHORT[d.getMonth()]+' – '+dom.getDate()+' '+MESI_SHORT[dom.getMonth()];
-    return `<div class="rep-sett-btn ${s.data===lunStr?'corrente':''}" onclick="openRepModal('${s.data}','${s.operaio||''}')">
-      <div class="sett-data">${label}</div>
+  if(!S.reperibilita) return;
+  const corrente=S.reperibilita.corrente;
+  document.getElementById('repNome').textContent=corrente&&corrente.operaio?corrente.operaio:'—';
+  const settimane=S.reperibilita.settimane||[];
+  document.getElementById('repSettimane').innerHTML=settimane.map(s=>{
+    const isCorrente=s.dataInizio===corrente?.dataInizio;
+    const dIn=new Date(s.dataInizio+'T00:00:00'), dOut=new Date(s.dataFine+'T00:00:00');
+    const lbl=`${dIn.getDate()} ${MESI_SHORT[dIn.getMonth()]} – ${dOut.getDate()} ${MESI_SHORT[dOut.getMonth()]}`;
+    return `<div class="rep-sett-btn ${isCorrente?'corrente':''}" onclick="openRepModal('${s.dataInizio}','${s.dataFine}','${s.operaio||''}')">
+      <div class="sett-data">${lbl}</div>
       <div class="sett-op ${s.operaio?'':'vuoto'}">${s.operaio||'non assegnato'}</div>
     </div>`;
   }).join('');
 }
-function openRepModal(data,operaioAttuale) {
-  const d=new Date(data+'T00:00:00'), dom=new Date(d); dom.setDate(d.getDate()+6);
-  document.getElementById('repModalTitolo').textContent='Settimana '+d.getDate()+' '+MESI_SHORT[d.getMonth()]+' – '+dom.getDate()+' '+MESI_SHORT[dom.getMonth()];
-  document.getElementById('repDataHidden').value=data;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{const el=document.getElementById('repchip-'+n);if(el)el.classList.toggle('selected',n===operaioAttuale);});
+function openRepModal(dataInizio,dataFine,operaioAttuale) {
+  document.getElementById('repDataHidden').value=dataInizio+'|'+dataFine;
+  const dIn=new Date(dataInizio+'T00:00:00'), dOut=new Date(dataFine+'T00:00:00');
+  document.getElementById('repModalTitolo').textContent=`Reperibile ${dIn.getDate()} ${MESI_SHORT[dIn.getMonth()]} – ${dOut.getDate()} ${MESI_SHORT[dOut.getMonth()]}`;
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected'));
+  if(operaioAttuale) document.getElementById('repchip-'+operaioAttuale)?.classList.add('selected');
   document.getElementById('modalRep').classList.add('open');
 }
 async function salvaReperibile() {
-  const data=document.getElementById('repDataHidden').value;
+  const [dataInizio,dataFine]=document.getElementById('repDataHidden').value.split('|');
   const operaio=['Matteo','Stefano','Michele','Ezio'].find(n=>document.getElementById('repchip-'+n).classList.contains('selected'));
   if(!operaio){toast('Seleziona un operaio','err');return;}
   try {
-    await apiPost('/salva-reperibile',{data,operaio});
-    if(S.reperibilita){const s=S.reperibilita.settimane.find(x=>x.data===data);if(s)s.operaio=operaio;const oggi=new Date(),dow=oggi.getDay()===0?6:oggi.getDay()-1,lun=new Date(oggi);lun.setDate(oggi.getDate()-dow);lun.setHours(0,0,0,0);if(toLocaleDateStr(lun)===data)S.reperibilita.corrente.operaio=operaio;renderRepWidget();}
-    closeModal('modalRep'); toast('Reperibile: '+operaio,'ok');
+    const r=await apiPost('/imposta-reperibile',{dataInizio,dataFine,operaio});
+    if(!r.ok){toast('Errore','err');return;}
+    closeModal('modalRep');
+    toast('Reperibilità aggiornata','ok');
+    const rep=await apiGet('/reperibile'); S.reperibilita=rep; renderRepWidget();
   } catch(e){toast('Errore','err');}
 }
 
@@ -2787,20 +2836,16 @@ async function salvaReperibile() {
 //  UTILS
 // ============================================================
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function escJs(s) { return (s||'').replace(/'/g,"\\'"); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
 function toast(msg,type) {
-  const el=document.getElementById('toast');
-  el.textContent=msg; el.className='toast '+(type||''); el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2400);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show '+(type||'ok');
+  setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-document.querySelectorAll('.overlay').forEach(o=>{
-  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
-});
-
-setInterval(()=>{
-  if(!document.querySelector('.overlay.open')){ caricaDati(); console.log('Auto-refresh',new Date().toLocaleTimeString('it-IT')); }
-},5*60*1000);
+// Auto-refresh ogni 60s
+setInterval(()=>{ if(document.getElementById('appShell').style.display!=='none') caricaDati(); }, 60000);
 </script>
 </body>
 </html>
