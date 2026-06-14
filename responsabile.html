@@ -525,10 +525,13 @@ tr.int-completato td * { text-decoration: line-through; }
             </div>
           </div>
           <div class="cal-legend">
-            <div class="leg-item"><div class="leg-dot" style="background:var(--matteo)"></div>Matteo</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--stefano)"></div>Stefano</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--michele)"></div>Michele</div>
-            <div class="leg-item"><div class="leg-dot" style="background:var(--ezio)"></div>Ezio</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#7a9ec8"></div>Pesaro</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#d9a066"></div>Misano</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#7ab87a"></div>Verucchio</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#b08fd8"></div>Gabicce</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#5cc0c8"></div>Capitaneria</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#d98a9e"></div>Morciano</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#9aa0a8"></div>Altri</div>
             <div style="width:1px;background:var(--border);margin:0 4px"></div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--ferie)"></div>Ferie</div>
             <div class="leg-item"><div class="leg-dot" style="background:var(--permesso)"></div>Permesso</div>
@@ -1157,6 +1160,25 @@ const MESI       = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Lug
 const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
+  // Commesse dal comune dell'impianto — stesso schema dell'app operaio
+const COMMESSE_R = [
+  {key:'Pesaro',color:'#7a9ec8',match:['pesaro']},
+  {key:'Misano',color:'#d9a066',match:['misano']},
+  {key:'Verucchio',color:'#7ab87a',match:['verucchio']},
+  {key:'Gabicce',color:'#b08fd8',match:['gabicce']},
+  {key:'Capitaneria',color:'#5cc0c8',match:['rimini']},
+  {key:'Morciano',color:'#d98a9e',match:['morciano']},
+  {key:'Altri',color:'#9aa0a8',match:[]},
+];
+function commessaDi(imp){
+  const comune=((imp&&imp.comune)||'').toLowerCase();
+  const desc=((imp&&imp.descrizione)||'').toLowerCase();
+  if(comune.includes('rimini')||comune.includes('capitaneria')||desc.includes('capitaneria'))return COMMESSE_R.find(c=>c.key==='Capitaneria');
+  for(const co of COMMESSE_R){ if(co.key==='Altri'||co.key==='Capitaneria')continue; if(co.match.some(m=>comune.includes(m)))return co; }
+  return COMMESSE_R.find(c=>c.key==='Altri');
+}
+function isPresaR(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
+function isPresaR(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
 const ASSENZA_COLOR = { Ferie:'ev-ferie', Permesso:'ev-permesso', Malattia:'ev-malattia' };
 
 function toLocaleDateStr(d) {
@@ -1233,7 +1255,7 @@ function renderSettimana() {
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
       const done=chk.filter(c=>c.eseguita==='SI').length;
       const completo=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
-      const col=OPERAI_HEX[i.operaio]||'#888';
+      const col=commessaDi(imp).color;
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
       const praDot=hasPratica?'<span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle"></span>':'';
       const isOrd = i.tipoVisita === 'Ordinaria';
@@ -1244,9 +1266,11 @@ function renderSettimana() {
           onclick="openDettaglio('${i.id}')"
           title="${imp?imp.descrizione:i.codiceImpianto}">${nome} · ${i.operaio}${praDot}</div>`;
       } else {
+        const prefisso = isPresaR(i) ? `In carico: ${i.operaio}${i.secondoOperaio?'+'+i.secondoOperaio:''} · ` : '📦 ';
         return `<div class="ev-str ${completo?'completato':''}"
           style="background:${col}28;color:${col};border-color:${col}"
-          onclick="openDettaglio('${i.id}')">${nome} · ${i.operaio}${praDot}</div>`;
+          onclick="openDettaglio('${i.id}')"
+          title="${imp?imp.descrizione:i.codiceImpianto}">${prefisso}${nome}${praDot}</div>`;
       }
     }).join('');
     const ICONS_ASS = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
@@ -1296,7 +1320,7 @@ function renderCalendario() {
       const done=chk.filter(c=>c.eseguita==='SI').length;
       const isChiuso=i.stato==='Chiuso';
       const tuttiDone=isChiuso||(chk.length>0&&done===chk.length);
-      const col=OPERAI_HEX[i.operaio]||'#888';
+      const col=commessaDi(imp).color;
       const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
       const isMulti=i.dataFine&&i.dataFine>i.dataPrevista;
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
@@ -1304,17 +1328,19 @@ function renderCalendario() {
       const isOrd = i.tipoVisita === 'Ordinaria';
 
       if(isOrd) {
-        // Ordinari: compatti, opachi, senza bordo laterale
+        // Ordinari: colore commessa, operaio nel testo
         if(!mostraOrdinari) return '';
         return `<div class="ev-ord ${tuttiDone?'completato':''}"
           style="background:${col}18;color:${col}"
           onclick="event.stopPropagation();openDettaglio('${i.id}')"
-          title="${imp?imp.descrizione:i.codiceImpianto}">${nome}${praDot}</div>`;
+          title="${imp?imp.descrizione:i.codiceImpianto}">${nome}${i.operaio?' · '+i.operaio:''}${praDot}</div>`;
       } else {
-        // Straordinari: prominenti con bordo laterale spesso
+        // Straordinari (richieste): colore commessa + "In carico" se presi
+        const prefisso = isPresaR(i) ? `In carico: ${i.operaio}${i.secondoOperaio?'+'+i.secondoOperaio:''} · ` : '📦 ';
         return `<div class="ev-str ${tuttiDone?'completato':''}"
           style="background:${col}28;color:${col};border-color:${col};${isMulti?'border-right:2px solid '+col+';':''}"
-          onclick="event.stopPropagation();openDettaglio('${i.id}')">${nome}${isMulti?' 📅':''}${praDot}</div>`;
+          onclick="event.stopPropagation();openDettaglio('${i.id}')"
+          title="${imp?imp.descrizione:i.codiceImpianto}">${prefisso}${nome}${isMulti?' 📅':''}${praDot}</div>`;
       }
     }).join('');
     const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
