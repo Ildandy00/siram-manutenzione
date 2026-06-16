@@ -2454,9 +2454,28 @@ function openDettaglio(id) {
     ${i.dataFine&&i.dataFine>i.dataPrevista?`<div><strong>Fine lavori:</strong> ${i.dataFine}</div>`:''}
   `;
 
-  document.getElementById('detNote').innerHTML = i.note
-    ? `<div style="font-size:13px;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-style:italic">📝 ${i.note}</div>`
-    : '';
+  // Nota di chiusura: dalla colonna dedicata O (i.notaChiusura).
+  // Fallback per interventi chiusi prima della colonna: nota accodata in Note come "... | Chiusura: <testo>"
+  let notaPrincipale = i.note || '';
+  let notaChiusura = i.notaChiusura || '';
+  if (!notaChiusura) {
+    const idxCh = notaPrincipale.lastIndexOf('Chiusura: ');
+    if (idxCh >= 0) {
+      notaChiusura = notaPrincipale.slice(idxCh + 'Chiusura: '.length).split('| 🔄')[0].trim();
+      notaPrincipale = notaPrincipale.slice(0, idxCh).replace(/\s*\|\s*$/, '').trim();
+    }
+  }
+
+  document.getElementById('detNote').innerHTML =
+    (notaPrincipale
+      ? `<div style="font-size:13px;background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-style:italic">📝 ${notaPrincipale}</div>`
+      : '')
+    + (notaChiusura
+      ? `<div style="font-size:13px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);border-left:3px solid #4ade80;border-radius:8px;padding:10px 12px;margin-bottom:14px">
+           <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">✓ Nota di chiusura${i.operaio?' — '+i.operaio:''}</div>
+           ${notaChiusura}
+         </div>`
+      : '');
 
   // Pratica collegata
   const praticaCollegata=S.pratiche.find(p=>p.idIntervento===i.id);
@@ -2789,6 +2808,7 @@ function openStorico(codiceImpianto) {
         <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto">${i.dataPrevista}${i.dataChiusura?' → '+i.dataChiusura:''}</span>
       </div>
       ${i.note?`<div style="font-size:13px;font-style:italic;color:var(--muted);margin-bottom:6px">📝 ${i.note}</div>`:''}
+      ${(i.notaChiusura||'')?`<div style="font-size:13px;color:#4ade80;margin-bottom:6px">✓ Chiusura: ${i.notaChiusura}</div>`:''}
       ${chk.length?`<div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'○'} ${c.attivita}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
