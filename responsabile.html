@@ -965,6 +965,10 @@ tr.int-completato td * { text-decoration: line-through; }
       <div id="detPraticaBox" style="display:none;margin-bottom:14px"></div>
       <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Checklist</div>
       <div id="detChk"></div>
+      <div class="fg" style="margin-top:14px">
+        <label>📋 Note responsabile — come risolto</label>
+        <textarea class="fc" id="detNoteResp" rows="3" placeholder="Annota come è stato risolto il problema..."></textarea>
+      </div>
       <div class="fc-row" style="margin-top:14px">
         <div class="fg"><label>Stato</label>
           <select class="fc" id="detStato"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
@@ -2500,6 +2504,7 @@ function openDettaglio(id) {
       </div>`).join('');
 
   document.getElementById('detStato').value=i.stato==='DaAssegnare'?'Aperto':i.stato;
+  document.getElementById('detNoteResp').value=i.noteResponsabile||'';
   document.getElementById('detNuovaData').value='';
   document.getElementById('detDataFine').value=i.dataFine||'';
   document.getElementById('detOpSecondario2').value=i.operaioSecondario2||'';
@@ -2528,12 +2533,14 @@ async function salvaDettaglio() {
   const nuovaData=document.getElementById('detNuovaData').value;
   const dataFine=document.getElementById('detDataFine').value;
   const opSec2=document.getElementById('detOpSecondario2').value;
+  const noteResp=document.getElementById('detNoteResp').value;
   const i=S.interventi.find(x=>x.id===currentDetId);
   try {
     const body={id:currentDetId,stato};
     if(nuovaData) body.dataPrevista=nuovaData;
     if(dataFine!==undefined) body.dataFine=dataFine;
     body.operaioSecondario2=opSec2;
+    body.noteResponsabile=noteResp;
     if(stato==='Chiuso'&&!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
     const r=await apiPost('/aggiorna-intervento',body);
     if(!r.ok){toast('Errore salvataggio','err');return;}
@@ -2809,6 +2816,7 @@ function openStorico(codiceImpianto) {
       </div>
       ${i.note?`<div style="font-size:13px;font-style:italic;color:var(--muted);margin-bottom:6px">📝 ${i.note}</div>`:''}
       ${(i.notaChiusura||'')?`<div style="font-size:13px;color:#4ade80;margin-bottom:6px">✓ Chiusura: ${i.notaChiusura}</div>`:''}
+      ${(i.noteResponsabile||'')?`<div style="font-size:13px;color:#7ab0d8;margin-bottom:6px">📋 Risolto: ${i.noteResponsabile}</div>`:''}
       ${chk.length?`<div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'○'} ${c.attivita}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
