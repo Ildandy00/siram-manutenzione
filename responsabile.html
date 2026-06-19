@@ -2536,16 +2536,24 @@ async function salvaDettaglio() {
   const noteResp=document.getElementById('detNoteResp').value;
   const i=S.interventi.find(x=>x.id===currentDetId);
   try {
-    const body={id:currentDetId,stato};
-    if(nuovaData) body.dataPrevista=nuovaData;
-    if(dataFine!==undefined) body.dataFine=dataFine;
-    body.operaioSecondario2=opSec2;
-    body.noteResponsabile=noteResp;
+    // 1) stato + nota responsabile (+ data chiusura se chiuso ora)
+    const body={id:currentDetId,stato,noteResponsabile:noteResp};
     if(stato==='Chiuso'&&!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
     const r=await apiPost('/aggiorna-intervento',body);
     if(!r.ok){toast('Errore salvataggio','err');return;}
     Object.assign(i,body);
     if(body.dataChiusura) i.dataChiusura=body.dataChiusura;
+
+    // 2) posticipo → endpoint dedicato che scrive la colonna C
+    if(nuovaData){
+      const rp=await apiPost('/posticipa-intervento',{id:currentDetId,nuovaData});
+      if(rp.ok) i.dataPrevista=nuovaData; else toast('Errore posticipo','err');
+    }
+
+    // 3) data fine + 2° operaio → endpoint dedicato (colonne M:N)
+    const rm=await apiPost('/aggiorna-multigiorno',{id:currentDetId,dataFine:dataFine||'',operaioSecondario2:opSec2||''});
+    if(rm.ok){ i.dataFine=dataFine||''; i.operaioSecondario2=opSec2||''; }
+
     closeModal('modalDettaglio');
     toast('Salvato','ok');
     renderCalendario(); renderInterventi();
