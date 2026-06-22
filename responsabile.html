@@ -678,6 +678,8 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="sec-title">Avanzamento stagione 2026</div>
           <div id="avanzamentoSub" style="font-size:12px;color:var(--muted)"></div>
         </div>
+        <!-- Leaderboard richieste straordinarie -->
+        <div id="avanzamentoRichieste" style="margin-bottom:24px"></div>
         <!-- Card totale -->
         <div id="avanzamentoTotale" style="margin-bottom:20px"></div>
         <!-- Cards per operaio -->
@@ -1488,6 +1490,43 @@ function esportaReport() {
 //  AVANZAMENTO OPERAI
 // ============================================================
 function renderAvanzamento() {
+  // ── Leaderboard richieste straordinarie: prese in carico e chiuse per tecnico ──
+  (function(){
+    const TECNICI = ['Matteo','Stefano','Michele','Ezio'];
+    const straord = S.interventi.filter(i => i.tipoVisita === 'Straordinaria');
+    const stats = TECNICI.map(nome => {
+      const prese  = straord.filter(i => i.operaio === nome).length;
+      const chiuse = straord.filter(i => i.operaio === nome && i.stato === 'Chiuso').length;
+      return { nome, col: OPERAI_HEX[nome] || '#888', prese, chiuse, aperte: prese - chiuse };
+    }).sort((a,b) => b.chiuse - a.chiuse || b.prese - a.prese);
+    const maxChiuse = Math.max(1, ...stats.map(s => s.chiuse));
+    const totChiuse = stats.reduce((a,s) => a + s.chiuse, 0);
+    const totPrese  = stats.reduce((a,s) => a + s.prese, 0);
+    const libere    = straord.filter(i => i.stato === 'Aperto' && !isPresaR(i)).length;
+    const medaglie = ['🥇','🥈','🥉'];
+    document.getElementById('avanzamentoRichieste').innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">🏆 Richieste straordinarie</div>
+          <div style="font-size:12px;color:var(--muted)">${totChiuse} chiuse · ${totPrese} prese in carico${libere?` · ${libere} nel contenitore`:''}</div>
+        </div>
+        ${stats.map((s,idx) => {
+          const pct = Math.round(s.chiuse / maxChiuse * 100);
+          return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <div style="width:90px;font-weight:600;color:${s.col};flex-shrink:0">${s.chiuse>0&&idx<3?medaglie[idx]+' ':''}${s.nome}</div>
+            <div style="flex:1;height:22px;background:var(--bg4);border-radius:6px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${s.col};border-radius:6px;transition:width .5s ease"></div>
+            </div>
+            <div style="font-family:'DM Mono',monospace;font-size:13px;min-width:160px;text-align:right;flex-shrink:0">
+              <span style="color:${s.col};font-weight:700">${s.chiuse}</span> chiuse
+              <span style="color:var(--muted)"> · ${s.prese} prese</span>
+              ${s.aperte>0?`<span style="color:var(--yellow)"> · ${s.aperte} in corso</span>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  })();
+
   const STAGIONE_INIZIO = '2026-04-16';
   const STAGIONE_FINE   = '2026-10-01';
   const anno = new Date().getFullYear();
