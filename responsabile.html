@@ -919,6 +919,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="chip-Michele" onclick="toggleOpChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
           <div class="op-chip" id="chip-Ezio" onclick="toggleOpChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
         </div>
+        <div id="chip-Contenitore" onclick="toggleContenitoreNew()" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Metti nel Contenitore (nessun operaio)</div>
       </div>
       <div class="fc-row">
         <div class="fg"><label>Data inizio *</label><input class="fc" type="date" id="nData"/></div>
@@ -965,6 +966,16 @@ tr.int-completato td * { text-decoration: line-through; }
       <div id="detNote"></div>
       <!-- Pratica collegata (se esiste) -->
       <div id="detPraticaBox" style="display:none;margin-bottom:14px"></div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>👷 Assegna a</label>
+        <div class="op-chips">
+          <div class="op-chip" id="dchip-Matteo" onclick="setDetOperaio('Matteo')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div></div>
+          <div class="op-chip" id="dchip-Stefano" onclick="setDetOperaio('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div></div>
+          <div class="op-chip" id="dchip-Michele" onclick="setDetOperaio('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div></div>
+          <div class="op-chip" id="dchip-Ezio" onclick="setDetOperaio('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div></div>
+        </div>
+        <div id="dchip-Contenitore" onclick="setDetOperaio('')" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Contenitore (nessun operaio)</div>
+      </div>
       <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Checklist</div>
       <div id="detChk"></div>
       <div class="fg" style="margin-top:14px">
@@ -973,9 +984,13 @@ tr.int-completato td * { text-decoration: line-through; }
       </div>
       <div class="fc-row" style="margin-top:14px">
         <div class="fg"><label>Stato</label>
-          <select class="fc" id="detStato"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
+          <select class="fc" id="detStato" onchange="toggleChiusuraBox()"><option value="Aperto">Aperto</option><option value="Chiuso">Chiuso</option></select></div>
         <div class="fg"><label>Posticipa al</label>
           <input class="fc" type="date" id="detNuovaData"/></div>
+      </div>
+      <div class="fg" id="detChiusuraBox" style="margin-top:10px;display:none">
+        <label>✓ Nota di chiusura</label>
+        <textarea class="fc" id="detNotaChiusura" rows="2" placeholder="Come è stata chiusa/risolta la richiesta..."></textarea>
       </div>
       <div class="fc-row" style="margin-top:10px">
         <div class="fg"><label>Data fine lavori</label><input class="fc" type="date" id="detDataFine"/></div>
@@ -2475,6 +2490,27 @@ function renderInterventi() {
 // ============================================================
 //  DETTAGLIO INTERVENTO
 // ============================================================
+let detOperaioSel='';
+function setDetOperaio(nome) { detOperaioSel=nome; renderDetAssegna(); }
+function renderDetAssegna() {
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{
+    const c=document.getElementById('dchip-'+n);
+    if(c) c.classList.toggle('selected', detOperaioSel===n);
+  });
+  const cont=document.getElementById('dchip-Contenitore');
+  if(cont){
+    const on = detOperaioSel==='';
+    cont.style.borderColor = on?'#4ade80':'var(--border)';
+    cont.style.borderStyle = on?'solid':'dashed';
+    cont.style.background = on?'rgba(74,222,128,.12)':'var(--bg3)';
+    cont.style.color = on?'#4ade80':'var(--muted)';
+  }
+}
+function toggleChiusuraBox() {
+  const chiuso = document.getElementById('detStato').value==='Chiuso';
+  document.getElementById('detChiusuraBox').style.display = chiuso?'block':'none';
+}
+
 function openDettaglio(id) {
   currentDetId=id;
   const i=S.interventi.find(x=>x.id===id);
@@ -2544,6 +2580,12 @@ function openDettaglio(id) {
 
   document.getElementById('detStato').value=i.stato==='DaAssegnare'?'Aperto':i.stato;
   document.getElementById('detNoteResp').value=i.noteResponsabile||'';
+  // Assegnazione corrente
+  detOperaioSel = i.operaio || '';
+  renderDetAssegna();
+  // Nota di chiusura (colonna O): visibile se chiuso
+  document.getElementById('detNotaChiusura').value = i.notaChiusura || '';
+  toggleChiusuraBox();
   document.getElementById('detNuovaData').value='';
   document.getElementById('detDataFine').value=i.dataFine||'';
   document.getElementById('detOpSecondario2').value=i.operaioSecondario2||'';
@@ -2575,9 +2617,13 @@ async function salvaDettaglio() {
   const noteResp=document.getElementById('detNoteResp').value;
   const i=S.interventi.find(x=>x.id===currentDetId);
   try {
-    // 1) stato + nota responsabile (+ data chiusura se chiuso ora)
-    const body={id:currentDetId,stato,noteResponsabile:noteResp};
-    if(stato==='Chiuso'&&!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
+    // 1) stato + nota responsabile + assegnazione operaio (+ data chiusura/nota chiusura se chiuso)
+    const body={id:currentDetId,stato,noteResponsabile:noteResp,operaio:detOperaioSel};
+    if(stato==='Chiuso'){
+      if(!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
+      const nc=document.getElementById('detNotaChiusura').value.trim();
+      if(nc) body.notaChiusura=nc;
+    }
     const r=await apiPost('/aggiorna-intervento',body);
     if(!r.ok){toast('Errore salvataggio','err');return;}
     Object.assign(i,body);
@@ -2649,6 +2695,7 @@ function popolaSelectImpianti() {
 }
 
 let opSelezionati=new Set();
+let contenitoreNewSel=false;
 
 function openModalIntervento(dataPreimpostata) {
   document.getElementById('nImp').value='';
@@ -2660,7 +2707,9 @@ function openModalIntervento(dataPreimpostata) {
   document.getElementById('nAnteprima').style.display='none';
   document.getElementById('nAntEmpty').style.display='none';
   opSelezionati=new Set();
+  contenitoreNewSel=false;
   ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+  setContenitoreNewUI();
   nExtraItems=[];
   renderExtraList();
   document.getElementById('modalIntervento').classList.add('open');
@@ -2669,7 +2718,27 @@ function openModalIntervento(dataPreimpostata) {
 function toggleOpChip(nome) {
   const chip=document.getElementById('chip-'+nome);
   if(opSelezionati.has(nome)){ opSelezionati.delete(nome); chip.classList.remove('selected'); }
-  else { opSelezionati.add(nome); chip.classList.add('selected'); }
+  else { opSelezionati.add(nome); chip.classList.add('selected'); contenitoreNewSel=false; setContenitoreNewUI(); }
+}
+
+function toggleContenitoreNew() {
+  contenitoreNewSel=!contenitoreNewSel;
+  if(contenitoreNewSel){
+    opSelezionati=new Set();
+    ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+  }
+  setContenitoreNewUI();
+}
+function setContenitoreNewUI() {
+  const el=document.getElementById('chip-Contenitore');
+  if(!el) return;
+  if(contenitoreNewSel){
+    el.style.borderColor='#4ade80'; el.style.borderStyle='solid';
+    el.style.background='rgba(74,222,128,.12)'; el.style.color='#4ade80';
+  } else {
+    el.style.borderColor='var(--border)'; el.style.borderStyle='dashed';
+    el.style.background='var(--bg3)'; el.style.color='var(--muted)';
+  }
 }
 
 function onImpChange() { onTipoChange(); }
@@ -2712,8 +2781,17 @@ async function salvaIntervento() {
   const note=document.getElementById('nNote').value.trim();
   const operai=[...opSelezionati];
   if(!codice||!tipo||!data){toast('Compila i campi obbligatori','err');return;}
-  if(operai.length===0){toast('Seleziona almeno un operaio','err');return;}
+  if(!contenitoreNewSel && operai.length===0){toast('Seleziona un operaio o il Contenitore','err');return;}
   try {
+    // Contenitore: un solo intervento con operaio vuoto (visibile a tutti)
+    if(contenitoreNewSel){
+      const r=await apiPost('/crea-intervento',{codiceImpianto:codice,tipoVisita:tipo,operaio:'',dataPrevista:data,dataFine,operaioSecondario2:opSec2,note,attivitaExtra:nExtraItems});
+      if(!r.ok){toast('Errore creazione','err');return;}
+      closeModal('modalIntervento');
+      toast('Richiesta creata nel contenitore','ok');
+      await caricaDati();
+      return;
+    }
     const ids=[];
     for(const operaio of operai){
       const r=await apiPost('/crea-intervento',{codiceImpianto:codice,tipoVisita:tipo,operaio,dataPrevista:data,dataFine,operaioSecondario2:opSec2,note,attivitaExtra:nExtraItems});
