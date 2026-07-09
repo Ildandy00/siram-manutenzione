@@ -493,6 +493,8 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="nav-item" onclick="nav('rdacat')" id="nav-rdacat">
         🛒 RDA / CAT <span class="nav-badge" id="badgeRda" style="background:#7ab0d8;color:#1a1a1a;display:none">0</span>
       </div>
+      <div class="nav-sec">Scadenze</div>
+      <div class="nav-item" onclick="nav('rcee')" id="nav-rcee">📋 RCEE <span class="nav-badge" id="badgeRcee" style="background:var(--red);color:#fff;display:none">0</span></div>
       <div class="nav-sec">Monitoraggio</div>
       <div class="nav-item" onclick="window.open('/dashboard-segnalazioni.html','_blank')">📊 Segnalazioni <span style="font-size:10px;color:var(--muted);margin-left:auto">↗</span></div>
       <div class="nav-sec">Anagrafica</div>
@@ -646,7 +648,6 @@ tr.int-completato td * { text-decoration: line-through; }
             <button class="btn btn-primary btn-sm" onclick="openModalNuovaPratica()">+ Nuova pratica</button>
           </div>
         </div>
-        <!-- Filtri -->
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte</button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta" onclick="setPraticaFilter('Richiesta')">📝 Richiesta</button>
@@ -678,14 +679,28 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="sec-title">Avanzamento stagione 2026</div>
           <div id="avanzamentoSub" style="font-size:12px;color:var(--muted)"></div>
         </div>
-        <!-- Leaderboard richieste straordinarie -->
         <div id="avanzamentoRichieste" style="margin-bottom:24px"></div>
-        <!-- Card totale -->
         <div id="avanzamentoTotale" style="margin-bottom:20px"></div>
-        <!-- Cards per operaio -->
         <div id="avanzamentoOperai" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"></div>
-        <!-- Tabella impianti da fare per operaio -->
         <div id="avanzamentoDaFare" style="margin-top:24px"></div>
+      </div>
+
+      <!-- VIEW: RCEE -->
+      <div class="view" id="view-rcee">
+        <div class="sec-header">
+          <div class="sec-title">Scadenze RCEE</div>
+          <div id="rceeSummary" style="font-size:12px;color:var(--muted)"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-ghost btn-sm report-filter active" data-rfilter="tutti" onclick="setRceeFilter('tutti')">Tutte</button>
+          <button class="btn btn-ghost btn-sm report-filter" data-rfilter="SCADUTO" onclick="setRceeFilter('SCADUTO')">Scadute</button>
+          <button class="btn btn-ghost btn-sm report-filter" data-rfilter="IN SCADENZA" onclick="setRceeFilter('IN SCADENZA')">In scadenza</button>
+          <button class="btn btn-ghost btn-sm report-filter" data-rfilter="OK" onclick="setRceeFilter('OK')">OK</button>
+          <input class="fc" id="rceeSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:160px;max-width:300px" oninput="renderRcee()"/>
+          <button class="btn btn-ghost btn-sm" onclick="caricaScadenzeRcee()">↻ Aggiorna</button>
+        </div>
+        <div id="rceeLoading" class="loading-full" style="display:none"><div class="spin"></div> Caricamento scadenze...</div>
+        <div class="table-wrap" id="tblRcee"></div>
       </div>
 
       <!-- VIEW: IMPIANTI -->
@@ -723,10 +738,6 @@ tr.int-completato td * { text-decoration: line-through; }
     </main>
   </div>
 </div>
-
-<!-- ============================================================
-     MODALI
-     ============================================================ -->
 
 <!-- MODAL BACKLOG -->
 <div class="overlay" id="modalBacklog">
@@ -781,6 +792,33 @@ tr.int-completato td * { text-decoration: line-through; }
   </div>
 </div>
 
+<!-- MODAL ASSEGNA RCEE -->
+<div class="overlay" id="modalAssegnaRcee">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <div class="modal-title" id="rceeAssTitle">Assegna RCEE</div>
+      <button class="modal-close" onclick="closeModal('modalAssegnaRcee')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="rceeAssInfo" style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--muted)"></div>
+      <div class="fg"><label>Assegna a *</label>
+        <div class="op-chips">
+          <div class="op-chip" id="rchip-Matteo" onclick="setRceeOperaio('Matteo')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div><div class="op-chip-zona">Pesaro</div></div>
+          <div class="op-chip" id="rchip-Stefano" onclick="setRceeOperaio('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
+          <div class="op-chip" id="rchip-Michele" onclick="setRceeOperaio('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
+          <div class="op-chip" id="rchip-Ezio" onclick="setRceeOperaio('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
+        </div>
+        <div id="rchip-Contenitore" onclick="setRceeOperaio('')" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Contenitore (nessun operaio)</div>
+      </div>
+      <div class="fg"><label>Data intervento *</label><input class="fc" type="date" id="rceeAssData"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modalAssegnaRcee')">Annulla</button>
+      <button class="btn btn-primary" onclick="confermaAssegnaRcee()">Crea richiesta</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUOVA PRATICA -->
 <div class="overlay" id="modalNuovaPratica">
   <div class="modal" style="max-width:500px">
@@ -831,18 +869,10 @@ tr.int-completato td * { text-decoration: line-through; }
       <button class="modal-close" onclick="closeModal('modalPratica')">✕</button>
     </div>
     <div class="modal-body">
-      <!-- Mini timeline visiva -->
       <div id="praticaTimeline" class="timeline" style="margin-bottom:20px;padding:0 10px"></div>
-
-      <!-- Toggle Lavoro in gestione — sempre visibile -->
       <div id="praticaGestioneToggle" style="margin-bottom:10px"></div>
-
-      <!-- Pianifica intervento di realizzazione — sempre visibile -->
       <div id="praticaInterventiBox" style="margin-bottom:14px"></div>
-
-      <!-- Step panels -->
       <div id="praticaSteps"></div>
-
     </div>
     <div class="modal-foot">
       <button class="btn btn-danger btn-sm" onclick="eliminaPratica()">Elimina pratica</button>
@@ -964,7 +994,6 @@ tr.int-completato td * { text-decoration: line-through; }
     <div class="modal-body">
       <div id="detInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted)"></div>
       <div id="detNote"></div>
-      <!-- Pratica collegata (se esiste) -->
       <div id="detPraticaBox" style="display:none;margin-bottom:14px"></div>
       <div class="fg" style="margin-bottom:14px">
         <label>👷 Assegna a</label>
@@ -1078,7 +1107,7 @@ let blTipoSel         = '';
 let currentBacklogId  = null;
 let praticaFilterCorrente = 'tutti';
 let reportFilterCorrente  = 'tutti';
-let mostraOrdinari        = true; // toggle ordinari nel calendario
+let mostraOrdinari        = true;
 
 // ============================================================
 //  LOGIN
@@ -1122,7 +1151,6 @@ async function caricaDati() {
     S.pratiche   = d.pratiche   || [];
     S.offerte    = d.offerte    || [];
 
-    // Backlog
     const nBacklog = S.interventi.filter(i => i.stato === 'DaAssegnare').length;
     const backlogSec = document.getElementById('backlogSection');
     if (backlogSec) { backlogSec.style.display = nBacklog > 0 ? 'block' : 'none'; document.getElementById('backlogCount').textContent = nBacklog; try { renderBacklog(); } catch(err){ console.error('Errore renderBacklog:',err); } }
@@ -1130,7 +1158,6 @@ async function caricaDati() {
 
     popolaSelectImpianti();
 
-    // Badge pratiche aperte (non chiuse)
     const nPraticheAperte = S.pratiche.filter(p => p.stato !== 'Chiusa').length;
     const bpra = document.getElementById('badgePratiche');
     bpra.textContent = nPraticheAperte;
@@ -1138,7 +1165,6 @@ async function caricaDati() {
     document.getElementById('praticheSummary').textContent =
       nPraticheAperte + ' in corso · ' + S.pratiche.filter(p=>p.stato==='Chiusa').length + ' chiuse';
 
-    // RDA/CAT
     try {
       const dr = await apiGet('/rdacat');
       S.rdacat = dr.richieste || [];
@@ -1148,10 +1174,11 @@ async function caricaDati() {
       document.getElementById('rdaSummary').textContent = nRda + ' nuove · ' + S.rdacat.filter(r=>r.stato==='In lavorazione').length + ' in lavorazione';
     } catch(e) { S.rdacat = []; }
 
-    // Reperibilità
     try { const rep = await apiGet('/reperibile'); S.reperibilita = rep; renderRepWidget(); } catch(e) { S.reperibilita = null; }
 
-    // Popola filtro comuni report
+    // Scadenze RCEE (badge + tabella)
+    try { const drc = await apiGet('/scadenze-rcee'); rceeScadenze = drc.scadenze || []; aggiornaBadgeRcee(); if(document.getElementById('view-rcee').classList.contains('active')) renderRcee(); } catch(e) { rceeScadenze = []; }
+
     const comuniSet = [...new Set(S.impianti.map(i=>i.comune).filter(Boolean))].sort();
     const selComune = document.getElementById('reportComune');
     selComune.innerHTML = '<option value="">Tutti i comuni</option>' + comuniSet.map(c=>`<option value="${c}">${c}</option>`).join('');
@@ -1182,6 +1209,7 @@ function nav(id) {
   if (id==='pratiche')   renderPratiche();
   if (id==='rdacat')     renderRdacat();
   if (id==='avanzamento') renderAvanzamento();
+  if (id==='rcee')       { if(rceeScadenze.length) renderRcee(); else caricaScadenzeRcee(); }
 }
 
 // ============================================================
@@ -1192,7 +1220,6 @@ const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott',
 const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
 const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
 
-// Commesse ricavate dal comune dell'impianto — stesso schema dell'app operaio
 const COMMESSE_R = [
   {key:'Pesaro',color:'#7a9ec8',match:['pesaro']},
   {key:'Misano',color:'#d9a066',match:['misano']},
@@ -1209,9 +1236,7 @@ function commessaDi(imp){
   for(const co of COMMESSE_R){ if(co.key==='Altri'||co.key==='Capitaneria')continue; if(co.match.some(m=>comune.includes(m)))return co; }
   return COMMESSE_R.find(c=>c.key==='Altri');
 }
-// Una richiesta straordinaria è "presa in carico" se ha un operaio valorizzato
 function isPresaR(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
-// Colore "In carico" — verde acceso, sempre ben visibile sopra qualsiasi sfondo commessa
 const COL_IN_CARICO = '#4ade80';
 
 const ASSENZA_COLOR = { Ferie:'ev-ferie', Permesso:'ev-permesso', Malattia:'ev-malattia' };
@@ -1241,13 +1266,8 @@ function toggleOrdinari() {
   mostraOrdinari = !mostraOrdinari;
   const btn = document.getElementById('toggleOrdBtn');
   const ico = document.getElementById('toggleOrdIcon');
-  if(mostraOrdinari) {
-    btn.classList.remove('nascosti');
-    ico.textContent = '○';
-  } else {
-    btn.classList.add('nascosti');
-    ico.textContent = '●';
-  }
+  if(mostraOrdinari) { btn.classList.remove('nascosti'); ico.textContent = '○'; }
+  else { btn.classList.add('nascosti'); ico.textContent = '●'; }
   if(vistaCorrente==='mese') renderCalendario(); else renderSettimana();
 }
 
@@ -1260,10 +1280,6 @@ function getLunediSettimana(offset) {
   return lun;
 }
 
-// Riga evento: nome impianto a sinistra, operaio spinto a destra.
-// - Ordinarie: operaio in grigio (var(--muted))
-// - Straordinarie prese in carico: operaio/i in verde acceso
-// - Straordinarie libere (contenitore): icona 📦 tenue
 function evRowHtml(nome, isOrd, i, extra) {
   let opHtml;
   if (isOrd) {
@@ -1377,16 +1393,13 @@ function renderCalendario() {
       const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
       const praDot=hasPratica?`<span style="width:4px;height:4px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle;flex-shrink:0"></span>`:'';
       const isOrd = i.tipoVisita === 'Ordinaria';
-
       if(isOrd) {
-        // Ordinari: colore commessa a sinistra, operaio in grigio a destra
         if(!mostraOrdinari) return '';
         return `<div class="ev-ord ${tuttiDone?'completato':''}"
           style="background:${col}18;color:${col}"
           onclick="event.stopPropagation();openDettaglio('${i.id}')"
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,true,i,praDot)}</div>`;
       } else {
-        // Straordinari (richieste): colore commessa, "In carico" in verde a destra o 📦 se libera
         const extra=(isMulti?' 📅':'')+praDot;
         return `<div class="ev-str ${tuttiDone?'completato':''}"
           style="background:${col}28;color:${col};border-color:${col};${isMulti?'border-right:2px solid '+col+';':''}"
@@ -1505,7 +1518,6 @@ function esportaReport() {
 //  AVANZAMENTO OPERAI
 // ============================================================
 function renderAvanzamento() {
-  // ── Leaderboard richieste straordinarie: prese in carico e chiuse per tecnico ──
   (function(){
     const TECNICI = ['Matteo','Stefano','Michele','Ezio'];
     const straord = S.interventi.filter(i => i.tipoVisita === 'Straordinaria');
@@ -1555,27 +1567,21 @@ function renderAvanzamento() {
 
   function statOperaio(nomeOperaio) {
     const impAssegnati = [...new Set(
-      S.impianti
-        .filter(i => i.operaioDefault === nomeOperaio)
-        .map(i => i.codice)
+      S.impianti.filter(i => i.operaioDefault === nomeOperaio).map(i => i.codice)
     )];
     S.interventi.forEach(i => {
       if((i.operaio===nomeOperaio||i.secondoOperaio===nomeOperaio) &&
          i.tipoVisita==='Ordinaria' &&
          i.dataPrevista>=STAGIONE_INIZIO && i.dataPrevista<=STAGIONE_FINE) {
-        if(!impAssegnati.includes(i.codiceImpianto))
-          impAssegnati.push(i.codiceImpianto);
+        if(!impAssegnati.includes(i.codiceImpianto)) impAssegnati.push(i.codiceImpianto);
       }
     });
-
     const totale = impAssegnati.length;
     let fatti=0, pianificati=0, daFare=0;
     const dettaglio = impAssegnati.map(codice => {
       const ints = S.interventi.filter(i =>
-        i.codiceImpianto===codice &&
-        i.tipoVisita==='Ordinaria' &&
-        i.dataPrevista>=STAGIONE_INIZIO && i.dataPrevista<=STAGIONE_FINE
-      );
+        i.codiceImpianto===codice && i.tipoVisita==='Ordinaria' &&
+        i.dataPrevista>=STAGIONE_INIZIO && i.dataPrevista<=STAGIONE_FINE);
       const chiuso = ints.find(i=>i.stato==='Chiuso');
       const aperto = ints.find(i=>i.stato==='Aperto');
       const imp    = S.impianti.find(x=>x.codice===codice);
@@ -1588,7 +1594,6 @@ function renderAvanzamento() {
   }
 
   const statsPerOp = OPERAI_INFO.map(op => ({ ...op, ...statOperaio(op.nome) }));
-
   const totTot  = statsPerOp.reduce((a,o)=>a+o.totale,0);
   const totFatti= statsPerOp.reduce((a,o)=>a+o.fatti,0);
   const totPian = statsPerOp.reduce((a,o)=>a+o.pianificati,0);
@@ -1627,43 +1632,26 @@ function renderAvanzamento() {
         <div style="font-family:'DM Mono',monospace;font-size:32px;font-weight:700;color:${barColor}">${pct}%</div>
       </div>
       <div class="op-av-nums">
-        <div class="op-av-num">
-          <div class="op-av-val" style="color:var(--green)">${op.fatti}</div>
-          <div class="op-av-lbl">Fatti</div>
-        </div>
-        <div class="op-av-num">
-          <div class="op-av-val" style="color:var(--yellow)">${op.pianificati}</div>
-          <div class="op-av-lbl">Pianificati</div>
-        </div>
-        <div class="op-av-num">
-          <div class="op-av-val" style="color:var(--red)">${op.daFare}</div>
-          <div class="op-av-lbl">Da fare</div>
-        </div>
+        <div class="op-av-num"><div class="op-av-val" style="color:var(--green)">${op.fatti}</div><div class="op-av-lbl">Fatti</div></div>
+        <div class="op-av-num"><div class="op-av-val" style="color:var(--yellow)">${op.pianificati}</div><div class="op-av-lbl">Pianificati</div></div>
+        <div class="op-av-num"><div class="op-av-val" style="color:var(--red)">${op.daFare}</div><div class="op-av-lbl">Da fare</div></div>
       </div>
-      <div class="op-av-bar">
-        <div class="op-av-fill" style="width:${pct}%;background:${barColor}"></div>
-      </div>
-      <div class="op-av-pct">
-        <span>${op.fatti} completati</span>
-        <span>${op.totale-op.fatti} rimanenti</span>
-      </div>
+      <div class="op-av-bar"><div class="op-av-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="op-av-pct"><span>${op.fatti} completati</span><span>${op.totale-op.fatti} rimanenti</span></div>
     </div>`;
   }).join('');
 
   let daFareHtml = '';
   statsPerOp.forEach(op => {
-    const daFare = op.dettaglio
-      .filter(d => d.stato !== 'verde')
-      .sort((a,b) => {
-        if(a.stato==='giallo' && b.stato!=='giallo') return -1;
-        if(b.stato==='giallo' && a.stato!=='giallo') return 1;
-        return (a.comune||'').localeCompare(b.comune||'');
-      });
+    const daFare = op.dettaglio.filter(d => d.stato !== 'verde').sort((a,b) => {
+      if(a.stato==='giallo' && b.stato!=='giallo') return -1;
+      if(b.stato==='giallo' && a.stato!=='giallo') return 1;
+      return (a.comune||'').localeCompare(b.comune||'');
+    });
     if(!daFare.length) return;
     daFareHtml += `
       <div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;color:${op.col};text-transform:uppercase;
-          letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:12px;font-weight:700;color:${op.col};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${op.col}"></div>
           ${op.nome} — ${daFare.length} da completare
         </div>
@@ -1674,9 +1662,7 @@ function renderAvanzamento() {
               ${daFare.map(d=>`<tr>
                 <td style="font-weight:600">${d.nome}</td>
                 <td style="color:var(--muted)">${d.comune||'—'}</td>
-                <td>${d.stato==='giallo'
-                  ? `<span style="color:var(--yellow);font-weight:700">→ Pianificato</span>`
-                  : `<span style="color:var(--red);font-weight:700">✗ Da fare</span>`}</td>
+                <td>${d.stato==='giallo'?`<span style="color:var(--yellow);font-weight:700">→ Pianificato</span>`:`<span style="color:var(--red);font-weight:700">✗ Da fare</span>`}</td>
                 <td style="font-family:'DM Mono',monospace;font-size:12px">${d.data||'—'}</td>
               </tr>`).join('')}
             </tbody>
@@ -1688,6 +1674,138 @@ function renderAvanzamento() {
   document.getElementById('avanzamentoDaFare').innerHTML = daFareHtml
     ? `<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Dettaglio da completare</div>${daFareHtml}`
     : `<div class="empty">🎉 Tutti gli impianti completati!</div>`;
+}
+
+// ============================================================
+//  RCEE — Scadenze
+// ============================================================
+let rceeScadenze = [];
+let rceeFilter   = 'tutti';
+let rceeAssIdx   = null;
+let rceeOperaioSel = '';
+
+async function caricaScadenzeRcee() {
+  const el = document.getElementById('tblRcee');
+  document.getElementById('rceeLoading').style.display = 'flex';
+  if (el) el.style.display = 'none';
+  try {
+    const d = await apiGet('/scadenze-rcee');
+    rceeScadenze = d.scadenze || [];
+    aggiornaBadgeRcee();
+    renderRcee();
+  } catch(e) {
+    if (el) el.innerHTML = '<div class="empty">Errore nel caricamento delle scadenze</div>';
+  }
+  document.getElementById('rceeLoading').style.display = 'none';
+  if (el) el.style.display = '';
+}
+
+function aggiornaBadgeRcee() {
+  const n = rceeScadenze.filter(s => s.stato === 'SCADUTO' || s.stato === 'IN SCADENZA').length;
+  const b = document.getElementById('badgeRcee');
+  if (b) { b.textContent = n; b.style.display = n > 0 ? '' : 'none'; }
+}
+
+function setRceeFilter(f) {
+  rceeFilter = f;
+  document.querySelectorAll('.report-filter[data-rfilter]').forEach(b => b.classList.toggle('active', b.dataset.rfilter === f));
+  renderRcee();
+}
+
+function rceeColore(commessa) { return commessaDi({ comune: commessa || '' }).color; }
+
+function rceeStatoBadge(stato, giorni) {
+  const g = isNaN(giorni) ? '' : giorni;
+  if (stato === 'SCADUTO')     return `<span class="badge" style="background:rgba(200,120,120,.15);color:#f0a0a0">⚠ Scaduto ${Math.abs(g)}gg fa</span>`;
+  if (stato === 'IN SCADENZA') return `<span class="badge" style="background:rgba(200,180,100,.15);color:var(--yellow)">⏳ ${g}gg</span>`;
+  return `<span class="badge" style="background:rgba(143,190,122,.12);color:var(--green)">✓ ${g}gg</span>`;
+}
+
+function esisteInterventoRcee(s) {
+  const cod = s.codiceAnagrafica || s.codiceImpianto;
+  return S.interventi.some(i => i.stato !== 'Chiuso' && i.codiceImpianto === cod && (i.note || '').indexOf('[RCEE]') >= 0);
+}
+
+function renderRcee() {
+  const el = document.getElementById('tblRcee');
+  if (!el) return;
+  const search = document.getElementById('rceeSearch') && document.getElementById('rceeSearch').value ? document.getElementById('rceeSearch').value.toLowerCase() : '';
+  let lista = [...rceeScadenze];
+  if (rceeFilter !== 'tutti') lista = lista.filter(s => s.stato === rceeFilter);
+  if (search) lista = lista.filter(s => ((s.descrizione||'')+(s.codiceImpianto||'')+(s.codiceAnagrafica||'')+(s.commessa||'')).toLowerCase().includes(search));
+  lista.sort((a,b) => (isNaN(a.giorni)?1e9:a.giorni) - (isNaN(b.giorni)?1e9:b.giorni));
+
+  const nSca = rceeScadenze.filter(s => s.stato === 'SCADUTO').length;
+  const nIn  = rceeScadenze.filter(s => s.stato === 'IN SCADENZA').length;
+  const sum = document.getElementById('rceeSummary');
+  if (sum) sum.textContent = `${nSca} scadute · ${nIn} in scadenza · ${rceeScadenze.length} totali`;
+
+  if (!lista.length) { el.innerHTML = '<div class="empty">Nessuna scadenza</div>'; return; }
+  el.innerHTML = `<table><thead><tr><th>Stato</th><th>Impianto</th><th>Commessa</th><th>Alim.</th><th>Potenza</th><th>Periodicità</th><th>Ultimo</th><th>Prossima</th><th></th></tr></thead><tbody>`+
+    lista.map(s => {
+      const col = rceeColore(s.commessa);
+      const realIdx = rceeScadenze.indexOf(s);
+      const giaAss = esisteInterventoRcee(s);
+      return `<tr>
+        <td>${rceeStatoBadge(s.stato, s.giorni)}</td>
+        <td style="font-weight:600">${s.descrizione || s.codiceAnagrafica || s.codiceImpianto}
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">imp. ${s.codiceImpianto}${s.nGeneratori>1?` · ${s.nGeneratori} gen.`:''}</div></td>
+        <td><span style="color:${col}">● ${s.commessa || '—'}</span></td>
+        <td style="color:var(--muted)">${s.alimentazione || '—'}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${s.potenzaImpianto || '—'} kW</td>
+        <td style="text-align:center">${s.periodicita ? s.periodicita + ' anni' : '—'}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${s.dataUltimo || '—'}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${s.prossimaScadenza || '—'}</td>
+        <td style="white-space:nowrap">
+          ${giaAss?`<span class="badge badge-str" title="Richiesta già creata">✓ assegnato</span>`:`<button class="btn btn-primary btn-sm" onclick="openAssegnaRcee(${realIdx})">Assegna →</button>`}
+        </td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function openAssegnaRcee(idx) {
+  rceeAssIdx = idx;
+  rceeOperaioSel = '';
+  const s = rceeScadenze[idx];
+  document.getElementById('rceeAssTitle').textContent = s.descrizione || s.codiceAnagrafica || s.codiceImpianto;
+  document.getElementById('rceeAssInfo').innerHTML =
+    `RCEE ${s.alimentazione || ''} · ${s.potenzaImpianto || '?'} kW · periodicità ${s.periodicita || '?'} anni<br>Prossima scadenza: <strong>${s.prossimaScadenza || '?'}</strong> (${s.giorni} gg)`;
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n => document.getElementById('rchip-'+n).classList.remove('selected'));
+  setRceeOperaioUI();
+  document.getElementById('rceeAssData').value = toLocaleDateStr(new Date());
+  document.getElementById('modalAssegnaRcee').classList.add('open');
+}
+function setRceeOperaio(nome) { rceeOperaioSel = nome; setRceeOperaioUI(); }
+function setRceeOperaioUI() {
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n => {
+    const c = document.getElementById('rchip-'+n); if (c) c.classList.toggle('selected', rceeOperaioSel === n);
+  });
+  const cont = document.getElementById('rchip-Contenitore');
+  if (cont) {
+    const on = rceeOperaioSel === '';
+    cont.style.borderColor = on ? '#4ade80' : 'var(--border)';
+    cont.style.borderStyle = on ? 'solid' : 'dashed';
+    cont.style.background   = on ? 'rgba(74,222,128,.12)' : 'var(--bg3)';
+    cont.style.color        = on ? '#4ade80' : 'var(--muted)';
+  }
+}
+async function confermaAssegnaRcee() {
+  const s = rceeScadenze[rceeAssIdx];
+  if (!s) return;
+  const data = document.getElementById('rceeAssData').value;
+  if (!data) { toast('Seleziona una data','err'); return; }
+  const cod = s.codiceAnagrafica || s.codiceImpianto;
+  const nota = `[RCEE] Controllo efficienza energetica — scad. ${s.prossimaScadenza || '?'} · ${s.alimentazione || ''} ${s.potenzaImpianto || ''}kW (imp. ${s.codiceImpianto})`;
+  try {
+    const r = await apiPost('/crea-intervento', { codiceImpianto: cod, tipoVisita: 'Straordinaria', operaio: rceeOperaioSel, dataPrevista: data, note: nota, attivitaExtra: [] });
+    if (!r.ok) { toast('Errore creazione','err'); return; }
+    const oggi = new Date().toISOString().slice(0,10);
+    S.interventi.push({ id:r.id, codiceImpianto:cod, dataPrevista:data, operaio:rceeOperaioSel, tipoVisita:'Straordinaria', stato:'Aperto', note:nota, dataChiusura:'', creatoIl:oggi, secondoOperaio:'', interventoCollegato:'', linkDrive:'', dataFine:'', operaioSecondario2:'' });
+    closeModal('modalAssegnaRcee');
+    toast(rceeOperaioSel ? `Assegnato a ${rceeOperaioSel}` : 'Creato nel contenitore','ok');
+    renderRcee();
+    const ba = document.getElementById('badgeAperti'); if (ba) ba.textContent = S.interventi.filter(x=>x.stato==='Aperto').length;
+  } catch(e) { toast('Errore','err'); }
 }
 
 // ============================================================
@@ -1714,28 +1832,19 @@ function setPraticaFilter(f) {
 function renderPratiche() {
   const search=(document.getElementById('praticaSearch')||{}).value||'';
   const comuneSel=(document.getElementById('praticaComuneFilter')||{}).value||'';
-
   const selComune = document.getElementById('praticaComuneFilter');
   if(selComune) {
     const comuniSet = [...new Set(
-      S.pratiche.map(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp?imp.comune:''; })
-                .filter(Boolean).sort()
+      S.pratiche.map(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp?imp.comune:''; }).filter(Boolean).sort()
     )];
     const valoreAttuale = selComune.value;
     selComune.innerHTML = '<option value="">Tutti i comuni</option>' +
       comuniSet.map(c=>`<option value="${c}" ${c===valoreAttuale?'selected':''}>${c}</option>`).join('');
   }
-
   let lista=[...S.pratiche];
   if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
-  if(comuneSel) lista=lista.filter(p=>{
-    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-    return imp && imp.comune === comuneSel;
-  });
-  if(search) lista=lista.filter(p=>{
-    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-    return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase());
-  });
+  if(comuneSel) lista=lista.filter(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp && imp.comune === comuneSel; });
+  if(search) lista=lista.filter(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase()); });
   lista.sort((a,b)=>{
     const da=a.stato==='Chiusa'?99:praticaStepIdx(a.stato);
     const db=b.stato==='Chiusa'?99:praticaStepIdx(b.stato);
@@ -1834,21 +1943,13 @@ function openPratica(id) {
       border-radius:10px;cursor:pointer;user-select:none"
       onclick="toggleGestione('${p.id}')">
       <div>
-        <div style="font-weight:700;font-size:13px;${p.inGestione?'color:#7ab0d8':''}">
-          🔧 Lavoro in gestione
-        </div>
+        <div style="font-weight:700;font-size:13px;${p.inGestione?'color:#7ab0d8':''}">🔧 Lavoro in gestione</div>
         <div style="font-size:11px;color:var(--muted);margin-top:1px">
-          ${p.inGestione
-            ? 'Attivo — preventivo saltato, si procede direttamente al BdO'
-            : 'Attiva per bypassare il preventivo (lavoro in gestione diretta)'}
+          ${p.inGestione?'Attivo — preventivo saltato, si procede direttamente al BdO':'Attiva per bypassare il preventivo (lavoro in gestione diretta)'}
         </div>
       </div>
-      <div style="width:40px;height:22px;border-radius:11px;
-        background:${p.inGestione?'#7ab0d8':'var(--bg4)'};
-        position:relative;transition:background .2s;flex-shrink:0;margin-left:14px">
-        <div style="width:18px;height:18px;border-radius:50%;background:#fff;
-          position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};
-          transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+      <div style="width:40px;height:22px;border-radius:11px;background:${p.inGestione?'#7ab0d8':'var(--bg4)'};position:relative;transition:background .2s;flex-shrink:0;margin-left:14px">
+        <div style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
       </div>
     </div>`;
 
@@ -1858,22 +1959,14 @@ function openPratica(id) {
     { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
     { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
   ];
-  const intCollegati = S.interventi.filter(i=>i.id===p.idIntervento||
-    S.pratiche.filter(x=>x.id===p.id).some(()=>i.note&&i.note.includes('[PRA:'+p.id+']')));
-  const intPratica = S.interventi.filter(i=>
-    (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento
-  );
-
+  const intPratica = S.interventi.filter(i => (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento);
   const intListHtml = intPratica.length===0
     ? `<div style="font-size:12px;color:var(--muted);padding:6px 0">Nessun intervento di realizzazione pianificato.</div>`
     : intPratica.map(i=>{
-        const imp2=S.impianti.find(x=>x.codice===i.codiceImpianto);
         const chk=S.checklist.filter(c=>c.idIntervento===i.id);
         const done=chk.filter(c=>c.eseguita==='SI').length;
         const col=OPERAI_HEX[i.operaio]||'#888';
-        return `<div style="display:flex;align-items:center;justify-content:space-between;
-          padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:6px;
-          border-left:3px solid ${col}">
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:6px;border-left:3px solid ${col}">
           <div>
             <div style="font-size:13px;font-weight:600;color:${col}">${i.operaio||'— contenitore'}</div>
             <div style="font-size:11px;color:var(--muted)">📅 ${i.dataPrevista} · ${done}/${chk.length} attività
@@ -1886,20 +1979,15 @@ function openPratica(id) {
 
   document.getElementById('praticaInterventiBox').innerHTML=`
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
-        🔨 Interventi di realizzazione
-      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔨 Interventi di realizzazione</div>
       ${intListHtml}
       <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pianifica nuovo intervento</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           ${OPERAI_LIST.map(op=>`
             <div id="pint_chip_${p.id}_${op.nome}" onclick="togglePintChip('${p.id}','${op.nome}')"
-              style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;cursor:pointer;
-                border:1.5px solid var(--border);background:var(--bg4);color:var(--muted);
-                font-size:13px;font-weight:500;transition:all .15s;user-select:none">
-              <div style="width:18px;height:18px;border-radius:50%;background:var(--bg5);
-                display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${op.iniziale}</div>
+              style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;cursor:pointer;border:1.5px solid var(--border);background:var(--bg4);color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none">
+              <div style="width:18px;height:18px;border-radius:50%;background:var(--bg5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${op.iniziale}</div>
               ${op.nome}
             </div>`).join('')}
         </div>
@@ -1917,7 +2005,6 @@ function openPratica(id) {
     const isDone=i<stepCorrente, isCurr=i===stepCorrente;
     const cls=isDone?'done':isCurr?'current':'';
     let bodyHtml='';
-
     if(s.key==='richiesta') {
       bodyHtml=`
         <div class="fg"><label>Data richiesta</label><input class="fc" type="date" id="ps_dataRichiesta" value="${p.dataRichiesta||''}"/></div>
@@ -1955,16 +2042,13 @@ function openPratica(id) {
           </div>`).join('');
       const btnProcedi = offSelezionata
         ? `<div style="margin-bottom:14px;padding:10px 14px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:13px">
-              ✓ Offerta selezionata: <strong>${offSelezionata.fornitore}</strong>
+            <div style="font-size:13px">✓ Offerta selezionata: <strong>${offSelezionata.fornitore}</strong>
               ${offSelezionata.importo?` — <span style="font-family:'DM Mono',monospace;color:var(--green)">€ ${parseFloat(offSelezionata.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
             </div>
             <button class="btn btn-primary btn-sm" onclick="avanzaAPreventivo('${p.id}')">Procedi al preventivo →</button>
           </div>`
         : offerteP.length > 0
-          ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:8px">
-              💡 Seleziona l'offerta scelta per procedere al preventivo
-            </div>`
+          ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:8px">💡 Seleziona l'offerta scelta per procedere al preventivo</div>`
           : '';
       bodyHtml=`
         ${btnProcedi}
@@ -1986,14 +2070,8 @@ function openPratica(id) {
     } else if(s.key==='preventivo') {
       const offSel = S.offerte.find(o=>o.idPratica===p.id&&o.selezionata);
       bodyHtml = p.inGestione
-        ? `<div style="text-align:center;padding:20px;color:#7ab0d8;font-size:13px">
-             🔧 Preventivo saltato — lavoro in gestione diretta<br>
-             <span style="font-size:11px;color:var(--muted)">Procedi con il BdO</span>
-           </div>`
-        : `${offSel?`<div style="padding:8px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.2);border-radius:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">
-             ✓ Offerta selezionata: <strong style="color:var(--text)">${offSel.fornitore}</strong>
-             ${offSel.importo?` — € <strong>${parseFloat(offSel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</strong>`:''}
-           </div>`:''}
+        ? `<div style="text-align:center;padding:20px;color:#7ab0d8;font-size:13px">🔧 Preventivo saltato — lavoro in gestione diretta<br><span style="font-size:11px;color:var(--muted)">Procedi con il BdO</span></div>`
+        : `${offSel?`<div style="padding:8px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.2);border-radius:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">✓ Offerta selezionata: <strong style="color:var(--text)">${offSel.fornitore}</strong>${offSel.importo?` — € <strong>${parseFloat(offSel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</strong>`:''}</div>`:''}
            <div class="fc-row">
              <div class="fg"><label>Data ricezione preventivo</label><input class="fc" type="date" id="ps_dataPreventivo" value="${p.dataPreventivo||''}"/></div>
              <div class="fg"><label>Importo preventivo €</label><input class="fc" type="number" step="0.01" id="ps_importoPreventivo" value="${p.importoPreventivo||''}" placeholder="0.00"/></div>
@@ -2029,7 +2107,6 @@ function openPratica(id) {
         <div class="fg"><label>Note finali</label><textarea class="fc" id="ps_noteChiusura" rows="2" placeholder="Note di chiusura, eventuali pendenze...">${p.noteChiusura||''}</textarea></div>
         <button class="btn btn-primary btn-sm" onclick="salvaStep('chiuso')" style="background:var(--green);color:#1a1a1a">✓ Chiudi pratica</button>`;
     }
-
     const bodyOpen=isCurr?'open':'';
     return `<div class="step-panel">
       <div class="step-panel-head ${cls}" onclick="toggleStepPanel(this)">
@@ -2045,10 +2122,7 @@ function openPratica(id) {
   document.getElementById('modalPratica').classList.add('open');
 }
 
-function toggleStepPanel(head) {
-  const body=head.nextElementSibling;
-  body.classList.toggle('open');
-}
+function toggleStepPanel(head) { head.nextElementSibling.classList.toggle('open'); }
 
 async function salvaStep(step) {
   const p=S.pratiche.find(x=>x.id===currentPraticaId);
@@ -2114,9 +2188,7 @@ async function selezionaOfferta(idOfferta, idPratica) {
     const nuovaSelezionata = offerta && offerta.selezionata ? null : idOfferta;
     const r = await apiPost('/seleziona-offerta',{id:nuovaSelezionata, idPratica});
     if(!r.ok){toast('Errore','err');return;}
-    S.offerte.forEach(o=>{
-      if(o.idPratica===idPratica) o.selezionata = (nuovaSelezionata && o.id===nuovaSelezionata);
-    });
+    S.offerte.forEach(o=>{ if(o.idPratica===idPratica) o.selezionata = (nuovaSelezionata && o.id===nuovaSelezionata); });
     toast(nuovaSelezionata?'Offerta selezionata':'Offerta deselezionata','ok');
     openPratica(idPratica);
   } catch(e){toast('Errore','err');}
@@ -2176,7 +2248,6 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
   if(!sel || sel.size===0) { toast('Seleziona almeno un operaio','err'); return; }
   const data = document.getElementById('pint_data_'+idPratica)?.value;
   if(!data) { toast('Seleziona una data','err'); return; }
-
   try {
     const operai = [...sel];
     const p2 = S.pratiche.find(x=>x.id===idPratica);
@@ -2184,10 +2255,7 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
     const nota = (notaBase ? notaBase + ' ' : '') + '[PRA:'+idPratica+']';
     const ids = [];
     for(const operaio of operai) {
-      const r = await apiPost('/crea-intervento',{
-        codiceImpianto, tipoVisita:'Straordinaria', operaio,
-        dataPrevista:data, note:nota, attivitaExtra:[]
-      });
+      const r = await apiPost('/crea-intervento',{ codiceImpianto, tipoVisita:'Straordinaria', operaio, dataPrevista:data, note:nota, attivitaExtra:[] });
       if(r.ok) ids.push(r.id);
     }
     if(ids.length===0) { toast('Errore creazione','err'); return; }
@@ -2199,13 +2267,7 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
     }
     const oggi = new Date().toISOString().slice(0,10);
     operai.forEach((operaio,i)=>{
-      S.interventi.push({
-        id:ids[i], codiceImpianto, dataPrevista:data, operaio,
-        tipoVisita:'Straordinaria', stato:'Aperto', note:nota,
-        dataChiusura:'', creatoIl:oggi, secondoOperaio:'',
-        interventoCollegato:ids.length>1?(i===0?ids[1]:ids[0]):'',
-        linkDrive:'', dataFine:'', operaioSecondario2:''
-      });
+      S.interventi.push({ id:ids[i], codiceImpianto, dataPrevista:data, operaio, tipoVisita:'Straordinaria', stato:'Aperto', note:nota, dataChiusura:'', creatoIl:oggi, secondoOperaio:'', interventoCollegato:ids.length>1?(i===0?ids[1]:ids[0]):'', linkDrive:'', dataFine:'', operaioSecondario2:'' });
     });
     _pintChipSel[idPratica] = new Set();
     toast(operai.length>1?`${operai.length} interventi pianificati`:'Intervento pianificato','ok');
@@ -2255,18 +2317,10 @@ function openModalNuovaPratica(idIntervento) {
   const selInt=document.getElementById('npIntervento');
   const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>(b.dataPrevista||'').localeCompare(a.dataPrevista||''));
   selInt.innerHTML='<option value="">— Nessun collegamento —</option>'+
-    intsAperti.map(i=>{
-      const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-      return `<option value="${i.id}" ${i.id===idIntervento?'selected':''}>
-        ${imp?imp.descrizione:i.codiceImpianto} · ${i.dataPrevista} · ${i.operaio}
-      </option>`;
-    }).join('');
+    intsAperti.map(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return `<option value="${i.id}" ${i.id===idIntervento?'selected':''}>${imp?imp.descrizione:i.codiceImpianto} · ${i.dataPrevista} · ${i.operaio}</option>`; }).join('');
   if(idIntervento){
     const interv=S.interventi.find(x=>x.id===idIntervento);
-    if(interv){
-      selImp.value=interv.codiceImpianto;
-      selInt.value=idIntervento;
-    }
+    if(interv){ selImp.value=interv.codiceImpianto; selInt.value=idIntervento; }
   }
   document.getElementById('modalNuovaPratica').classList.add('open');
 }
@@ -2294,13 +2348,8 @@ async function creaPratica() {
 
 function aproPraticaDaIntervento() {
   const praticaEsistente=S.pratiche.find(p=>p.idIntervento===currentDetId);
-  if(praticaEsistente){
-    closeModal('modalDettaglio');
-    openPratica(praticaEsistente.id);
-  } else {
-    closeModal('modalDettaglio');
-    openModalNuovaPratica(currentDetId);
-  }
+  if(praticaEsistente){ closeModal('modalDettaglio'); openPratica(praticaEsistente.id); }
+  else { closeModal('modalDettaglio'); openModalNuovaPratica(currentDetId); }
 }
 
 // ============================================================
@@ -2449,14 +2498,8 @@ function renderInterventi() {
   let lista=S.interventi.filter(i=>i.stato!=='DaAssegnare');
   if(filtStato) lista=lista.filter(i=>i.stato===filtStato);
   if(filtOp) lista=lista.filter(i=>i.operaio===filtOp||i.secondoOperaio===filtOp||i.operaioSecondario2===filtOp);
-  if(search) lista=lista.filter(i=>{
-    const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
-    return (i.codiceImpianto+(imp?imp.descrizione:'')+(i.operaio||'')+(i.note||'')).toLowerCase().includes(search);
-  });
-  lista.sort((a,b)=>{
-    if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1;
-    return (b.dataPrevista||'').localeCompare(a.dataPrevista||'');
-  });
+  if(search) lista=lista.filter(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return (i.codiceImpianto+(imp?imp.descrizione:'')+(i.operaio||'')+(i.note||'')).toLowerCase().includes(search); });
+  lista.sort((a,b)=>{ if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1; return (b.dataPrevista||'').localeCompare(a.dataPrevista||''); });
   const el=document.getElementById('tblInterventi');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
   el.innerHTML=`<table><thead><tr><th>Stato</th><th>Impianto</th><th>Tipo</th><th>Operaio</th><th>Data</th><th>Checklist</th><th></th></tr></thead><tbody>`+
@@ -2493,10 +2536,7 @@ function renderInterventi() {
 let detOperaioSel='';
 function setDetOperaio(nome) { detOperaioSel=nome; renderDetAssegna(); }
 function renderDetAssegna() {
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{
-    const c=document.getElementById('dchip-'+n);
-    if(c) c.classList.toggle('selected', detOperaioSel===n);
-  });
+  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{ const c=document.getElementById('dchip-'+n); if(c) c.classList.toggle('selected', detOperaioSel===n); });
   const cont=document.getElementById('dchip-Contenitore');
   if(cont){
     const on = detOperaioSel==='';
@@ -2533,8 +2573,6 @@ function openDettaglio(id) {
     ${i.dataFine&&i.dataFine>i.dataPrevista?`<div><strong>Fine lavori:</strong> ${i.dataFine}</div>`:''}
   `;
 
-  // Nota di chiusura: dalla colonna dedicata O (i.notaChiusura).
-  // Fallback per interventi chiusi prima della colonna: nota accodata in Note come "... | Chiusura: <testo>"
   let notaPrincipale = i.note || '';
   let notaChiusura = i.notaChiusura || '';
   if (!notaChiusura) {
@@ -2556,7 +2594,6 @@ function openDettaglio(id) {
          </div>`
       : '');
 
-  // Pratica collegata
   const praticaCollegata=S.pratiche.find(p=>p.idIntervento===i.id);
   const praBox=document.getElementById('detPraticaBox');
   if(praticaCollegata){
@@ -2565,9 +2602,7 @@ function openDettaglio(id) {
       <div style="font-size:13px"><span class="pra-stato ${praticaCollegata.stato}">${praticaCollegata.stato}</span> Pratica collegata</div>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('modalDettaglio');openPratica('${praticaCollegata.id}')">Apri pratica →</button>
     </div>`;
-  } else {
-    praBox.style.display='none'; praBox.innerHTML='';
-  }
+  } else { praBox.style.display='none'; praBox.innerHTML=''; }
 
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   document.getElementById('detChk').innerHTML = chk.length===0
@@ -2580,10 +2615,8 @@ function openDettaglio(id) {
 
   document.getElementById('detStato').value=i.stato==='DaAssegnare'?'Aperto':i.stato;
   document.getElementById('detNoteResp').value=i.noteResponsabile||'';
-  // Assegnazione corrente
   detOperaioSel = i.operaio || '';
   renderDetAssegna();
-  // Nota di chiusura (colonna O): visibile se chiuso
   document.getElementById('detNotaChiusura').value = i.notaChiusura || '';
   toggleChiusuraBox();
   document.getElementById('detNuovaData').value='';
@@ -2617,7 +2650,6 @@ async function salvaDettaglio() {
   const noteResp=document.getElementById('detNoteResp').value;
   const i=S.interventi.find(x=>x.id===currentDetId);
   try {
-    // 1) stato + nota responsabile + assegnazione operaio (+ data chiusura/nota chiusura se chiuso)
     const body={id:currentDetId,stato,noteResponsabile:noteResp,operaio:detOperaioSel};
     if(stato==='Chiuso'){
       if(!i.dataChiusura) body.dataChiusura=toLocaleDateStr(new Date());
@@ -2629,13 +2661,11 @@ async function salvaDettaglio() {
     Object.assign(i,body);
     if(body.dataChiusura) i.dataChiusura=body.dataChiusura;
 
-    // 2) posticipo → endpoint dedicato che scrive la colonna C
     if(nuovaData){
       const rp=await apiPost('/posticipa-intervento',{id:currentDetId,nuovaData});
       if(rp.ok) i.dataPrevista=nuovaData; else toast('Errore posticipo','err');
     }
 
-    // 3) data fine + 2° operaio → endpoint dedicato (colonne M:N)
     const rm=await apiPost('/aggiorna-multigiorno',{id:currentDetId,dataFine:dataFine||'',operaioSecondario2:opSec2||''});
     if(rm.ok){ i.dataFine=dataFine||''; i.operaioSecondario2=opSec2||''; }
 
@@ -2783,7 +2813,6 @@ async function salvaIntervento() {
   if(!codice||!tipo||!data){toast('Compila i campi obbligatori','err');return;}
   if(!contenitoreNewSel && operai.length===0){toast('Seleziona un operaio o il Contenitore','err');return;}
   try {
-    // Contenitore: un solo intervento con operaio vuoto (visibile a tutti)
     if(contenitoreNewSel){
       const r=await apiPost('/crea-intervento',{codiceImpianto:codice,tipoVisita:tipo,operaio:'',dataPrevista:data,dataFine,operaioSecondario2:opSec2,note,attivitaExtra:nExtraItems});
       if(!r.ok){toast('Errore creazione','err');return;}
@@ -2999,7 +3028,6 @@ function toast(msg,type) {
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-// Auto-refresh ogni 60s
 setInterval(()=>{ if(document.getElementById('appShell').style.display!=='none') caricaDati(); }, 60000);
 </script>
 </body>
