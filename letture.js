@@ -33,6 +33,19 @@
     if (typeof toast === 'function') toast(msg, tipo);
     else console.log('[letture]', msg);
   }
+  // Le commesse sono definite in index.html: stesse etichette e stessi colori
+  // del contenitore, senza duplicarne la tabella qui dentro.
+  function commesseApp() {
+    try {
+      return (typeof COMMESSE !== 'undefined' && COMMESSE.length) ? COMMESSE : null;
+    } catch (e) { return null; }
+  }
+  function commessaDiApp(imp) {
+    try {
+      if (typeof commessaDi === 'function') return commessaDi(imp);
+    } catch (e) { /* index.html vecchio: si continua senza pillole */ }
+    return null;
+  }
   async function apiGetL(path) {
     const r = await fetch(proxy() + path);
     return r.json();
@@ -53,6 +66,7 @@
     letture: [],          // letture del mese corrente
     impiantoSel: null,    // codice impianto aperto
     filtro: 'tutti',      // tutti | dafare | fatti
+    commessa: '',         // chiave commessa selezionata, '' = tutte
     caricato: false,
     posizione: null,
   };
@@ -125,6 +139,7 @@
     <button id="lettReload" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">\u21BB</button>
   </div>
   <div class="let-banner" id="lettBanner"></div>
+  <div class="filtri-commesse" id="lettCommesse" style="padding:10px 16px 6px;margin:0;background:var(--bg2);border-bottom:1px solid var(--bg3)"></div>
   <div class="let-sum" id="lettSum">
     <div class="let-sum-row">
       <div class="let-sum-box"><div class="let-sum-n" id="lettTot">0</div><div class="let-sum-l">Impianti</div></div>
@@ -219,10 +234,66 @@
     });
   }
 
+  // -- Pillole commessa: il badge conta gli impianti ancora da leggere ------
+  function renderCommesse(lista) {
+    const el = document.getElementById('lettCommesse');
+    const COMM = commesseApp();
+    if (!COMM) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+
+    const cont = {};
+    lista.forEach(x => {
+      const co = commessaDiApp(x);
+      if (!co) return;
+      if (x.letti < x.tot) cont[co.key] = (cont[co.key] || 0) + 1;
+    });
+
+    el.innerHTML = COMM.map(co => {
+      const n = cont[co.key] || 0;
+      const attiva = L.commessa === co.key;
+      const stile = attiva
+        ? 'background:' + co.color + ';border-color:' + co.color + ';color:#1a1a1a'
+        : 'background:' + co.color + '22;border-color:' + co.color + '55;color:' + co.color;
+      const badge = attiva
+        ? 'background:rgba(0,0,0,.2);color:#1a1a1a'
+        : 'background:' + co.color + '33;color:' + co.color;
+      return '<button class="fc-btn ' + (attiva ? 'active' : '') + '" style="' + stile + '" ' +
+        'data-co="' + esc(co.key) + '">' + esc(co.label) +
+        (n ? '<span class="fc-count" style="' + badge + '">' + n + '</span>' : '') + '</button>';
+    }).join('');
+
+    el.querySelectorAll('.fc-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        const k = b.getAttribute('data-co');
+        L.commessa = (L.commessa === k ? '' : k);   // ritocco = deseleziona
+        renderLista();
+      });
+    });
+  }
+
+  function etichettaCommessa(key) {
+    const COMM = commesseApp();
+    if (!COMM) return key;
+    const co = COMM.find(function (c) { return c.key === key; });
+    return co ? co.label : key;
+  }
+
   // -- Rendering elenco impianti --------------------------------------------
   function renderLista() {
     const search = (document.getElementById('lettSearch').value || '').toLowerCase();
     let lista = elencoImpianti();
+
+    // Le pillole contano su tutto, prima di qualsiasi filtro
+    renderCommesse(lista);
+
+    // La commessa filtra anche i riepiloghi: "Pesaro 12/40" e' un numero utile,
+    // "60/254" mentre stai guardando solo Pesaro non lo e'.
+    if (L.commessa) {
+      lista = lista.filter(x => {
+        const co = commessaDiApp(x);
+        return co && co.key === L.commessa;
+      });
+    }
 
     const tot    = lista.length;
     const fatti  = lista.filter(x => x.letti >= x.tot && x.tot > 0).length;
@@ -234,7 +305,9 @@
     document.getElementById('lettDaFare').textContent = daFare;
     document.getElementById('lettBar').style.width    = pct + '%';
     document.getElementById('lettSub').textContent    =
-      fatti + '/' + tot + ' completi \u00B7 ' + (L.cfg && L.cfg.meseCorrente ? L.cfg.meseCorrente : '');
+      fatti + '/' + tot + ' completi \u00B7 ' +
+      (L.commessa ? etichettaCommessa(L.commessa) + ' \u00B7 ' : '') +
+      (L.cfg && L.cfg.meseCorrente ? L.cfg.meseCorrente : '');
 
     if (L.filtro === 'fatti')  lista = lista.filter(x => x.letti >= x.tot && x.tot > 0);
     if (L.filtro === 'dafare') lista = lista.filter(x => x.letti < x.tot);
@@ -246,9 +319,13 @@
       (a.descrizione || '').localeCompare(b.descrizione || ''));
 
     if (!lista.length) {
+      const motivo = L.commessa
+        ? 'Nessun impianto per ' + esc(etichettaCommessa(L.commessa))
+        : 'Nessun impianto';
       document.getElementById('lettLista').innerHTML =
         '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\uD83D\uDD22</div>' +
-        '<div class="empty-txt">Nessun impianto</div></div>';
+        '<div class="empty-txt">' + motivo + '</div>' +
+        '<div class="empty-sub">Cambia commessa o filtro</div></div>';
       return;
     }
 
