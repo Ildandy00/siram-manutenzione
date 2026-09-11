@@ -367,13 +367,9 @@
     const n = Number(String(v).replace(',', '.'));
     return Number.isFinite(n) ? Math.round(n * 10) / 10 : NaN;
   }
-  /** Limiti di temperatura dello schedule selezionato (li calcola l'agente dal tipo). */
-  function limits() {
-    const s = S.schedule || {};
-    const lo = Number(s.t_min), hi = Number(s.t_max);
-    return (s.t_min != null && s.t_max != null && Number.isFinite(lo) && Number.isFinite(hi) && lo < hi) ? [lo, hi] : [5, 35];
-  }
-  function fmtNum(n) { return String(n).replace('.', ','); }
+  // Unico controllo: valore scrivibile nel registro Coster (raw = °C*10 + 250)
+  const T_MIN = -25;
+  const T_MAX = 100;
   function maskText(mask) {
     if (!mask) return 'Disabilitata';
     const n = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -585,9 +581,7 @@
     card.hidden = false;
 
     const imp = S.catalog.impianti.find((p) => p.ref === S.schedule.impianto_ref) || {};
-    const [tMin, tMax] = limits();
-    $('editorSub').textContent = `${impiantoLabel(imp)} · ${S.schedule.nome} · `
-      + `${S.schedule.categoria_label || 'Ambiente'} ${fmtNum(tMin)}–${fmtNum(tMax)} °C`;
+    $('editorSub').textContent = `${impiantoLabel(imp)} · ${S.schedule.nome}`;
 
     const banner = $('editorBanner');
     if (S.baseline) {
@@ -632,7 +626,7 @@
       const end = el('input', { type: 'time', value: e.end, class: 'fields', 'aria-label': `Riga ${i + 1} a` });
       end.addEventListener('input', () => { e.end = end.value; refreshChanges(); });
       const temp = el('input', {
-        type: 'number', step: '0.1', min: String(limits()[0]), max: String(limits()[1]), inputmode: 'decimal',
+        type: 'number', step: '0.1', min: String(T_MIN), max: String(T_MAX), inputmode: 'decimal',
         value: e.temp, class: 'fields', 'aria-label': `Riga ${i + 1} temperatura`,
       });
       temp.addEventListener('input', () => { e.temp = temp.value; refreshChanges(); });
@@ -679,9 +673,8 @@
       if (Number.isNaN(start)) throw new Error(R + 'ora di inizio non valida.');
       if (Number.isNaN(end)) throw new Error(R + 'ora di fine non valida.');
       if (Number.isNaN(temp)) throw new Error(R + 'temperatura non valida.');
-      const [tMin, tMax] = limits();
-      if (temp != null && (temp < tMin || temp > tMax)) {
-        throw new Error(R + `temperatura fuori dal range ${fmtNum(tMin)}–${fmtNum(tMax)} °C per questo schedule.`);
+      if (temp != null && (temp < T_MIN || temp > T_MAX)) {
+        throw new Error(R + `temperatura non scrivibile nel registro Coster (${T_MIN}…${T_MAX} °C).`);
       }
 
       const ch = { row: i, action: 'modify', days: null, start: null, end: null, temp: null };
