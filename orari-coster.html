@@ -209,6 +209,31 @@
 
   .pinbox { max-width: 380px; margin: 40px auto; }
   #pinInput { letter-spacing: 4px; }
+  /* Straordinari */
+  .stra-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
+  @media (max-width: 760px) { .stra-form { grid-template-columns: 1fr 1fr; } .stra-form .span-all { grid-column: 1 / -1; } }
+  .stra-form .span-all { grid-column: 1 / -1; }
+  .fasce { display: flex; flex-direction: column; gap: 6px; }
+  .fascia { display: grid; grid-template-columns: 28px 140px 140px 100px 34px; gap: 8px; align-items: center; }
+  .fascia .n { font-family: 'DM Mono', monospace; color: var(--muted); font-size: 12px; }
+  .fascia .x { padding: 0; min-height: 34px; height: 34px; width: 34px; }
+  @media (max-width: 560px) { .fascia { grid-template-columns: 22px 1fr 1fr 70px 34px; } }
+  .stra-list { list-style: none; margin: 0; padding: 0; }
+  .stra-item {
+    display: grid; grid-template-columns: 130px 1fr auto; gap: 12px; align-items: start;
+    padding: 12px 6px; border-bottom: 1px solid var(--border);
+  }
+  .stra-item:last-child { border-bottom: none; }
+  .stra-item .d { font-family: 'DM Mono', monospace; font-size: 13px; }
+  .stra-item .d small { display: block; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  .stra-item .t { font-weight: 600; font-size: 13px; }
+  .stra-item .f { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--yellow); margin-top: 2px; }
+  .stra-item .m { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .stra-item .m.bad { color: #e0a0a0; }
+  .stra-item .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  @media (max-width: 560px) { .stra-item { grid-template-columns: 1fr; } .stra-item .side { align-items: flex-start; flex-direction: row; } }
+  .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -284,6 +309,45 @@
       </div>
     </section>
 
+    <!-- STRAORDINARI: nuovo -->
+    <section id="straCard" class="card" hidden>
+      <h2>Nuovo straordinario <small id="straSub"></small></h2>
+      <div class="banner info" style="margin-bottom:14px">
+        Le fasce <strong>sostituiscono gli orari ordinari</strong> dello schedule solo per i giorni scelti:
+        l'ottimizzatore Coster continua a funzionare. Il PC le scrive nei 6 giorni prima e ripristina
+        il programma ordinario il giorno dopo, da solo.
+      </div>
+      <div id="straWarn" class="banner warn" hidden></div>
+      <div class="stra-form">
+        <div>
+          <label class="f" for="straDal">Giorno</label>
+          <input id="straDal" type="date">
+        </div>
+        <div>
+          <label class="f" for="straAl">Fino al (facoltativo)</label>
+          <input id="straAl" type="date">
+        </div>
+        <div>
+          <label class="f" for="straNote">Note</label>
+          <input id="straNote" type="text" maxlength="300" placeholder="Es. evento, richiesta del Comune…">
+        </div>
+        <div class="span-all">
+          <label class="f">Fasce orarie del giorno</label>
+          <div id="straFasce" class="fasce"></div>
+          <div class="actions" style="margin-top:8px">
+            <button id="straAddFascia" class="btn ghost" type="button">+ Fascia</button>
+            <span id="straPrefill" class="muted" style="font-size:12px"></span>
+          </div>
+        </div>
+      </div>
+      <div id="straErr" class="banner err" hidden style="margin-top:12px"></div>
+      <div id="straOk" class="banner ok" hidden style="margin-top:12px"></div>
+      <div class="actions">
+        <span class="spacer"></span>
+        <button id="straSubmit" class="btn primary">Programma straordinario</button>
+      </div>
+    </section>
+
     <!-- LAVORO -->
     <section id="jobCard" class="card" hidden>
       <div class="jobhead">
@@ -307,6 +371,15 @@
         <span class="spacer"></span>
         <button id="btnChiudiJob" class="btn ghost" hidden>Chiudi</button>
       </div>
+    </section>
+
+    <!-- STRAORDINARI: elenco -->
+    <section class="card" id="straListCard">
+      <h2>Straordinari programmati
+        <small><label class="chk"><input type="checkbox" id="straSoloQuesto"> solo lo schedule selezionato</label></small>
+      </h2>
+      <ul class="stra-list" id="straList"></ul>
+      <div class="muted" id="straEmpty">Nessuno straordinario.</div>
     </section>
 
     <!-- STORICO -->
@@ -598,8 +671,13 @@
       S.baseline = null;
       S.baselineAt = null;
       $('letturaInfo').textContent = '';
+      S.straFasce = [{ start: '', end: '', temp: '' }];
+      $('straDal').value = ''; $('straAl').value = '';
+      $('straPrefill').textContent = '';
+      $('straErr').hidden = true; $('straOk').hidden = true;
       resetEdits();
       renderEditor();
+      renderStraList();
     }
   }
 
@@ -620,6 +698,7 @@
 
   function renderEditor() {
     const card = $('editorCard');
+    renderStraCard();
     if (!S.schedule) { card.hidden = true; return; }
     card.hidden = false;
 
@@ -1005,6 +1084,242 @@
     }
   }
 
+
+  // ============================================================
+  // STRAORDINARI
+  // ============================================================
+  const STRA_STATO = {
+    in_attesa_agente: ['In attesa del PC', 'wait'],
+    programmato: ['Programmato', 'wait'],
+    applicato: ['Scritto su Coster', 'run'],
+    ripristinato: ['Ripristinato', 'ok'],
+    annullato: ['Annullato', ''],
+    scaduto: ['Non scritto (scaduto)', 'err'],
+    rifiutato: ['Rifiutato', 'err'],
+    da_controllare: ['Da controllare', 'err'],
+  };
+  const GG = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+  S.stra = [];
+  S.straFasce = [{ start: '', end: '', temp: '' }];
+
+  function localIso(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function dateFromIso(v) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || '');
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function fmtShort(v) {   // 'YYYY-MM-DD HH:MM' → 'gg/mm HH:MM'
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?/.exec(v || '');
+    if (!m) return v || '';
+    return `${m[3]}/${m[2]}` + (m[4] ? ` ${m[4]}:${m[5]}` : '');
+  }
+  function nowLocalStr() {
+    const d = new Date();
+    return localIso(d) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  function renderStraCard() {
+    const card = $('straCard');
+    if (!S.schedule) { card.hidden = true; return; }
+    card.hidden = false;
+    const imp = S.catalog.impianti.find((p) => p.ref === S.schedule.impianto_ref) || {};
+    $('straSub').textContent = `${impiantoLabel(imp)} · ${S.schedule.nome}`;
+    const today = localIso(new Date());
+    $('straDal').min = today;
+    $('straAl').min = $('straDal').value || today;
+    // programma appena letto e giorno già scelto: precompila
+    const key = `${S.schedule.id}|${$('straDal').value}|${S.baselineAt || ''}`;
+    if (S.baseline && $('straDal').value && S.straPrefillKey !== key) {
+      S.straPrefillKey = key;
+      prefillStra();
+    }
+    renderStraFasce();
+    renderStraWarn();
+  }
+
+  function renderStraFasce() {
+    const box = $('straFasce');
+    box.innerHTML = '';
+    S.straFasce.forEach((f, i) => {
+      const start = el('input', { type: 'time', value: f.start, 'aria-label': `Fascia ${i + 1} dalle` });
+      start.addEventListener('input', () => { f.start = start.value; });
+      const end = el('input', { type: 'time', value: f.end, 'aria-label': `Fascia ${i + 1} alle` });
+      end.addEventListener('input', () => { f.end = end.value; });
+      const temp = el('input', { type: 'number', step: '0.1', min: String(T_MIN), max: String(T_MAX), inputmode: 'decimal', value: f.temp, placeholder: '°C', 'aria-label': `Fascia ${i + 1} temperatura` });
+      temp.addEventListener('input', () => { f.temp = temp.value; });
+      const x = el('button', {
+        type: 'button', class: 'btn danger x', text: '✕', title: 'Togli fascia',
+        onclick: () => { S.straFasce.splice(i, 1); if (!S.straFasce.length) S.straFasce.push({ start: '', end: '', temp: '' }); renderStraFasce(); },
+      });
+      box.append(el('div', { class: 'fascia' }, [el('span', { class: 'n', text: String(i + 1) }), start, end, temp, x]));
+    });
+    $('straAddFascia').disabled = S.straFasce.length >= 4;
+  }
+
+  /** Precompila con gli orari ordinari del giorno scelto (se il programma è stato letto). */
+  function prefillStra() {
+    const d = dateFromIso($('straDal').value);
+    if (!d) return;
+    S.straPrefillKey = `${S.schedule && S.schedule.id}|${$('straDal').value}|${S.baselineAt || ''}`;
+    $('straAl').min = $('straDal').value;
+    if ($('straAl').value && $('straAl').value < $('straDal').value) $('straAl').value = '';
+    if (!S.baseline) {
+      $('straPrefill').textContent = 'Leggi il programma attuale per precompilare con gli orari ordinari.';
+      return;
+    }
+    const bit = 1 << ((d.getDay() + 6) % 7);
+    const rows = S.baseline.filter((r) => r.attiva && (r.days & bit)).sort((a, b) => a.start - b.start);
+    S.straFasce = rows.length
+      ? rows.slice(0, 4).map((r) => ({ start: r.da, end: r.a, temp: String(r.temp_c) }))
+      : [{ start: '', end: '', temp: '' }];
+    $('straPrefill').textContent = rows.length
+      ? `Precompilate con gli orari ordinari del ${GG[d.getDay()]}: modificale.`
+      : `Il ${GG[d.getDay()]} non ha orari ordinari: inserisci le fasce.`;
+    renderStraFasce();
+  }
+
+  function collectStra() {
+    const dal = $('straDal').value;
+    if (!dal) throw new Error('Scegli il giorno.');
+    const al = $('straAl').value || '';
+    if (al && al < dal) throw new Error('"Fino al" è prima del giorno iniziale.');
+    const fasce = S.straFasce
+      .filter((f) => f.start || f.end || f.temp)
+      .map((f, i) => {
+        const start = toMin(f.start), end = toMin(f.end), temp = parseTemp(f.temp);
+        if (start == null || end == null || Number.isNaN(start) || Number.isNaN(end)) throw new Error(`Fascia ${i + 1}: orari mancanti o non validi.`);
+        if (end <= start) throw new Error(`Fascia ${i + 1}: l'ora finale deve essere successiva a quella iniziale.`);
+        if (temp == null || Number.isNaN(temp)) throw new Error(`Fascia ${i + 1}: temperatura mancante.`);
+        if (temp < T_MIN || temp > T_MAX) throw new Error(`Fascia ${i + 1}: temperatura non scrivibile (${T_MIN}…${T_MAX} °C).`);
+        return { start, end, temp };
+      })
+      .sort((a, b) => a.start - b.start);
+    if (!fasce.length) throw new Error('Inserisci almeno una fascia.');
+    for (let i = 1; i < fasce.length; i++) if (fasce[i].start < fasce[i - 1].end) throw new Error('Le fasce si sovrappongono.');
+    return { schedule_id: S.schedule.id, data_dal: dal, data_al: al || null, fasce, note: $('straNote').value.trim() };
+  }
+
+  async function submitStra() {
+    $('straErr').hidden = true; $('straOk').hidden = true;
+    let body;
+    try { body = collectStra(); } catch (e) { $('straErr').hidden = false; $('straErr').textContent = e.message; return; }
+    $('straSubmit').disabled = true;
+    try {
+      const r = await api('/straordinari', { method: 'POST', body });
+      $('straOk').hidden = false;
+      $('straOk').textContent = r.ids.length > 1
+        ? `${r.ids.length} straordinari inviati al PC.`
+        : 'Straordinario inviato al PC: lo scriverà su Coster nei giorni prima.';
+      $('straNote').value = '';
+      await loadStra();
+    } catch (err) {
+      const m = handleErr(err, 'stra');
+      if (m) { $('straErr').hidden = false; $('straErr').textContent = m; }
+    } finally {
+      $('straSubmit').disabled = false;
+    }
+  }
+
+  async function cancelStra(id, btn) {
+    btn.disabled = true;
+    try {
+      const r = await api('/straordinari/' + id + '/annulla', { method: 'POST' });
+      btn.textContent = 'Inviato';
+      if (r.messaggio) btn.title = r.messaggio;
+      await loadStra();
+    } catch (err) {
+      const m = handleErr(err, 'annullaStra');
+      if (m) { btn.disabled = false; alertBanner(m); }
+    }
+  }
+  function alertBanner(m) { $('straErr').hidden = false; $('straErr').textContent = m; }
+
+  function straWindowsText(x) {
+    const w = x.finestre || {};
+    if (x.stato === 'in_attesa_agente') return 'Il PC lo registra appena si collega.';
+    if (x.stato === 'programmato') {
+      const now = nowLocalStr();
+      if (w.scrivi_da && now < w.scrivi_da) return `Verrà scritto dal ${fmtShort(w.scrivi_da)} (consigliato entro ${fmtShort(w.scrivi_consigliato_entro)}).`;
+      return `Da scrivere ora (consigliato entro ${fmtShort(w.scrivi_consigliato_entro)}, ultimo limite ${fmtShort(w.scrivi_entro)}).`;
+    }
+    if (x.stato === 'applicato') {
+      const righe = x.righe && x.righe.aggiunte ? x.righe.aggiunte.map((a) => a.riga + 1).join(', ') : '';
+      return `Scritto il ${fmtShort(x.scritto_il)}${righe ? ` (righe ${righe})` : ''} · ripristino dal ${fmtShort(w.ripristina_da)}.`;
+    }
+    if (x.stato === 'ripristinato' || (x.stato === 'annullato' && x.ripristinato_il)) return `Ripristinato il ${fmtShort(x.ripristinato_il)}.`;
+    return '';
+  }
+
+  function straIsLate(x) {
+    const w = x.finestre || {};
+    const now = nowLocalStr();
+    if (x.stato === 'programmato' && w.scrivi_consigliato_entro && now > w.scrivi_consigliato_entro) return 'In ritardo: il PC deve essere acceso per scriverlo.';
+    if (x.stato === 'applicato' && w.ripristina_entro && now > w.ripristina_entro) return 'Ripristino in ritardo: accendi il PC, altrimenti lo straordinario si ripete la prossima settimana.';
+    return '';
+  }
+
+  function renderStraList() {
+    const only = $('straSoloQuesto').checked && S.schedule;
+    let list = S.stra.slice();
+    if (only) list = list.filter((x) => String(x.schedule_id) === String(S.schedule.id));
+    const order = { in_attesa_agente: 0, programmato: 1, applicato: 1, da_controllare: 0, scaduto: 2, rifiutato: 2, ripristinato: 3, annullato: 3 };
+    list.sort((a, b) => (order[a.stato] ?? 9) - (order[b.stato] ?? 9) || (a.data || '').localeCompare(b.data || ''));
+    const ul = $('straList');
+    ul.innerHTML = '';
+    $('straEmpty').hidden = list.length > 0;
+    for (const x of list) {
+      const [lbl, cls] = STRA_STATO[x.stato] || [x.stato, ''];
+      const e = x.etichetta || {};
+      const late = straIsLate(x);
+      const canCancel = ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato) && !x.annulla && !x.annulla_in_invio;
+      const side = [el('span', { class: 'badge ' + cls, text: lbl })];
+      if ((x.annulla || x.annulla_in_invio) && ['programmato', 'applicato'].includes(x.stato)) side.push(el('span', { class: 'badge wait', text: 'Annullamento in corso' }));
+      if (canCancel) {
+        const b = el('button', { class: 'btn danger', style: 'min-height:30px;padding:4px 10px;font-size:12px', text: 'Annulla' });
+        b.addEventListener('click', () => cancelStra(x.id, b));
+        side.push(b);
+      }
+      const d = dateFromIso(x.data);
+      ul.append(el('li', { class: 'stra-item' }, [
+        el('div', { class: 'd' }, [el('small', { text: x.giorno || (d ? GG[d.getDay()] : '') }), fmtShort(x.data) + (d ? '/' + d.getFullYear() : '')]),
+        el('div', {}, [
+          el('div', { class: 't', text: [e.impianto, e.schedule].filter(Boolean).join(' · ') || `Schedule ${x.schedule_id}` }),
+          el('div', { class: 'f', text: x.fasce_testo || '' }),
+          x.note ? el('div', { class: 'm', text: '📝 ' + x.note }) : null,
+          el('div', { class: 'm', text: straWindowsText(x) }),
+          x.messaggio && !['in_attesa_agente'].includes(x.stato) ? el('div', { class: 'm' + (['scaduto', 'rifiutato', 'da_controllare'].includes(x.stato) || /non riuscit/i.test(x.messaggio) ? ' bad' : ''), text: x.messaggio }) : null,
+          late ? el('div', { class: 'm bad', text: '⚠ ' + late }) : null,
+        ]),
+        el('div', { class: 'side' }, side),
+      ]));
+    }
+    renderStraWarn();
+  }
+
+  function renderStraWarn() {
+    const w = $('straWarn');
+    if (!S.schedule) { w.hidden = true; return; }
+    const act = S.stra.filter((x) => String(x.schedule_id) === String(S.schedule.id) && x.stato === 'applicato');
+    w.hidden = !act.length;
+    if (act.length) {
+      w.textContent = 'Straordinari già scritti su questo schedule: ' + act.map((x) => {
+        const r = x.righe && x.righe.aggiunte ? ` (righe ${x.righe.aggiunte.map((a) => a.riga + 1).join(', ')})` : '';
+        return `${x.giorno} ${fmtShort(x.data)}${r}`;
+      }).join('; ') + '. Nell\'editor sopra non modificare quelle righe: il ripristino automatico le cerca.';
+    }
+  }
+
+  async function loadStra() {
+    try {
+      const r = await api('/straordinari');
+      S.stra = r.lista || [];
+      renderStraList();
+    } catch (err) {
+      handleErr(err, 'loadStra');
+    }
+  }
+
   // ============================================================
   // AVVIO
   // ============================================================
@@ -1014,9 +1329,11 @@
     $('app').hidden = false;
     await refreshStatus();
     await loadHistory();
+    await loadStra();
     if (!started) {
       started = true;
       setInterval(refreshStatus, 10000);
+      setInterval(loadStra, 15000);
       setInterval(() => { if (!S.jobId) loadHistory(); }, 30000);
     }
   }
@@ -1033,6 +1350,10 @@
   $('btnConferma').addEventListener('click', confirmJob);
   $('btnAnnullaJob').addEventListener('click', cancelJob);
   $('btnChiudiJob').addEventListener('click', closeJob);
+  $('straDal').addEventListener('change', prefillStra);
+  $('straAddFascia').addEventListener('click', () => { if (S.straFasce.length < 4) { S.straFasce.push({ start: '', end: '', temp: '' }); renderStraFasce(); } });
+  $('straSubmit').addEventListener('click', submitStra);
+  $('straSoloQuesto').addEventListener('change', renderStraList);
 
   S.pin = storageGet(PIN_KEY);
   if (S.pin) start(); else askPin();
