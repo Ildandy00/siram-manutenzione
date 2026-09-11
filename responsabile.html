@@ -59,6 +59,10 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 .view { display: none; padding: 24px; }
 .view.active { display: block; }
 
+/* ORARI COSTER (pagina orari-coster.html incorporata) */
+#view-orari { padding: 0; }
+#orariFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
+
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
@@ -497,6 +501,8 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="nav-item" onclick="nav('rcee')" id="nav-rcee">📋 RCEE <span class="nav-badge" id="badgeRcee" style="background:var(--red);color:#fff;display:none">0</span></div>
       <div class="nav-sec">Monitoraggio</div>
       <div class="nav-item" onclick="window.open('/dashboard-segnalazioni.html','_blank')">📊 Segnalazioni <span style="font-size:10px;color:var(--muted);margin-left:auto">↗</span></div>
+      <div class="nav-sec">Telegestione</div>
+      <div class="nav-item" onclick="nav('orari')" id="nav-orari">🕒 Orari Coster</div>
       <div class="nav-sec">Anagrafica</div>
       <div class="nav-item" onclick="nav('impianti')" id="nav-impianti">⊞ Impianti</div>
       <div class="nav-item" onclick="nav('catalogo')" id="nav-catalogo">≡ Catalogo</div>
@@ -701,6 +707,11 @@ tr.int-completato td * { text-decoration: line-through; }
         </div>
         <div id="rceeLoading" class="loading-full" style="display:none"><div class="spin"></div> Caricamento scadenze...</div>
         <div class="table-wrap" id="tblRcee"></div>
+      </div>
+
+      <!-- VIEW: ORARI COSTER (orari-coster.html incorporata, caricata al primo accesso) -->
+      <div class="view" id="view-orari">
+        <iframe id="orariFrame" title="Orari Coster" src="about:blank"></iframe>
       </div>
 
       <!-- VIEW: IMPIANTI -->
@@ -1210,6 +1221,20 @@ function nav(id) {
   if (id==='rdacat')     renderRdacat();
   if (id==='avanzamento') renderAvanzamento();
   if (id==='rcee')       { if(rceeScadenze.length) renderRcee(); else caricaScadenzeRcee(); }
+  if (id==='orari')      apriOrari();
+}
+
+// ============================================================
+//  ORARI COSTER — pagina orari-coster.html incorporata
+//  (caricata una sola volta: resta aperta cambiando sezione,
+//   così un lavoro in corso non si perde)
+// ============================================================
+function apriOrari() {
+  const f = document.getElementById('orariFrame');
+  if (!f.dataset.loaded) {
+    f.src = '/orari-coster.html';
+    f.dataset.loaded = '1';
+  }
 }
 
 // ============================================================
@@ -1507,7 +1532,7 @@ function renderReport() {
 function esportaReport() {
   const table=document.querySelector('#tblReport table'); if(!table)return;
   const rows=[...table.querySelectorAll('tr')].map(tr=>[...tr.querySelectorAll('th,td')].map(td=>'"'+td.innerText.replace(/"/g,'""')+'"').join(','));
-  const csv='\uFEFF'+rows.join('\n');
+  const csv='﻿'+rows.join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`manutenzioni_${new Date().getFullYear()}.csv`; a.click();
