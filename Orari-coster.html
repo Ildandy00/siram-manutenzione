@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orari Coster — Gestionale</title>
+<style>
+  :root {
+    --bg: #f3f5f8;
+    --card: #ffffff;
+    --ink: #1b2430;
+    --muted: #667085;
+    --line: #e1e6ee;
+    --accent: #0b6bcb;
+    --accent-ink: #ffffff;
+    --accent-soft: #e6f0fb;
+    --ok: #12805c;
+    --ok-soft: #e3f5ee;
+    --warn: #b25e09;
+    --warn-soft: #fdf1e2;
+    --err: #c23030;
+    --err-soft: #fbe7e7;
+    --chg: #fff6d6;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 16px; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  header.top h1 { font-size: 20px; margin: 0; }
+  header.top .sub { color: var(--muted); font-size: 13px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: #eceff3; color: var(--muted); white-space: nowrap;
+  }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.off { background: var(--err-soft); color: var(--err); }
+  .pill.wait { background: var(--warn-soft); color: var(--warn); }
+ 
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  .card h2 small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+ 
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 760px) { .grid3 { grid-template-columns: 1fr; } }
+  label.f { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  select, input[type=text], input[type=password], input[type=time], input[type=number] {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; color: inherit; background: #fff; min-height: 38px;
+  }
+  select:focus, input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .filter { margin-bottom: 6px; }
+ 
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+    min-height: 38px;
+  }
+  .btn:hover:not(:disabled) { border-color: #c5ceda; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.danger { background: var(--err); border-color: var(--err); color: #fff; }
+  .btn.ghost { background: transparent; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .actions .spacer { flex: 1; }
+ 
+  .banner { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+  .banner.warn { background: var(--warn-soft); color: #7a4106; }
+  .banner.err { background: var(--err-soft); color: #8b1f1f; }
+  .banner.ok { background: var(--ok-soft); color: #0c5a40; }
+  .banner.info { background: var(--accent-soft); color: #0a4a8c; }
+  .muted { color: var(--muted); }
+  .pre { white-space: pre-wrap; }
+ 
+  /* Editor programma */
+  .tbl-wrap { overflow-x: auto; }
+  table.prog { width: 100%; border-collapse: collapse; min-width: 720px; }
+  table.prog th, table.prog td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  table.prog th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  table.prog tr.changed td { background: var(--chg); }
+  table.prog tr.disabled .fields { opacity: .35; }
+  table.prog td.num { width: 34px; font-weight: 700; color: var(--muted); }
+  table.prog input[type=time] { width: 112px; }
+  table.prog input[type=number] { width: 80px; }
+  .days { display: inline-flex; gap: 3px; }
+  .day {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--line);
+    background: #fff; font: inherit; font-weight: 700; font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+  .day[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .day:disabled { cursor: not-allowed; }
+  .rowstate { font-size: 12px; white-space: nowrap; }
+  .rowstate.on { color: var(--ok); font-weight: 600; }
+  .rowstate.offr { color: var(--muted); }
+  .tog {
+    padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: #fff;
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .tog[aria-pressed=true] { background: var(--err-soft); border-color: #efb4b4; color: var(--err); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+ 
+  /* Editor su telefono: ogni riga diventa una scheda */
+  @media (max-width: 700px) {
+    table.prog { min-width: 0; }
+    table.prog thead { display: none; }
+    table.prog, table.prog tbody { display: block; }
+    table.prog tr {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 8px;
+      padding: 12px 6px; border-bottom: 1px solid var(--line);
+    }
+    table.prog tr.changed { background: var(--chg); }
+    table.prog td { border: 0; padding: 0; background: transparent !important; }
+    table.prog td.num { width: auto; font-size: 15px; }
+    table.prog td.c-days { grid-column: 1 / -1; }
+    table.prog td.c-tog { grid-row: 1; grid-column: 3; text-align: right; }
+    table.prog td[data-label]::before {
+      content: attr(data-label); display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px;
+    }
+    table.prog input[type=time], table.prog input[type=number] { width: 100%; }
+    .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); width: 100%; gap: 4px; }
+    .day { width: auto; height: 36px; }
+  }
+ 
+  /* Lavoro */
+  .steps { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 12px; }
+  .step {
+    flex: 1 1 90px; padding: 6px 8px; border-radius: 6px; background: #eef1f5; color: var(--muted);
+    font-size: 12px; font-weight: 600; text-align: center;
+  }
+  .step.done { background: var(--ok-soft); color: var(--ok); }
+  .step.now { background: var(--accent); color: #fff; }
+  .step.fail { background: var(--err); color: #fff; }
+  .jobhead { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .jobhead .t { font-weight: 700; }
+  table.diff { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  table.diff th, table.diff td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; }
+  table.diff th { color: var(--muted); font-size: 12px; }
+  table.diff td.new { font-weight: 700; }
+ 
+  .hist { list-style: none; margin: 0; padding: 0; }
+  .hist li {
+    display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center;
+    padding: 8px 4px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .hist li:hover { background: #f8fafc; }
+  .hist .when { font-size: 12px; color: var(--muted); }
+  .hist .what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 560px) { .hist li { grid-template-columns: 1fr auto; } .hist .when { grid-column: 1 / -1; } }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eceff3; color: var(--muted); white-space: nowrap; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.err { background: var(--err-soft); color: var(--err); }
+  .badge.run { background: var(--accent-soft); color: var(--accent); }
+  .badge.wait { background: var(--warn-soft); color: var(--warn); }
+ 
+  .pinbox { max-width: 360px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+ 
+  <header class="top">
+    <div>
+      <h1>Orari Coster</h1>
+      <div class="sub">Programmi orari dei controller — lettura e modifica con verifica</div>
+    </div>
+    <span id="agentPill" class="pill wait">Collegamento…</span>
+  </header>
+ 
+  <!-- PIN -->
+  <section id="pinCard" class="card pinbox" hidden>
+    <h2>Accesso</h2>
+    <div id="pinErr" class="banner err" hidden></div>
+    <label class="f" for="pinInput">PIN modulo orari</label>
+    <input id="pinInput" type="password" autocomplete="current-password">
+    <div class="actions"><button id="pinBtn" class="btn primary">Entra</button></div>
+  </section>
+ 
+  <div id="app" hidden>
+    <div id="agentBanner" class="banner warn" hidden></div>
+ 
+    <!-- SELEZIONE -->
+    <section class="card">
+      <h2>Selezione impianto</h2>
+      <div class="grid3">
+        <div>
+          <label class="f" for="selCommessa">Commessa</label>
+          <select id="selCommessa"></select>
+        </div>
+        <div>
+          <label class="f" for="selImpianto">Impianto</label>
+          <input id="filtroImpianto" class="filter" type="text" placeholder="Cerca codice o nome…">
+          <select id="selImpianto" disabled></select>
+        </div>
+        <div>
+          <label class="f" for="selSchedule">Schedule</label>
+          <select id="selSchedule" disabled></select>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnLeggi" class="btn" disabled>Leggi programma attuale</button>
+        <span id="letturaInfo" class="muted"></span>
+      </div>
+    </section>
+ 
+    <!-- EDITOR -->
+    <section id="editorCard" class="card" hidden>
+      <h2>Programma <small id="editorSub"></small></h2>
+      <div id="editorBanner" class="banner info" hidden></div>
+      <div class="tbl-wrap">
+        <table class="prog">
+          <thead>
+            <tr>
+              <th>#</th><th>Stato</th><th>Giorni</th><th>Da</th><th>A</th><th>°C</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="progBody"></tbody>
+        </table>
+      </div>
+      <div class="hint" id="editorHint"></div>
+      <div id="formErr" class="banner err" hidden style="margin-top:10px"></div>
+      <div class="actions">
+        <button id="btnReset" class="btn ghost">Annulla modifiche</button>
+        <span class="spacer"></span>
+        <span id="chgCount" class="muted"></span>
+        <button id="btnApplica" class="btn primary" disabled>Applica programma</button>
+      </div>
+    </section>
+ 
+    <!-- LAVORO -->
+    <section id="jobCard" class="card" hidden>
+      <div class="jobhead">
+        <div>
+          <div class="t" id="jobTitle"></div>
+          <div class="muted" id="jobSub"></div>
+        </div>
+        <div class="muted" id="jobTime"></div>
+      </div>
+      <div class="steps" id="jobSteps"></div>
+      <div id="jobMsg" class="banner info pre"></div>
+      <div id="jobDiff" hidden>
+        <table class="diff">
+          <thead><tr><th>Riga</th><th>Attuale</th><th>Nuovo</th></tr></thead>
+          <tbody id="diffBody"></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="btnConferma" class="btn primary" hidden>Conferma scrittura</button>
+        <button id="btnAnnullaJob" class="btn danger" hidden>Annulla</button>
+        <span class="spacer"></span>
+        <button id="btnChiudiJob" class="btn ghost" hidden>Chiudi</button>
+      </div>
+    </section>
+ 
+    <!-- STORICO -->
+    <section class="card">
+      <h2>Ultime richieste <small>(si azzerano se il server si riavvia)</small></h2>
+      <ul class="hist" id="histList"></ul>
+      <div class="muted" id="histEmpty">Nessuna richiesta.</div>
+    </section>
+  </div>
+</div>
+ 
+<script>
+(() => {
+  'use strict';
+ 
+  // ============================================================
+  // CONFIGURAZIONE
+  // ============================================================
+  const SERVER = 'https://siram-proxy.onrender.com';
+  const PIN_KEY = 'orari_coster_pin';
+ 
+  const DAYS = [['L', 1], ['M', 2], ['M', 4], ['G', 8], ['V', 16], ['S', 32], ['D', 64]];
+  const DAY_TITLES = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+  const ROWS = 8;
+ 
+  const STATE_LABEL = {
+    in_coda: 'In coda', preso: 'Presa in carico', connessione: 'Connessione',
+    lettura: 'Lettura', attesa_conferma: 'Attesa conferma', confermato: 'Confermato',
+    scrittura: 'Scrittura', verifica: 'Verifica', rollback: 'Ripristino',
+    completato: 'Completato', nessuna_modifica: 'Nessuna modifica', annullato: 'Annullato',
+    errore: 'Errore', scaduto: 'Scaduto',
+  };
+  const FINAL = new Set(['completato', 'nessuna_modifica', 'annullato', 'errore', 'scaduto']);
+ 
+  // ============================================================
+  // STATO
+  // ============================================================
+  const S = {
+    pin: null,
+    catalog: null,
+    commessa: null,
+    impianto: null,
+    schedule: null,
+    baseline: null,      // righe lette da Coster (array di 8)
+    baselineAt: null,
+    edits: [],
+    jobId: null,
+    jobTimer: null,
+    lastJob: null,
+  };
+ 
+  const $ = (id) => document.getElementById(id);
+ 
+  function storageGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function storageSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+ 
+  // ============================================================
+  // API
+  // ============================================================
+  class AuthErr extends Error {}
+ 
+  async function api(path, opts = {}) {
+    const res = await fetch(SERVER + '/orari' + path, {
+      method: opts.method || 'GET',
+      headers: Object.assign(
+        { 'X-Orari-Pin': S.pin || '' },
+        opts.body ? { 'Content-Type': 'application/json' } : {}
+      ),
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) {}
+    if (res.status === 401) throw new AuthErr(data.error || 'PIN non valido.');
+    if (!res.ok) throw new Error(data.error || ('Errore server HTTP ' + res.status));
+    return data;
+  }
+ 
+  function handleErr(err, where) {
+    if (err instanceof AuthErr) { askPin(err.message); return; }
+    console.error(where, err);
+    return err.message || String(err);
+  }
+ 
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function toMin(t) {
+    if (!t) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
+    if (!m) return NaN;
+    const h = +m[1], mi = +m[2];
+    if (h > 23 || mi > 59) return NaN;
+    return h * 60 + mi;
+  }
+  function toHHMM(min) {
+    if (min == null || isNaN(min)) return '';
+    return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
+  }
+  function parseTemp(v) {
+    if (v === '' || v == null) return null;
+    const n = Number(String(v).replace(',', '.'));
+    return Number.isFinite(n) ? Math.round(n * 10) / 10 : NaN;
+  }
+  function maskText(mask) {
+    if (!mask) return 'Disabilitata';
+    const n = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    return n.filter((_, i) => mask & (1 << i)).join(' ');
+  }
+  function fmtTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtElapsed(ms) {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+  }
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') e.className = v;
+      else if (k === 'text') e.textContent = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, '');
+      else if (v !== false && v != null) e.setAttribute(k, v);
+    }
+    for (const c of [].concat(children)) if (c != null) e.append(c);
+    return e;
+  }
+  function badgeClass(stato) {
+    if (stato === 'completato' || stato === 'nessuna_modifica') return 'ok';
+    if (stato === 'errore' || stato === 'scaduto') return 'err';
+    if (stato === 'annullato') return '';
+    if (stato === 'attesa_conferma' || stato === 'in_coda') return 'wait';
+    return 'run';
+  }
+ 
+  // ============================================================
+  // PIN
+  // ============================================================
+  function askPin(msg) {
+    S.pin = null;
+    storageSet(PIN_KEY, null);
+    $('app').hidden = true;
+    $('pinCard').hidden = false;
+    $('pinErr').hidden = !msg;
+    $('pinErr').textContent = msg || '';
+    $('pinInput').value = '';
+    $('pinInput').focus();
+    setPill('wait', 'Accesso richiesto');
+  }
+ 
+  async function submitPin() {
+    const v = $('pinInput').value.trim();
+    if (!v) return;
+    S.pin = v;
+    $('pinBtn').disabled = true;
+    try {
+      await api('/stato');
+      storageSet(PIN_KEY, v);
+      $('pinCard').hidden = true;
+      await start();
+    } catch (err) {
+      const m = handleErr(err, 'pin');
+      if (m) { $('pinErr').hidden = false; $('pinErr').textContent = m; }
+    } finally {
+      $('pinBtn').disabled = false;
+    }
+  }
+ 
+  // ============================================================
+  // STATO AGENTE
+  // ============================================================
+  function setPill(cls, text) {
+    const p = $('agentPill');
+    p.className = 'pill ' + cls;
+    p.textContent = text;
+  }
+ 
+  let catalogLoaded = false;
+ 
+  async function refreshStatus() {
+    try {
+      const st = await api('/stato');
+      if (st.agente_online) {
+        setPill('ok', 'Agente collegato' + (st.host_agente ? ' · ' + st.host_agente : ''));
+        $('agentBanner').hidden = true;
+      } else {
+        setPill('off', 'Agente non collegato');
+        $('agentBanner').hidden = false;
+        $('agentBanner').textContent = st.ultimo_contatto
+          ? `L'agente sul PC non risponde dal ${fmtTime(st.ultimo_contatto)}. Le richieste restano in coda fino a 30 minuti.`
+          : "L'agente sul PC non si è ancora collegato. Le richieste restano in coda fino a 30 minuti.";
+      }
+      if (st.catalogo_pronto && (!catalogLoaded || st.catalogo_aggiornato !== S.catalogAt)) {
+        await loadCatalog();
+      }
+    } catch (err) {
+      const m = handleErr(err, 'stato');
+      if (m) setPill('off', 'Server non raggiungibile');
+    }
+  }
+ 
+  // ============================================================
+  // CATALOGO E SELEZIONE
+  // ============================================================
+  async function loadCatalog() {
+    const data = await api('/catalogo');
+    S.catalog = data.catalogo;
+    S.catalogAt = data.aggiornato;
+    catalogLoaded = true;
+    fillCommesse();
+  }
+ 
+  function fillSelect(sel, items, placeholder, current) {
+    sel.innerHTML = '';
+    sel.append(el('option', { value: '', text: placeholder }));
+    for (const it of items) sel.append(el('option', { value: it.value, text: it.label }));
+    sel.value = current != null && items.some((i) => String(i.value) === String(current)) ? current : '';
+    sel.disabled = items.length === 0;
+  }
+ 
+  function fillCommesse() {
+    const cur = S.commessa;
+    fillSelect($('selCommessa'),
+      S.catalog.commesse.map((c) => ({ value: c.ref, label: c.nome })),
+      '— Seleziona commessa —', cur);
+    if ($('selCommessa').value !== (cur || '')) onCommessa();
+    else fillImpianti();
+  }
+ 
+  function impiantoLabel(p) { return p.codice_k ? `${p.codice_k} - ${p.nome}` : p.nome; }
+ 
+  function fillImpianti() {
+    const q = $('filtroImpianto').value.trim().toLowerCase();
+    const list = S.commessa
+      ? S.catalog.impianti.filter((p) => p.commessa_ref === S.commessa)
+          .filter((p) => !q || impiantoLabel(p).toLowerCase().includes(q))
+      : [];
+    const withSched = new Set(S.catalog.schedules.map((s) => s.impianto_ref));
+    fillSelect($('selImpianto'),
+      list.map((p) => ({ value: p.ref, label: impiantoLabel(p) + (withSched.has(p.ref) ? '' : '  (nessuno schedule)') })),
+      S.commessa ? `— ${list.length} impianti —` : '— prima la commessa —', S.impianto);
+    if (S.impianto && !$('selImpianto').value) {
+      // l'impianto selezionato è stato escluso dal filtro
+      S.impianto = null;
+      setSchedule(null);
+    }
+    fillSchedules();
+  }
+ 
+  function fillSchedules() {
+    const list = S.impianto ? S.catalog.schedules.filter((s) => s.impianto_ref === S.impianto) : [];
+    fillSelect($('selSchedule'),
+      list.map((s) => ({ value: s.id, label: `${s.nome} [${s.scheduler_id}]` })),
+      S.impianto ? (list.length ? '— Seleziona schedule —' : 'Nessuno schedule disponibile') : '— prima l\'impianto —',
+      S.schedule ? S.schedule.id : null);
+    const val = $('selSchedule').value;
+    if (!val && S.schedule) setSchedule(null);
+    $('btnLeggi').disabled = !S.schedule;
+  }
+ 
+  function onCommessa() {
+    S.commessa = $('selCommessa').value || null;
+    S.impianto = null;
+    $('filtroImpianto').value = '';
+    setSchedule(null);
+    fillImpianti();
+  }
+  function onImpianto() {
+    S.impianto = $('selImpianto').value || null;
+    setSchedule(null);
+    fillSchedules();
+  }
+  function onSchedule() {
+    const id = $('selSchedule').value;
+    const sch = S.catalog.schedules.find((s) => String(s.id) === id) || null;
+    setSchedule(sch);
+  }
+ 
+  function setSchedule(sch) {
+    const changed = (S.schedule && S.schedule.id) !== (sch && sch.id);
+    S.schedule = sch;
+    $('btnLeggi').disabled = !sch;
+    if (changed) {
+      S.baseline = null;
+      S.baselineAt = null;
+      $('letturaInfo').textContent = '';
+      resetEdits();
+      renderEditor();
+    }
+  }
+ 
+  // ============================================================
+  // EDITOR
+  // ============================================================
+  function resetEdits() {
+    S.edits = [];
+    for (let i = 0; i < ROWS; i++) {
+      const b = S.baseline && S.baseline[i];
+      // Le righe disabilitate su Coster contengono spesso valori di servizio
+      // (00:00, 0 °C): si mostrano vuote e vanno compilate per attivarle.
+      S.edits.push(b && b.attiva
+        ? { days: b.days, start: b.da, end: b.a, temp: String(b.temp_c), disable: false }
+        : { days: 0, start: '', end: '', temp: '', disable: false });
+    }
+  }
+ 
+  function renderEditor() {
+    const card = $('editorCard');
+    if (!S.schedule) { card.hidden = true; return; }
+    card.hidden = false;
+ 
+    const imp = S.catalog.impianti.find((p) => p.ref === S.schedule.impianto_ref) || {};
+    $('editorSub').textContent = `${impiantoLabel(imp)} · ${S.schedule.nome}`;
+ 
+    const banner = $('editorBanner');
+    if (S.baseline) {
+      banner.hidden = false;
+      banner.className = 'banner ok';
+      banner.textContent = `Programma letto da Coster il ${S.baselineAt || ''}. Modifica le righe: quelle cambiate si evidenziano.`;
+      $('editorHint').textContent = 'Deselezionando tutti i giorni la riga viene disabilitata. Prima della scrittura Coster viene riletto e ti viene mostrato il confronto da confermare.';
+    } else {
+      banner.hidden = false;
+      banner.className = 'banner info';
+      banner.textContent = 'Programma non ancora letto: puoi leggerlo (consigliato) oppure compilare solo i campi da cambiare — i campi vuoti mantengono il valore attuale, e senza giorni selezionati restano i giorni attuali.';
+      $('editorHint').textContent = 'In ogni caso, prima della scrittura Coster viene letto e ti viene mostrato il confronto da confermare.';
+    }
+ 
+    const body = $('progBody');
+    body.innerHTML = '';
+ 
+    for (let i = 0; i < ROWS; i++) {
+      const e = S.edits[i];
+      const b = S.baseline && S.baseline[i];
+      const tr = el('tr', { id: 'row' + i });
+ 
+      const stateCell = b
+        ? el('span', { class: 'rowstate ' + (b.attiva ? 'on' : 'offr'), text: b.attiva ? 'Attiva' : 'Disabilitata' })
+        : el('span', { class: 'rowstate offr', text: '—' });
+ 
+      const days = el('span', { class: 'days fields' });
+      DAYS.forEach(([lbl, bit], k) => {
+        days.append(el('button', {
+          type: 'button', class: 'day', text: lbl, title: DAY_TITLES[k],
+          'aria-pressed': String(Boolean(e.days & bit)),
+          onclick: (ev) => {
+            e.days ^= bit;
+            ev.currentTarget.setAttribute('aria-pressed', String(Boolean(e.days & bit)));
+            refreshChanges();
+          },
+        }));
+      });
+ 
+      const start = el('input', { type: 'time', value: e.start, class: 'fields', 'aria-label': `Riga ${i + 1} da` });
+      start.addEventListener('input', () => { e.start = start.value; refreshChanges(); });
+      const end = el('input', { type: 'time', value: e.end, class: 'fields', 'aria-label': `Riga ${i + 1} a` });
+      end.addEventListener('input', () => { e.end = end.value; refreshChanges(); });
+      const temp = el('input', {
+        type: 'number', step: '0.1', min: '5', max: '35', inputmode: 'decimal',
+        value: e.temp, class: 'fields', 'aria-label': `Riga ${i + 1} temperatura`,
+      });
+      temp.addEventListener('input', () => { e.temp = temp.value; refreshChanges(); });
+ 
+      const tog = el('button', {
+        type: 'button', class: 'tog', text: 'Disabilita', 'aria-pressed': String(e.disable),
+        onclick: () => {
+          e.disable = !e.disable;
+          tog.setAttribute('aria-pressed', String(e.disable));
+          refreshChanges();
+        },
+      });
+ 
+      tr.append(
+        el('td', { class: 'num', text: String(i + 1) }),
+        el('td', {}, stateCell),
+        el('td', { class: 'c-days' }, days),
+        el('td', { 'data-label': 'Da' }, start),
+        el('td', { 'data-label': 'A' }, end),
+        el('td', { 'data-label': '°C' }, temp),
+        el('td', { class: 'c-tog' }, tog),
+      );
+      body.append(tr);
+    }
+    refreshChanges();
+  }
+ 
+  /** Costruisce l'elenco delle modifiche da inviare; lancia Error se ci sono dati non validi. */
+  function computeChanges() {
+    const out = [];
+    for (let i = 0; i < ROWS; i++) {
+      const e = S.edits[i];
+      const b = S.baseline && S.baseline[i];
+      const R = `Riga ${i + 1}: `;
+ 
+      if (e.disable || (b && e.days === 0)) {
+        if (!b || b.attiva) out.push({ row: i, action: 'disable' });
+        continue;
+      }
+ 
+      const start = toMin(e.start);
+      const end = toMin(e.end);
+      const temp = parseTemp(e.temp);
+      if (Number.isNaN(start)) throw new Error(R + 'ora di inizio non valida.');
+      if (Number.isNaN(end)) throw new Error(R + 'ora di fine non valida.');
+      if (Number.isNaN(temp)) throw new Error(R + 'temperatura non valida.');
+      if (temp != null && (temp < 5 || temp > 35)) throw new Error(R + 'temperatura fuori dal range 5-35 °C.');
+ 
+      const ch = { row: i, action: 'modify', days: null, start: null, end: null, temp: null };
+ 
+      if (b && !b.attiva) {
+        // Riattivazione di una riga disabilitata: servono tutti i valori
+        if (start == null || end == null || temp == null) {
+          throw new Error(R + 'per attivare la riga compila Da, A e °C.');
+        }
+        if (end <= start) throw new Error(R + "l'ora finale deve essere successiva a quella iniziale.");
+        ch.days = e.days; ch.start = start; ch.end = end; ch.temp = temp;
+      } else if (b) {
+        if (e.days !== b.days) ch.days = e.days;
+        if (start != null && start !== b.start) ch.start = start;
+        if (end != null && end !== b.end) ch.end = end;
+        if (temp != null && temp !== b.temp_c) ch.temp = temp;
+        const effStart = start != null ? start : b.start;
+        const effEnd = end != null ? end : b.end;
+        const touched = ch.days != null || ch.start != null || ch.end != null || ch.temp != null;
+        if (touched && effEnd <= effStart) throw new Error(R + "l'ora finale deve essere successiva a quella iniziale.");
+        if (touched && start == null) throw new Error(R + 'ora di inizio mancante.');
+        if (touched && end == null) throw new Error(R + 'ora di fine mancante.');
+      } else {
+        if (e.days) ch.days = e.days;
+        ch.start = start; ch.end = end; ch.temp = temp;
+        if (start != null && end != null && end <= start) throw new Error(R + "l'ora finale deve essere successiva a quella iniziale.");
+      }
+ 
+      if (ch.days != null || ch.start != null || ch.end != null || ch.temp != null) out.push(ch);
+    }
+    return out;
+  }
+ 
+  function refreshChanges() {
+    let changes = [];
+    let err = null;
+    try { changes = computeChanges(); } catch (e) { err = e.message; }
+    const rows = new Set(changes.map((c) => c.row));
+    for (let i = 0; i < ROWS; i++) {
+      const tr = $('row' + i);
+      if (!tr) continue;
+      const e = S.edits[i];
+      tr.classList.toggle('changed', rows.has(i));
+      tr.classList.toggle('disabled', e.disable);
+      tr.querySelectorAll('.fields, .fields button').forEach((x) => { x.disabled = e.disable; });
+    }
+    $('formErr').hidden = !err;
+    $('formErr').textContent = err || '';
+    $('chgCount').textContent = changes.length ? `${changes.length} ${changes.length === 1 ? 'riga modificata' : 'righe modificate'}` : '';
+    const busy = S.lastJob && !FINAL.has(S.lastJob.stato);
+    $('btnApplica').disabled = Boolean(err) || !changes.length || busy;
+  }
+ 
+  // ============================================================
+  // LAVORI
+  // ============================================================
+  async function createJob(tipo) {
+    if (!S.schedule) return;
+    let body = { tipo, schedule_id: S.schedule.id };
+    if (tipo === 'modifica') {
+      let changes;
+      try { changes = computeChanges(); } catch (e) { $('formErr').hidden = false; $('formErr').textContent = e.message; return; }
+      if (!changes.length) return;
+      body.modifiche = changes;
+    }
+    $('btnLeggi').disabled = true;
+    $('btnApplica').disabled = true;
+    try {
+      const job = await api('/jobs', { method: 'POST', body });
+      showJob(job);
+      loadHistory();
+    } catch (err) {
+      const m = handleErr(err, 'job');
+      if (m) alertJobError(m);
+    } finally {
+      $('btnLeggi').disabled = !S.schedule;
+      refreshChanges();
+    }
+  }
+ 
+  function alertJobError(msg) {
+    $('jobCard').hidden = false;
+    $('jobTitle').textContent = 'Richiesta non inviata';
+    $('jobSub').textContent = '';
+    $('jobTime').textContent = '';
+    $('jobSteps').innerHTML = '';
+    $('jobMsg').className = 'banner err pre';
+    $('jobMsg').textContent = msg;
+    $('jobDiff').hidden = true;
+    $('btnConferma').hidden = true;
+    $('btnAnnullaJob').hidden = true;
+    $('btnChiudiJob').hidden = false;
+  }
+ 
+  function showJob(job) {
+    S.jobId = job.id;
+    renderJob(job);
+    scheduleJobPoll();
+    $('jobCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+ 
+  function scheduleJobPoll() {
+    clearTimeout(S.jobTimer);
+    S.jobTimer = setTimeout(pollJob, 2000);
+  }
+ 
+  async function pollJob() {
+    if (!S.jobId) return;
+    try {
+      const job = await api('/jobs/' + S.jobId);
+      renderJob(job);
+      if (!FINAL.has(job.stato)) scheduleJobPoll();
+      else loadHistory();
+    } catch (err) {
+      const m = handleErr(err, 'pollJob');
+      if (m) {
+        $('jobMsg').className = 'banner err pre';
+        $('jobMsg').textContent = m;
+        if (!/non trovato/i.test(m)) S.jobTimer = setTimeout(pollJob, 5000);
+      }
+    }
+  }
+ 
+  function stepsFor(job) {
+    return job.tipo === 'lettura'
+      ? [['in_coda', 'In coda'], ['connessione', 'Controller'], ['lettura', 'Lettura'], ['completato', 'Fatto']]
+      : [['in_coda', 'In coda'], ['connessione', 'Controller'], ['lettura', 'Lettura'], ['attesa_conferma', 'Conferma'],
+         ['scrittura', 'Scrittura'], ['verifica', 'Verifica'], ['completato', 'Fatto']];
+  }
+ 
+  function stepIndex(job, steps) {
+    const alias = { preso: 'connessione', confermato: 'scrittura', rollback: 'verifica', nessuna_modifica: 'completato' };
+    const key = alias[job.stato] || job.stato;
+    let idx = steps.findIndex(([k]) => k === key);
+    if (idx < 0) {
+      // Stato finale anomalo: si ferma sull'ultimo stato attraversato
+      const hist = (job.storia || []).map((h) => alias[h.stato] || h.stato);
+      for (let i = hist.length - 1; i >= 0 && idx < 0; i--) idx = steps.findIndex(([k]) => k === hist[i]);
+      if (idx < 0) idx = 0;
+    }
+    return idx;
+  }
+ 
+  function renderJob(job) {
+    S.lastJob = job;
+    const card = $('jobCard');
+    card.hidden = false;
+ 
+    const e = job.etichetta || {};
+    $('jobTitle').textContent = (job.tipo === 'lettura' ? 'Lettura programma' : 'Modifica programma') + ' · ' + (STATE_LABEL[job.stato] || job.stato);
+    $('jobSub').textContent = [e.impianto, e.schedule].filter(Boolean).join(' · ');
+    const endTs = job.concluso || Date.now();
+    $('jobTime').textContent = `Avviata ${fmtTime(job.creato)} · ${fmtElapsed(endTs - job.creato)}`;
+ 
+    // Passi
+    const steps = stepsFor(job);
+    const idx = stepIndex(job, steps);
+    const failed = ['errore', 'scaduto', 'annullato'].includes(job.stato);
+    const done = job.stato === 'completato' || job.stato === 'nessuna_modifica';
+    const box = $('jobSteps');
+    box.innerHTML = '';
+    steps.forEach(([, label], i) => {
+      let cls = 'step';
+      if (done || i < idx) cls += ' done';
+      else if (i === idx) cls += failed ? ' fail' : ' now';
+      box.append(el('div', { class: cls, text: label }));
+    });
+ 
+    // Messaggio
+    const msg = $('jobMsg');
+    let cls = 'info';
+    if (done) cls = 'ok';
+    else if (failed) cls = job.stato === 'annullato' ? 'warn' : 'err';
+    else if (job.stato === 'attesa_conferma') cls = 'warn';
+    msg.className = 'banner pre ' + cls;
+    let text = job.messaggio || STATE_LABEL[job.stato] || '';
+    if (job.stato === 'errore' && job.dati && job.dati.rollback === 'fallito') {
+      text = '⚠ RIPRISTINO NON COMPLETATO — controllare subito il programma su Coster.\n\n' + text;
+    }
+    msg.textContent = text;
+ 
+    // Differenze
+    const diff = job.dati && job.dati.differenze;
+    const showDiff = Array.isArray(diff) && diff.length && ['attesa_conferma', 'confermato', 'scrittura', 'verifica', 'completato', 'errore'].includes(job.stato);
+    $('jobDiff').hidden = !showDiff;
+    if (showDiff) {
+      const tb = $('diffBody');
+      tb.innerHTML = '';
+      for (const d of diff) {
+        tb.append(el('tr', {}, [
+          el('td', { text: String(d.riga + 1) }),
+          el('td', { text: d.attuale.testo }),
+          el('td', { class: 'new', text: d.nuovo.testo }),
+        ]));
+      }
+    }
+ 
+    // Pulsanti
+    $('btnConferma').hidden = job.stato !== 'attesa_conferma';
+    $('btnAnnullaJob').hidden = !['in_coda', 'preso', 'connessione', 'lettura', 'attesa_conferma'].includes(job.stato) || job.annulla_richiesto;
+    $('btnChiudiJob').hidden = !FINAL.has(job.stato);
+ 
+    // Programma letto: aggiorna l'editor se riguarda lo schedule selezionato
+    const prog = job.dati && job.dati.programma;
+    const sameSchedule = S.schedule && String(S.schedule.id) === String(job.schedule_id);
+    if (sameSchedule && Array.isArray(prog) && (job.stato === 'completato' || job.stato === 'nessuna_modifica')) {
+      const stamp = job.id + ':' + job.stato;
+      if (S.appliedStamp !== stamp) {
+        S.appliedStamp = stamp;
+        S.baseline = prog;
+        S.baselineAt = fmtTime(job.aggiornato);
+        $('letturaInfo').textContent = 'Ultima lettura: ' + S.baselineAt;
+        resetEdits();
+        renderEditor();
+      }
+    }
+    refreshChanges();
+  }
+ 
+  async function confirmJob() {
+    $('btnConferma').disabled = true;
+    try {
+      const job = await api('/jobs/' + S.jobId + '/conferma', { method: 'POST' });
+      renderJob(job);
+      scheduleJobPoll();
+    } catch (err) {
+      const m = handleErr(err, 'conferma');
+      if (m) { $('jobMsg').className = 'banner err pre'; $('jobMsg').textContent = m; }
+    } finally {
+      $('btnConferma').disabled = false;
+    }
+  }
+ 
+  async function cancelJob() {
+    $('btnAnnullaJob').disabled = true;
+    try {
+      const job = await api('/jobs/' + S.jobId + '/annulla', { method: 'POST' });
+      renderJob(job);
+      scheduleJobPoll();
+    } catch (err) {
+      const m = handleErr(err, 'annulla');
+      if (m) { $('jobMsg').className = 'banner err pre'; $('jobMsg').textContent = m; }
+    } finally {
+      $('btnAnnullaJob').disabled = false;
+    }
+  }
+ 
+  function closeJob() {
+    clearTimeout(S.jobTimer);
+    S.jobId = null;
+    S.lastJob = null;
+    $('jobCard').hidden = true;
+    refreshChanges();
+  }
+ 
+  // ============================================================
+  // STORICO
+  // ============================================================
+  async function loadHistory() {
+    try {
+      const { lavori } = await api('/jobs');
+      const ul = $('histList');
+      ul.innerHTML = '';
+      $('histEmpty').hidden = lavori.length > 0;
+      for (const j of lavori) {
+        const e = j.etichetta || {};
+        ul.append(el('li', {
+          title: 'Apri',
+          onclick: async () => {
+            try { showJob(await api('/jobs/' + j.id)); } catch (err) { handleErr(err, 'apri'); }
+          },
+        }, [
+          el('span', { class: 'when', text: fmtTime(j.creato) }),
+          el('span', { class: 'what', text: `${j.tipo === 'lettura' ? 'Lettura' : 'Modifica'} · ${e.impianto || ''} · ${e.schedule || ''}` }),
+          el('span', { class: 'badge ' + badgeClass(j.stato), text: STATE_LABEL[j.stato] || j.stato }),
+        ]));
+      }
+      // Riprende automaticamente un lavoro ancora in corso (es. dopo un ricaricamento della pagina)
+      if (!S.jobId) {
+        const running = lavori.find((j) => !FINAL.has(j.stato));
+        if (running) showJob(await api('/jobs/' + running.id));
+      }
+    } catch (err) {
+      handleErr(err, 'storico');
+    }
+  }
+ 
+  // ============================================================
+  // AVVIO
+  // ============================================================
+  let started = false;
+ 
+  async function start() {
+    $('app').hidden = false;
+    await refreshStatus();
+    await loadHistory();
+    if (!started) {
+      started = true;
+      setInterval(refreshStatus, 10000);
+      setInterval(() => { if (!S.jobId) loadHistory(); }, 30000);
+    }
+  }
+ 
+  $('pinBtn').addEventListener('click', submitPin);
+  $('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPin(); });
+  $('selCommessa').addEventListener('change', onCommessa);
+  $('selImpianto').addEventListener('change', onImpianto);
+  $('selSchedule').addEventListener('change', onSchedule);
+  $('filtroImpianto').addEventListener('input', () => { if (S.catalog) fillImpianti(); });
+  $('btnLeggi').addEventListener('click', () => createJob('lettura'));
+  $('btnApplica').addEventListener('click', () => createJob('modifica'));
+  $('btnReset').addEventListener('click', () => { resetEdits(); renderEditor(); });
+  $('btnConferma').addEventListener('click', confirmJob);
+  $('btnAnnullaJob').addEventListener('click', cancelJob);
+  $('btnChiudiJob').addEventListener('click', closeJob);
+ 
+  S.pin = storageGet(PIN_KEY);
+  if (S.pin) start(); else askPin();
+})();
+</script>
+</body>
+</html>
