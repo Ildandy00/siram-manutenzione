@@ -403,7 +403,19 @@
 
   const DAYS = [['L', 1], ['M', 2], ['M', 4], ['G', 8], ['V', 16], ['S', 32], ['D', 64]];
   const DAY_TITLES = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
-  const ROWS = 8;
+  // Righe del programma: dipende dalla famiglia del registro Coster
+  // ("passi" 8 righe, "termostato" 15). Il valore arriva dall'anagrafica.
+  const ROWS_DEFAULT = 8;
+  const ROWS_MAX = 15;
+  function rowsOf(sch) {
+    const n = Number(sch && sch.righe);
+    return Number.isInteger(n) && n > 0 && n <= ROWS_MAX ? n : ROWS_DEFAULT;
+  }
+  // Se il programma è stato letto valgono le righe davvero presenti sulla
+  // centralina (alcune ne espongono più di quelle previste dalla famiglia).
+  function ROWS() {
+    return S.baseline && S.baseline.length ? S.baseline.length : rowsOf(S.schedule);
+  }
 
   const STATE_LABEL = {
     in_coda: 'In coda', preso: 'Presa in carico', connessione: 'Connessione',
@@ -423,7 +435,7 @@
     commessa: null,
     impianto: null,
     schedule: null,
-    baseline: null,      // righe lette da Coster (array di 8)
+    baseline: null,      // righe lette da Coster (una per riga dello schedule)
     baselineAt: null,
     edits: [],
     jobId: null,
@@ -686,7 +698,7 @@
   // ============================================================
   function resetEdits() {
     S.edits = [];
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < ROWS(); i++) {
       const b = S.baseline && S.baseline[i];
       // Le righe disabilitate su Coster contengono spesso valori di servizio
       // (00:00, 0 °C): si mostrano vuote e vanno compilate per attivarle.
@@ -721,7 +733,7 @@
     const body = $('progBody');
     body.innerHTML = '';
 
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < ROWS(); i++) {
       const e = S.edits[i];
       const b = S.baseline && S.baseline[i];
       const tr = el('tr', { id: 'row' + i });
@@ -779,7 +791,7 @@
   /** Costruisce l'elenco delle modifiche da inviare; lancia Error se ci sono dati non validi. */
   function computeChanges() {
     const out = [];
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < ROWS(); i++) {
       const e = S.edits[i];
       const b = S.baseline && S.baseline[i];
       const R = `Riga ${i + 1}: `;
@@ -835,7 +847,7 @@
     let err = null;
     try { changes = computeChanges(); } catch (e) { err = e.message; }
     const rows = new Set(changes.map((c) => c.row));
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < ROWS(); i++) {
       const tr = $('row' + i);
       if (!tr) continue;
       const e = S.edits[i];
