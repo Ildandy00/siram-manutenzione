@@ -62,6 +62,9 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 /* ORARI COSTER (pagina orari-coster.html incorporata) */
 #view-orari { padding: 0; }
 #orariFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
+/* ANALISI IMPIANTI (pagina analisi-coster.html incorporata) */
+#view-analisi { padding: 0; }
+#analisiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
@@ -503,6 +506,7 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="nav-item" onclick="window.open('/dashboard-segnalazioni.html','_blank')">📊 Segnalazioni <span style="font-size:10px;color:var(--muted);margin-left:auto">↗</span></div>
       <div class="nav-sec">Telegestione</div>
       <div class="nav-item" onclick="nav('orari')" id="nav-orari">🕒 Orari Coster</div>
+      <div class="nav-item" onclick="nav('analisi')" id="nav-analisi">🌡️ Analisi impianti</div>
       <div class="nav-sec">Anagrafica</div>
       <div class="nav-item" onclick="nav('impianti')" id="nav-impianti">⊞ Impianti</div>
       <div class="nav-item" onclick="nav('catalogo')" id="nav-catalogo">≡ Catalogo</div>
@@ -707,6 +711,11 @@ tr.int-completato td * { text-decoration: line-through; }
         </div>
         <div id="rceeLoading" class="loading-full" style="display:none"><div class="spin"></div> Caricamento scadenze...</div>
         <div class="table-wrap" id="tblRcee"></div>
+      </div>
+
+      <!-- VIEW: ANALISI IMPIANTI (analisi-coster.html incorporata, caricata al primo accesso) -->
+      <div class="view" id="view-analisi">
+        <iframe id="analisiFrame" title="Analisi impianti" src="about:blank"></iframe>
       </div>
 
       <!-- VIEW: ORARI COSTER (orari-coster.html incorporata, caricata al primo accesso) -->
@@ -1222,6 +1231,7 @@ function nav(id) {
   if (id==='avanzamento') renderAvanzamento();
   if (id==='rcee')       { if(rceeScadenze.length) renderRcee(); else caricaScadenzeRcee(); }
   if (id==='orari')      apriOrari();
+  if (id==='analisi')    apriAnalisi();
 }
 
 // ============================================================
@@ -1233,6 +1243,17 @@ function apriOrari() {
   const f = document.getElementById('orariFrame');
   if (!f.dataset.loaded) {
     f.src = '/orari-coster.html';
+    f.dataset.loaded = '1';
+  }
+}
+
+// ============================================================
+//  ANALISI IMPIANTI — pagina analisi-coster.html incorporata
+// ============================================================
+function apriAnalisi() {
+  const f = document.getElementById('analisiFrame');
+  if (!f.dataset.loaded) {
+    f.src = '/analisi-coster.html';
     f.dataset.loaded = '1';
   }
 }
