@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siram — Analisi impianti</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script>
+  try { if (window.self !== window.top) document.documentElement.classList.add('embedded'); } catch (e) {}
+</script>
+<style>
+  /* Stessa palette di responsabile.html */
+  :root {
+    --bg:     #282828;
+    --bg2:    #444444;
+    --bg3:    #4e4e4e;
+    --bg4:    #585858;
+    --border: rgba(255,255,255,.1);
+    --text:   #eeeeee;
+    --muted:  #999999;
+    --accent: #cccccc;
+    --green:  #8fbe7a;
+    --yellow: #c8b464;
+    --red:    #c87878;
+    --orange: #c89060;
+    --blue:   #7ab0d8;
+    /* Colori dei grafici: scelti per restare distinguibili anche con
+       daltonismo sul fondo #444 (verificati con il validatore). */
+    --s1: #5598e7;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --grid: rgba(255,255,255,.09);
+    color-scheme: dark;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 14px/1.45 'Outfit', system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px; }
+  html.embedded .wrap { max-width: none; }
+
+  header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  header.top h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  header.top .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .brand { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+  html.embedded .brand { display: none; }
+  .headtools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+          background: var(--bg3); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .pill.ok   { background: rgba(143,190,122,.12); border-color: rgba(143,190,122,.3); color: var(--green); }
+  .pill.off  { background: rgba(200,120,120,.12); border-color: rgba(200,120,120,.3); color: var(--red); }
+  .pill.wait { background: rgba(200,180,100,.12); border-color: rgba(200,180,100,.3); color: var(--yellow); }
+
+  nav.seg { display: flex; gap: 4px; flex-wrap: wrap; background: var(--bg2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+  nav.seg button { flex: 1 1 auto; padding: 7px 12px; border-radius: 7px; border: none; background: transparent;
+                   color: var(--muted); font: 600 13px 'Outfit', sans-serif; cursor: pointer; white-space: nowrap; }
+  nav.seg button:hover { color: var(--text); }
+  nav.seg button[aria-selected="true"] { background: var(--bg4); color: var(--text); }
+
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin: 0 0 14px; }
+  .card h2 small { color: var(--muted); font-weight: 400; margin-left: 6px; text-transform: none; letter-spacing: 0; font-size: 12px; }
+  .card > p:last-child, .card > div:last-child { margin-bottom: 0; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .v { font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .tile .l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .tile .bar { height: 3px; border-radius: 2px; margin-top: 10px; background: var(--bg5, #626262); }
+
+  .cols2 { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; align-items: start; }
+  .cols11 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .cols2, .cols11 { grid-template-columns: 1fr; } .wrap { padding: 16px; } }
+
+  /* Quadro sinottico */
+  .syn { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .syn button { text-align: left; border-radius: 9px; border: 1px solid var(--border); padding: 8px 10px;
+                color: #1c1c1c; font: 600 13px 'Outfit', sans-serif; cursor: pointer; min-height: 56px; }
+  .syn button small { display: block; font-weight: 500; font-size: 11px; opacity: .85; margin-top: 2px; }
+  .syn button:hover { filter: brightness(1.1); }
+  .syn .p1 { background: var(--red); }
+  .syn .p2 { background: var(--yellow); }
+  .syn .p3 { background: var(--green); }
+  .syn .p0 { background: var(--bg4); color: var(--text); }
+
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px;
+          font-weight: 600; border: 1px solid var(--border); background: var(--bg3); color: var(--muted); }
+  .chip.p1 { background: rgba(200,120,120,.16); border-color: rgba(200,120,120,.35); color: var(--red); }
+  .chip.p2 { background: rgba(200,180,100,.16); border-color: rgba(200,180,100,.35); color: var(--yellow); }
+  .chip.p3 { background: rgba(143,190,122,.16); border-color: rgba(143,190,122,.35); color: var(--green); }
+  .chip.info { background: rgba(122,176,216,.14); border-color: rgba(122,176,216,.3); color: var(--blue); }
+
+  .item { border: 1px solid var(--border); border-left-width: 4px; border-radius: 10px; background: var(--bg3);
+          padding: 12px 14px; margin-bottom: 10px; }
+  .item h4 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .item p { margin: 0; }
+  .item .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .item.p1 { border-left-color: var(--red); }
+  .item.p2 { border-left-color: var(--yellow); }
+  .item.p3 { border-left-color: var(--green); }
+  .item.p0 { border-left-color: var(--bg5, #626262); }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data th { padding: 7px 8px; text-align: left; font-size: 11px; font-weight: 600; color: var(--muted);
+                  text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); background: var(--bg3); position: sticky; top: 0; }
+  table.data td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data td.num, table.data th.num { text-align: right; font-family: 'DM Mono', monospace; }
+  table.data tr.clickable { cursor: pointer; }
+  table.data tr.clickable:hover td { background: var(--bg3); }
+  .tbl-wrap { overflow: auto; max-height: 460px; border: 1px solid var(--border); border-radius: 10px; }
+
+  label.f { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  select, input[type=text], input[type=password], input[type=date], input[type=number] {
+    width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; min-height: 38px; }
+  select option { background: var(--bg3); }
+  select:focus, input:focus { outline: none; border-color: var(--accent); }
+  input[type=number], input[type=date] { font-family: 'DM Mono', monospace; }
+  .formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .formgrid .full { grid-column: 1 / -1; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: 8px;
+         border: 1px solid var(--border); background: var(--bg3); color: var(--muted); font: 600 13px 'Outfit', sans-serif;
+         cursor: pointer; min-height: 38px; }
+  .btn:hover:not(:disabled) { color: var(--text); border-color: rgba(255,255,255,.2); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary { background: #666; border-color: #666; color: #fff; }
+  .btn.small { padding: 5px 10px; min-height: 30px; font-size: 12px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+
+  .banner { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; border: 1px solid var(--border); border-left-width: 3px; }
+  .banner.warn { background: rgba(200,180,100,.08); border-color: rgba(200,180,100,.3); color: var(--yellow); }
+  .banner.err  { background: rgba(200,120,120,.08); border-color: rgba(200,120,120,.3); color: #e0a0a0; }
+  .banner.ok   { background: rgba(143,190,122,.08); border-color: rgba(143,190,122,.3); color: var(--green); }
+  .banner.info { background: rgba(122,176,216,.08); border-color: rgba(122,176,216,.3); color: var(--blue); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  details.tech { margin-top: 10px; }
+  details.tech summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; }
+  details.tech pre { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+                     overflow: auto; max-height: 280px; font: 12px/1.4 'DM Mono', monospace; color: var(--accent); }
+
+  /* Barre orizzontali (segnalazioni per tipo, azioni) */
+  .hbar { display: grid; grid-template-columns: minmax(120px, 220px) 1fr auto; gap: 10px; align-items: center; margin-bottom: 6px; font-size: 13px; }
+  .hbar .track { background: var(--bg3); border-radius: 4px; height: 16px; overflow: hidden; }
+  .hbar .fill { height: 100%; border-radius: 0 4px 4px 0; }
+  .hbar .n { font-family: 'DM Mono', monospace; color: var(--muted); min-width: 26px; text-align: right; }
+  .groupttl { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; margin: 12px 0 6px; }
+
+  svg.chart { width: 100%; height: auto; display: block; touch-action: pan-y; }
+  svg.chart text { font: 11px 'Outfit', sans-serif; fill: var(--muted); }
+  svg.chart .axis { stroke: var(--grid); stroke-width: 1; }
+  svg.chart .zero { stroke: var(--muted); stroke-dasharray: 3 3; stroke-width: 1; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  #tip { position: fixed; z-index: 50; pointer-events: none; background: #1c1c1c; border: 1px solid var(--border);
+         border-radius: 8px; padding: 7px 10px; font-size: 12px; color: var(--text); max-width: 260px;
+         box-shadow: 0 6px 18px rgba(0,0,0,.45); display: none; }
+  #tip b { color: #fff; }
+
+  /* Accesso */
+  #gate { max-width: 380px; margin: 60px auto; }
+  #app[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ACCESSO -->
+  <section id="gate">
+    <div class="card">
+      <div class="brand">Siram · Telegestione</div>
+      <h2>Analisi impianti</h2>
+      <label class="f" for="pinInput">PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN della telegestione">
+      <div class="banner err" id="pinErr" hidden></div>
+      <div class="actions"><button class="btn primary" id="pinBtn">Entra</button></div>
+    </div>
+  </section>
+
+  <!-- APPLICAZIONE -->
+  <div id="app" hidden>
+    <header class="top">
+      <div>
+        <div class="brand">Siram · Telegestione</div>
+        <h1>Analisi impianti</h1>
+        <div class="sub" id="subInfo">—</div>
+      </div>
+      <div class="headtools">
+        <select id="selImpianto" style="min-width:230px"></select>
+        <span class="pill" id="statePill">—</span>
+        <button class="btn small" id="btnRefresh" title="Rileggi la fotografia dal PC">Aggiorna</button>
+      </div>
+    </header>
+
+    <nav class="seg" id="nav" role="tablist"></nav>
+    <div id="view"></div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // CONFIGURAZIONE
+  // ============================================================
+  const SERVER = 'https://siram-proxy.onrender.com';
+  const PIN_KEY = 'orari_coster_pin';          // lo stesso della pagina Orari
+  const RICARICA_MS = 60000;                    // ogni quanto si controlla la fotografia
+
+  const VISTE = ['Stato flotta', 'Impianto', 'Interventi', 'Diario', 'Ore di funzionamento',
+                 'Recupero termico', 'Energia', 'Contatori caldaia', 'Come leggere'];
+
+  const PRIORITA_LABEL = { 1: 'Urgente', 2: 'Da programmare', 3: 'Da monitorare', 0: 'Nessuna azione' };
+  const PRIORITA_SEGNO = { 1: '▲', 2: '■', 3: '●', 0: '·' };
+
+  const PRIORITA_PER_CODICE = {
+    GENERATION_DEFICIT: 1, GENERATOR_UNDERPERFORMING: 1, HYDRAULIC_FLOW_ISSUE: 1,
+    GENERATOR_UNDERPERFORMING_PAST: 3,
+    UPSTREAM_REQUEST_CAPPED: 2, HYDRAULIC_UPSTREAM_LIMIT: 2, THERMAL_EFFICIENCY_DRIFT: 2,
+    PREHEAT_TOO_SHORT_AFTER_LONG_OFF: 2, MIX_VALVE_LOW_POSITION_COLLECTOR_LIKE: 2,
+    MIX_LOW_AUTHORITY: 3, CLIMATE_CURVE_OVERSIZED: 3, HEATING_WHILE_SATISFIED: 3,
+    HYDRAULIC_HUNTING: 3, HYDRAULIC_POOR_TRACKING: 3, SUPPLY_CHRONIC_OVERTEMP: 3,
+  };
+
+  const CODICE_LABEL = {
+    GENERATION_DEFICIT: 'Generatore sotto la domanda', GENERATOR_UNDERPERFORMING: 'Generatore sotto richiesta',
+    GENERATOR_UNDERPERFORMING_PAST: 'Generatore sotto richiesta (episodio chiuso)',
+    HYDRAULIC_FLOW_ISSUE: 'Portata insufficiente', UPSTREAM_REQUEST_CAPPED: 'Richiesta caldaia limitata',
+    HYDRAULIC_UPSTREAM_LIMIT: 'Limite a monte', THERMAL_EFFICIENCY_DRIFT: 'Recupero in peggioramento',
+    PREHEAT_TOO_SHORT_AFTER_LONG_OFF: 'Preaccensione corta', MIX_VALVE_LOW_POSITION_COLLECTOR_LIKE: 'Valvola che non chiude',
+    MIX_LOW_AUTHORITY: 'Valvola poco efficace', CLIMATE_CURVE_OVERSIZED: 'Curva climatica alta',
+    HEATING_WHILE_SATISFIED: 'Riscalda a target raggiunto', HYDRAULIC_HUNTING: 'Regolazione instabile',
+    HYDRAULIC_POOR_TRACKING: 'Mandata fuori setpoint', SUPPLY_CHRONIC_OVERTEMP: 'Mandata troppo calda',
+  };
+
+  const STATO_KPI_LABEL = {
+    computed: 'calcolato', available_not_computed: 'dati presenti, non calcolato', unavailable: 'non disponibile',
+  };
+  const STATO_KPI_CHIP = { computed: 'p3', available_not_computed: 'p2', unavailable: '' };
+
+  // ============================================================
+  // STATO
+  // ============================================================
+  const S = {
+    pin: null,
+    dati: null,          // fotografia
+    impronta: null,
+    stato: null,         // /stato
+    vista: VISTE[0],
+    impianto: null,      // impianto_ref
+    zonaRecupero: null,
+    timer: null,
+    scritture: [],       // registrazioni in attesa
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const vista = () => $('view');
+
+  function storageGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function storageSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+
+  // ============================================================
+  // UTILITÀ
+  // ============================================================
+  function el(tag, opts, ...figli) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(opts || {})) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === 'text') n.textContent = v;
+      else if (k === 'html') n.innerHTML = v;
+      else if (k === 'class') n.className = v;
+      else if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? '' : v);
+    }
+    for (const f of figli.flat()) {
+      if (f === null || f === undefined || f === false) continue;
+      n.append(f.nodeType ? f : document.createTextNode(String(f)));
+    }
+    return n;
+  }
+
+  const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
+  function fmt(v, dec = 1, suffisso = '') {
+    const n = num(v);
+    if (n === null) return 'n/d';
+    return n.toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suffisso;
+  }
+  const pct = (v, dec = 0) => (num(v) === null ? 'n/d' : fmt(num(v) * 100, dec, '%'));
+  const segno = (v, dec = 0) => (num(v) === null ? 'n/d' : (num(v) > 0 ? '+' : '') + fmt(v, dec, '%'));
+
+  function dataIso(s) {           // 2026-09-13T10:00 → Date
+    if (!s) return null;
+    const d = new Date(String(s).replace(' ', 'T'));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function dataIt(s) {            // 13/09/2026 → Date
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || '').trim());
+    return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+  }
+  function mostraData(d, conOra) {
+    if (!d) return 'n/d';
+    const g = String(d.getDate()).padStart(2, '0'), m = String(d.getMonth() + 1).padStart(2, '0');
+    const base = `${g}/${m}/${d.getFullYear()}`;
+    if (!conOra) return base;
+    return `${base} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  const oggiIso = () => new Date().toISOString().slice(0, 10);
+  const isoToIt = (iso) => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '');
+
+  function chip(testo, classe) { return el('span', { class: 'chip ' + (classe || ''), text: testo }); }
+
+  // tooltip condiviso
+  const tip = $('tip');
+  function mostraTip(ev, html) {
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    let x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + r.width > window.innerWidth - 8) x = ev.clientX - r.width - 14;
+    if (y + r.height > window.innerHeight - 8) y = ev.clientY - r.height - 14;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top = Math.max(8, y) + 'px';
+  }
+  function nascondiTip() { tip.style.display = 'none'; }
+  function conTip(nodo, html) {
+    nodo.addEventListener('mousemove', (e) => mostraTip(e, html));
+    nodo.addEventListener('mouseleave', nascondiTip);
+    nodo.addEventListener('touchstart', (e) => mostraTip(e.touches[0], html), { passive: true });
+    return nodo;
+  }
+
+  // ============================================================
+  // API
+  // ============================================================
+  async function api(path, opzioni) {
+    const o = Object.assign({ headers: {} }, opzioni || {});
+    o.headers['X-Orari-Pin'] = S.pin || '';
+    if (o.body !== undefined) {
+      o.headers['Content-Type'] = 'application/json';
+      o.body = JSON.stringify(o.body);
+      o.method = o.method || 'POST';
+    }
+    const r = await fetch(SERVER + '/analisi' + path, o);
+    if (r.status === 401) { const e = new Error('PIN non valido.'); e.pin = true; throw e; }
+    const testo = await r.text();
+    let dati = {};
+    try { dati = testo ? JSON.parse(testo) : {}; } catch (e) { dati = {}; }
+    if (!r.ok) throw new Error(dati.error || `Errore ${r.status}`);
+    return dati;
+  }
+
+  // ============================================================
+  // ACCESSO E CARICAMENTO
+  // ============================================================
+  async function entra(pin) {
+    S.pin = pin;
+    const st = await api('/stato');
+    storageSet(PIN_KEY, pin);
+    S.stato = st;
+    $('gate').hidden = true;
+    $('app').hidden = false;
+    costruisciNav();
+    await caricaDati(true);
+    if (S.timer) clearInterval(S.timer);
+    S.timer = setInterval(controlla, RICARICA_MS);
+  }
+
+  async function caricaDati(primaVolta) {
+    aggiornaPill('attesa', 'Lettura dati…');
+    try {
+      const r = await fetch(SERVER + '/analisi/dati', { headers: { 'X-Orari-Pin': S.pin } });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        S.dati = null;
+        disegna();
+        aggiornaPill('off', 'Fotografia non disponibile');
+        mostraAvviso(e.error || 'Fotografia non disponibile.');
+        return;
+      }
+      S.dati = await r.json();
+      S.impronta = S.stato && S.stato.impronta;
+      if (primaVolta || !S.impianto || !trovaImpianto(S.impianto)) {
+        const primo = (S.dati.impianti || [])[0];
+        S.impianto = primo ? primo.impianto_ref : null;
+      }
+      riempiSelettore();
+      disegna();
+      aggiornaTestata();
+    } catch (err) {
+      aggiornaPill('off', 'Errore di rete');
+      mostraAvviso(err.message);
+    }
+  }
+
+  async function controlla() {
+    try {
+      const st = await api('/stato');
+      S.stato = st;
+      aggiornaTestata();
+      if (st.impronta && st.impronta !== S.impronta) await caricaDati(false);
+      aggiornaScritture();
+    } catch (e) { /* la prossima volta */ }
+  }
+
+  function mostraAvviso(testo) {
+    const v = vista();
+    v.prepend(el('div', { class: 'banner err', text: testo }));
+  }
+
+  function aggiornaPill(tipo, testo) {
+    const p = $('statePill');
+    p.className = 'pill ' + (tipo === 'ok' ? 'ok' : tipo === 'off' ? 'off' : 'wait');
+    p.textContent = testo;
+  }
+
+  function aggiornaTestata() {
+    const st = S.stato || {};
+    if (!st.agente_online) aggiornaPill('off', 'PC non collegato');
+    else if (!st.pronto) aggiornaPill('wait', 'In attesa dei dati');
+    else aggiornaPill('ok', 'Dati aggiornati');
+
+    const parti = [];
+    const d = S.dati || {};
+    const run = (d.runs || []).find((r) => r.status === 'OK' || r.status === 'PARTIAL');
+    if (run) parti.push(`ultimo calcolo del motore ${mostraData(dataIso(run.finished_at), true)}`);
+    if (d.ultimo_dato_flotta) parti.push(`ultimo dato Coster ${mostraData(dataIso(d.ultimo_dato_flotta), true)}`);
+    if (d.generato_il) parti.push(`fotografia dal PC ${mostraData(dataIso(d.generato_il), true)}`);
+    $('subInfo').textContent = parti.join(' · ') || '—';
+  }
+
+  // ============================================================
+  // NAVIGAZIONE
+  // ============================================================
+  function costruisciNav() {
+    const nav = $('nav');
+    nav.innerHTML = '';
+    VISTE.forEach((v) => {
+      nav.append(el('button', {
+        role: 'tab', 'aria-selected': String(v === S.vista), text: v,
+        onclick: () => { S.vista = v; costruisciNav(); disegna(); window.scrollTo({ top: 0 }); },
+      }));
+    });
+  }
+
+  function riempiSelettore() {
+    const sel = $('selImpianto');
+    sel.innerHTML = '';
+    (S.dati.impianti || []).forEach((p) => {
+      sel.append(el('option', { value: p.impianto_ref, text: p.label, selected: p.impianto_ref === S.impianto }));
+    });
+    sel.onchange = () => { S.impianto = sel.value; S.zonaRecupero = null; disegna(); };
+  }
+
+  function trovaImpianto(ref) { return (S.dati.impianti || []).find((p) => p.impianto_ref === ref) || null; }
+  function dettagli(ref) { return (S.dati.dettagli || {})[ref] || {}; }
+
+  function vaiA(ref, vistaNuova) {
+    S.impianto = ref;
+    S.zonaRecupero = null;
+    $('selImpianto').value = ref;
+    if (vistaNuova) { S.vista = vistaNuova; costruisciNav(); }
+    disegna();
+    window.scrollTo({ top: 0 });
+  }
+
+  // ============================================================
+  // CALCOLI COMUNI
+  // ============================================================
+  function prioritaDi(codice) { return PRIORITA_PER_CODICE[codice] || 3; }
+
+  function findingsUnici(righe) {
+    const visti = new Set();
+    const out = [];
+    righe.slice().sort((a, b) => (num(b.window_days) || 0) - (num(a.window_days) || 0)).forEach((f) => {
+      const k = f.finding_code + '|' + f.scope_label + '|' + f.codice_k;
+      if (visti.has(k)) return;
+      visti.add(k);
+      out.push(f);
+    });
+    return out.sort((a, b) => prioritaDi(a.finding_code) - prioritaDi(b.finding_code)
+      || String(a.scope_label).localeCompare(String(b.scope_label)));
+  }
+
+  function azioniPerImpianto() {
+    const m = new Map();
+    (S.dati.worklist || []).forEach((w) => {
+      const k = w.codice_k || '';
+      const v = m.get(k) || { n: 0, priorita: 9 };
+      v.n += 1;
+      v.priorita = Math.min(v.priorita, num(w.priority) || 3);
+      m.set(k, v);
+    });
+    return m;
+  }
+
+  function verdettoChiaro(codice, ev, ripiego) {
+    const e = ev || {};
+    const n = (v, dec = 0) => (num(v) === null ? '' : fmt(v, dec));
+    try {
+      switch (codice) {
+        case 'MIX_LOW_AUTHORITY': {
+          const t = num(e.tracking_within_3c_pct);
+          return 'Il salto termico non cambia con il comando della valvola'
+            + (t === null ? '' : ` e la mandata sta al setpoint solo per il ${n(t)}% del tempo`)
+            + ': verificare sul posto posizione reale e servocomando. Se l’attuatore è a 3 punti, '
+            + 'la posizione a display è una stima e può essere sfasata.';
+        }
+        case 'MIX_VALVE_LOW_POSITION_COLLECTOR_LIKE':
+          return `Con valvola quasi chiusa la mandata resta comunque alla temperatura del collettore `
+            + `(${n(e.low_valve_collector_like_pct)}% delle volte): sospetto bypass o valvola che non chiude davvero.`;
+        case 'GENERATOR_UNDERPERFORMING':
+        case 'GENERATOR_UNDERPERFORMING_PAST': {
+          const when = e.generator_when || {};
+          let quando = '';
+          if (when.first && when.last) {
+            quando = ` Le ore interessate (${n(when.hours)} h su ${when.days || 0} giornate) vanno dal `
+              + `${String(when.first).slice(8, 10)}/${String(when.first).slice(5, 7)} al `
+              + `${String(when.last).slice(8, 10)}/${String(when.last).slice(5, 7)}`;
+            quando += when.closed
+              ? `; nessuna negli ultimi ${when.recent_days_window || 30} giorni.`
+              : `, di cui ${n(when.recent_hours)} h recenti.`;
+          }
+          const base = (num(e.generator_base_hours) !== null && num(e.active_hours_in_window) !== null)
+            ? ` (base: ${n(e.generator_base_hours)} h utili su ${n(e.active_hours_in_window)} h di riscaldamento)` : '';
+          return (codice.endsWith('_PAST') ? 'Episodio chiuso: ' : '')
+            + `il generatore non raggiunge la propria temperatura richiesta nel ${n(e.below_own_share)}% `
+            + `delle ore in cui il circuito è al massimo e sotto setpoint${base}.${quando}`;
+        }
+        case 'HYDRAULIC_UPSTREAM_LIMIT':
+          return 'Il circuito è limitato dalla temperatura a monte: il generatore o il collettore non forniscono il salto richiesto.';
+        case 'UPSTREAM_REQUEST_CAPPED':
+          return 'La richiesta verso il generatore viene limitata sotto quella del circuito: verificare il setpoint massimo di caldaia.';
+        case 'HYDRAULIC_FLOW_ISSUE':
+          return 'Mandata insufficiente nonostante calore disponibile a monte: sospetta portata o idraulica (pompa, bypass, bilanciamento).';
+        case 'HYDRAULIC_HUNTING':
+          return 'Regolazione instabile: la valvola oscilla continuamente senza stabilizzarsi.';
+        case 'HYDRAULIC_POOR_TRACKING':
+          return 'La mandata insegue male il setpoint: probabile problema di taratura del regolatore.';
+        case 'SUPPLY_CHRONIC_OVERTEMP':
+          return 'Mandata cronicamente più calda del necessario: verificare limite e taratura della miscelatrice.';
+        case 'CLIMATE_CURVE_OVERSIZED':
+          return `Curva climatica probabilmente troppo alta: margine stimato da tagliare `
+            + (num(e.margin) === null ? '' : `~${fmt(e.margin, 1)} °C`) + '.';
+        case 'HEATING_WHILE_SATISFIED':
+          return `Riscalda per il ${n(e.unnecessary_heat_pct)}% del tempo con ambiente già al target: verificare setpoint e orari.`;
+        case 'THERMAL_EFFICIENCY_DRIFT':
+          return 'La zona recupera più lentamente rispetto al proprio andamento storico a pari clima: '
+            + 'possibile degrado (sporcamento, sfiato, generazione).';
+        case 'PREHEAT_TOO_SHORT_AFTER_LONG_OFF':
+          return 'Dopo weekend e festività il target non viene raggiunto in tempo: anticipare la partenza.';
+        case 'GENERATION_DEFICIT':
+          return 'Il generatore non regge la domanda simultanea dei circuiti: verificare potenza disponibile e priorità tra rami.';
+        default: return ripiego;
+      }
+    } catch (err) { return ripiego; }
+  }
+
+  function notaAffidabilita(ev) {
+    const e = ev || {};
+    const parti = [];
+    const giorni = num(e.active_days) ?? num(e.days_active);
+    if (giorni) parti.push(`${Math.round(giorni)} giorni di riscaldamento`);
+    const camp = num(e.effective_samples) ?? num(e.regulating_effective_samples);
+    if (camp) parti.push(`${Math.round(camp)} campioni reali`);
+    const passo = num(e.native_sampling_minutes) ?? num(e.supply_sampling_minutes);
+    if (passo) parti.push(`campioni ogni ${Math.round(passo)} min`);
+    const n = num(e.recent_events) ?? num(e.blocks);
+    if (n && !giorni) parti.push(`${Math.round(n)} eventi`);
+    return parti.join(', ');
+  }
+
+  // storico: elenco dei run e confronto
+  function storicoPer(codiceK) { return (S.dati.storico || []).filter((h) => h.codice_k === codiceK); }
+  function runOrdinati() {
+    const s = new Set((S.dati.storico || []).map((h) => Number(h.run_id)));
+    return [...s].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  }
+
+  function verdettoIntervento(voce) {
+    const quando = dataIt(voce.data);
+    const storico = S.dati.storico || [];
+    if (!quando || !storico.length) return ['senza data valida', 'p0'];
+    let h = storico.filter((x) => x.codice_k === voce.codice_k);
+    if (voce.ambito) h = h.filter((x) => String(x.scope_label || '').trim().toLowerCase() === String(voce.ambito).trim().toLowerCase());
+    if (voce.finding_code) h = h.filter((x) => x.finding_code === voce.finding_code);
+    const runDopo = storico.filter((x) => { const d = dataIso(x.run_at); return d && d > quando; });
+    if (!runDopo.length) return ['in attesa del prossimo calcolo del motore', 'p0'];
+    const imp = (S.dati.impianti || []).find((p) => p.codice_k === voce.codice_k);
+    const ultimoDato = imp ? dataIso(imp.last_measurement) : null;
+    if (ultimoDato && ultimoDato < new Date(quando.getTime() + 5 * 864e5)) {
+      return ['troppo presto: meno di 5 giorni di dati dopo l’intervento', 'p0'];
+    }
+    const ultimoRun = Math.max(...runOrdinati());
+    const dopo = h.some((x) => Number(x.run_id) === ultimoRun);
+    const prima = h.some((x) => { const d = dataIso(x.run_at); return d && d <= quando; });
+    if (prima && !dopo) return ['segnalazione chiusa dopo l’intervento', 'p3'];
+    if (dopo) return ['segnalazione ancora presente', 'p1'];
+    return ['nessuna segnalazione collegata', 'p0'];
+  }
+
+  // ============================================================
+  // GRAFICI (SVG disegnato a mano, nessuna libreria)
+  // ============================================================
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs) {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === null || v === undefined) continue;
+      n.setAttribute(k, v);
+    }
+    return n;
+  }
+
+  function scala(min, max, da, a) {
+    if (!(max > min)) { max = min + 1; }
+    return (v) => da + ((v - min) / (max - min)) * (a - da);
+  }
+
+  function assi(svg, box, xTicks, yTicks, fx, fy) {
+    yTicks.forEach((t) => {
+      svg.append(svgEl('line', { class: 'axis', x1: box.l, x2: box.l + box.w, y1: fy(t.v), y2: fy(t.v) }));
+      const tx = svgEl('text', { x: box.l - 6, y: fy(t.v) + 4, 'text-anchor': 'end' });
+      tx.textContent = t.t;
+      svg.append(tx);
+    });
+    xTicks.forEach((t, i) => {
+      const x = fx(t.v);
+      const ancora = x <= box.l + 2 ? 'start' : (x >= box.l + box.w - 2 ? 'end' : 'middle');
+      const tx = svgEl('text', { x, y: box.t + box.h + 16, 'text-anchor': ancora });
+      tx.textContent = t.t;
+      svg.append(tx);
+    });
+  }
+
+  /** Etichetta breve per gli assi: niente separatore delle migliaia (3.357 si
+      legge male in italiano), k per i numeri grandi. */
+  function etichettaAsse(v, passo) {
+    const a = Math.abs(v);
+    if (a >= 10000) return (v / 1000).toFixed(a >= 100000 ? 0 : 1).replace('.', ',') + 'k';
+    if (Math.abs(passo) < 1) return v.toFixed(1).replace('.', ',');
+    return String(Math.round(v));
+  }
+
+  /** Passi tondi (1, 2, 2.5, 5 × 10^n) e limiti arrotondati. */
+  function tacche(min, max, n) {
+    if (!(max > min)) max = min + 1;
+    const grezzo = (max - min) / n;
+    const mag = Math.pow(10, Math.floor(Math.log10(grezzo)));
+    const passo = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= grezzo) || 10 * mag;
+    const primo = Math.ceil(min / passo) * passo;
+    const out = [];
+    for (let v = primo; v <= max + passo * 0.001; v += passo) {
+      out.push({ v, t: etichettaAsse(v, passo) });
+    }
+    return out;
+  }
+
+  /** Barre impilate (ore in fascia / fuori fascia) con linea di riferimento. */
+  function graficoBarreImpilate(dati, opzioni) {
+    const box = { l: 48, t: 12, w: 820, h: 240 };
+    const larghezza = box.l + box.w + 14, altezza = box.t + box.h + 46;
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${larghezza} ${altezza}`, preserveAspectRatio: 'xMidYMid meet' });
+    const maxV = Math.max(1, ...dati.map((d) => Math.max((num(d.a) || 0) + (num(d.b) || 0), num(d.rif) || 0)));
+    const fy = scala(0, maxV, box.t + box.h, box.t);
+    const passo = box.w / Math.max(1, dati.length);
+    const largo = Math.min(46, passo * 0.68);
+    assi(svg, box, [], tacche(0, maxV, 4), () => 0, fy);
+
+    dati.forEach((d, i) => {
+      const x = box.l + passo * i + (passo - largo) / 2;
+      const a = num(d.a) || 0, b = num(d.b) || 0;
+      const ya = fy(a), yb = fy(a + b);
+      if (b > 0) {
+        svg.append(conTip(svgEl('rect', { x, y: yb, width: largo, height: Math.max(0, ya - yb - 2), fill: 'var(--s2)', rx: 3 }),
+          `<b>${d.etichetta}</b><br>${opzioni.nomeB}: ${fmt(b, 0)} h`));
+      }
+      if (a > 0) {
+        svg.append(conTip(svgEl('rect', { x, y: ya, width: largo, height: Math.max(0, box.t + box.h - ya), fill: 'var(--s3)', rx: 3 }),
+          `<b>${d.etichetta}</b><br>${opzioni.nomeA}: ${fmt(a, 0)} h`));
+      }
+      if (num(d.rif) !== null) {
+        const y = fy(num(d.rif));
+        svg.append(conTip(svgEl('line', { x1: x - 2, x2: x + largo + 2, y1: y, y2: y, stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-dasharray': '4 3' }),
+          `<b>${d.etichetta}</b><br>${opzioni.nomeRif}: ${fmt(d.rif, 0)} h`));
+      }
+      if (dati.length <= 26 || i % 2 === 0) {
+        const t = svgEl('text', { x: box.l + passo * i + passo / 2, y: box.t + box.h + 16, 'text-anchor': 'end',
+          transform: `rotate(-35 ${box.l + passo * i + passo / 2} ${box.t + box.h + 16})` });
+        t.textContent = d.etichetta;
+        svg.append(t);
+      }
+    });
+    return svg;
+  }
+
+  /** Dispersione con retta di tendenza (firma energetica). */
+  function graficoDispersione(punti, sospetti, opzioni) {
+    const box = { l: 52, t: 12, w: 820, h: 300 };
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${box.l + box.w + 16} ${box.t + box.h + 46}` });
+    const tutti = punti.concat(sospetti);
+    const xmin = Math.min(...tutti.map((p) => p.x)), xmax = Math.max(...tutti.map((p) => p.x));
+    const ymin = 0, ymax = Math.max(...tutti.map((p) => p.y)) * 1.05;
+    const fx = scala(xmin * 0.95, xmax * 1.05, box.l, box.l + box.w);
+    const fy = scala(ymin, ymax, box.t + box.h, box.t);
+    assi(svg, box, tacche(xmin * 0.95, xmax * 1.05, 5), tacche(ymin, ymax, 4), fx, fy);
+
+    if (punti.length >= 2) {
+      const n = punti.length;
+      const sx = punti.reduce((a, p) => a + p.x, 0), sy = punti.reduce((a, p) => a + p.y, 0);
+      const sxx = punti.reduce((a, p) => a + p.x * p.x, 0), sxy = punti.reduce((a, p) => a + p.x * p.y, 0);
+      const den = n * sxx - sx * sx;
+      if (den !== 0) {
+        const m = (n * sxy - sx * sy) / den, q = (sy - m * sx) / n;
+        svg.append(svgEl('line', {
+          x1: fx(xmin), y1: fy(m * xmin + q), x2: fx(xmax), y2: fy(m * xmax + q),
+          stroke: 'var(--yellow)', 'stroke-width': 2, 'stroke-dasharray': '6 4',
+        }));
+      }
+    }
+    sospetti.forEach((p) => {
+      const g = svgEl('g');
+      const x = fx(p.x), y = fy(p.y);
+      g.append(svgEl('line', { x1: x - 5, y1: y - 5, x2: x + 5, y2: y + 5, stroke: 'var(--muted)', 'stroke-width': 2 }));
+      g.append(svgEl('line', { x1: x - 5, y1: y + 5, x2: x + 5, y2: y - 5, stroke: 'var(--muted)', 'stroke-width': 2 }));
+      svg.append(conTip(g, `<b>${p.nome}</b><br>${fmt(p.x, 0)} GG · ${fmt(p.y, 0)} Smc<br>lettura sospetta, esclusa dalla tendenza`));
+    });
+    punti.forEach((p) => {
+      svg.append(conTip(svgEl('circle', { cx: fx(p.x), cy: fy(p.y), r: 5, fill: 'var(--s1)', stroke: 'var(--bg2)', 'stroke-width': 2 }),
+        `<b>${p.nome}</b><br>${fmt(p.x, 0)} GG · ${fmt(p.y, 0)} Smc`));
+    });
+    const tx = svgEl('text', { x: box.l + box.w / 2, y: box.t + box.h + 38, 'text-anchor': 'middle' });
+    tx.textContent = opzioni.assex;
+    svg.append(tx);
+    return svg;
+  }
+
+  /** Linea semplice nel tempo. */
+  function graficoLinea(serie, opzioni) {
+    const box = { l: 52, t: 12, w: 820, h: 220 };
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${box.l + box.w + 16} ${box.t + box.h + 44}` });
+    if (!serie.length) return svg;
+    const xs = serie.map((p) => p.x.getTime());
+    const ys = serie.map((p) => p.y);
+    const ymin = Math.min(0, ...ys), ymax = Math.max(...ys) * 1.08 || 1;
+    const fx = scala(Math.min(...xs), Math.max(...xs), box.l, box.l + box.w);
+    const fy = scala(ymin, ymax, box.t + box.h, box.t);
+    const xt = [0, 0.5, 1].map((f) => {
+      const v = Math.min(...xs) + f * (Math.max(...xs) - Math.min(...xs));
+      return { v, t: mostraData(new Date(v)) };
+    });
+    assi(svg, box, xt, tacche(ymin, ymax, 4), fx, fy);
+    const d = serie.map((p, i) => `${i ? 'L' : 'M'}${fx(p.x.getTime()).toFixed(1)},${fy(p.y).toFixed(1)}`).join(' ');
+    svg.append(svgEl('path', { d, fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    serie.forEach((p) => {
+      svg.append(conTip(svgEl('circle', { cx: fx(p.x.getTime()), cy: fy(p.y), r: 4, fill: 'var(--s1)', stroke: 'var(--bg2)', 'stroke-width': 2 }),
+        `<b>${mostraData(p.x)}</b><br>${fmt(p.y, 2)} ${opzioni.unita || ''}`));
+    });
+    return svg;
+  }
+
+  /** Mediana mensile con fascia P10–P90 (recupero termico). */
+  function graficoFascia(mesi) {
+    const box = { l: 52, t: 12, w: 820, h: 260 };
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${box.l + box.w + 16} ${box.t + box.h + 44}` });
+    if (!mesi.length) return svg;
+    const xs = mesi.map((m) => m.x.getTime());
+    const valori = mesi.flatMap((m) => [m.p10, m.p90, m.mediana]).filter((v) => num(v) !== null);
+    const ymin = Math.min(-10, ...valori), ymax = Math.max(10, ...valori);
+    const fx = scala(Math.min(...xs), Math.max(...xs), box.l, box.l + box.w);
+    const fy = scala(ymin, ymax, box.t + box.h, box.t);
+    const xt = mesi.map((m) => ({ v: m.x.getTime(), t: m.etichetta })).filter((_, i, a) => a.length <= 8 || i % 2 === 0);
+    assi(svg, box, xt, tacche(ymin, ymax, 4), fx, fy);
+
+    const su = mesi.map((m, i) => `${i ? 'L' : 'M'}${fx(xs[i]).toFixed(1)},${fy(m.p90).toFixed(1)}`).join(' ');
+    const giu = mesi.slice().reverse().map((m, i) => `L${fx(xs[xs.length - 1 - i]).toFixed(1)},${fy(m.p10).toFixed(1)}`).join(' ');
+    svg.append(svgEl('path', { d: su + ' ' + giu + ' Z', fill: 'rgba(85,152,231,.18)', stroke: 'none' }));
+    svg.append(svgEl('line', { class: 'zero', x1: box.l, x2: box.l + box.w, y1: fy(0), y2: fy(0) }));
+    const d = mesi.map((m, i) => `${i ? 'L' : 'M'}${fx(xs[i]).toFixed(1)},${fy(m.mediana).toFixed(1)}`).join(' ');
+    svg.append(svgEl('path', { d, fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    mesi.forEach((m, i) => {
+      svg.append(conTip(svgEl('circle', { cx: fx(xs[i]), cy: fy(m.mediana), r: 4.5, fill: 'var(--s1)', stroke: 'var(--bg2)', 'stroke-width': 2 }),
+        `<b>${m.etichetta}</b><br>mediana ${segno(m.mediana)}<br>fascia ${segno(m.p10)} … ${segno(m.p90)}<br>${m.n} eventi`));
+    });
+    return svg;
+  }
+
+  /** Barre orizzontali raggruppate per priorità (nessun colore da solo: c'è il titolo). */
+  function barreRaggruppate(gruppi) {
+    const cont = el('div');
+    const massimo = Math.max(1, ...gruppi.flatMap((g) => g.voci.map((v) => v.n)));
+    gruppi.forEach((g) => {
+      if (!g.voci.length) return;
+      cont.append(el('div', { class: 'groupttl', style: `color: var(--${g.colore})`, text: `${PRIORITA_SEGNO[g.priorita]} ${g.titolo}` }));
+      g.voci.sort((a, b) => b.n - a.n).forEach((v) => {
+        const riga = el('div', { class: 'hbar' },
+          el('div', { class: 'small', text: v.etichetta }),
+          el('div', { class: 'track' }, el('div', { class: 'fill', style: `width:${(v.n / massimo) * 100}%; background: var(--${g.colore})` })),
+          el('div', { class: 'n', text: v.n }));
+        cont.append(conTip(riga, `<b>${v.etichetta}</b><br>${v.n} segnalazion${v.n === 1 ? 'e' : 'i'} · ${g.titolo}`));
+      });
+    });
+    return cont;
+  }
+
+  /** Linea del tempo delle segnalazioni + interventi. */
+  function graficoTimeline(barre, interventi) {
+    const alt = Math.max(120, barre.length * 30 + 60);
+    const box = { l: 190, t: 10, w: 700, h: alt - 50 };
+    const svg = svgEl('svg', { class: 'chart', viewBox: `0 0 ${box.l + box.w + 16} ${alt}` });
+    const tutte = barre.flatMap((b) => [b.da.getTime(), b.a.getTime()])
+      .concat(interventi.map((i) => i.quando.getTime()));
+    if (!tutte.length) return svg;
+    const fx = scala(Math.min(...tutte), Math.max(...tutte), box.l, box.l + box.w);
+    const passo = box.h / Math.max(1, barre.length);
+
+    [0, 0.5, 1].forEach((f) => {
+      const v = Math.min(...tutte) + f * (Math.max(...tutte) - Math.min(...tutte));
+      svg.append(svgEl('line', { class: 'axis', x1: fx(v), x2: fx(v), y1: box.t, y2: box.t + box.h }));
+      const t = svgEl('text', { x: fx(v), y: alt - 14, 'text-anchor': 'middle' });
+      t.textContent = mostraData(new Date(v));
+      svg.append(t);
+    });
+
+    barre.forEach((b, i) => {
+      const y = box.t + passo * i + passo / 2;
+      const et = svgEl('text', { x: box.l - 8, y: y + 4, 'text-anchor': 'end' });
+      et.textContent = b.etichetta.length > 30 ? b.etichetta.slice(0, 29) + '…' : b.etichetta;
+      svg.append(conTip(et, `<b>${b.etichetta}</b>`));
+      const x1 = fx(b.da.getTime()), x2 = Math.max(fx(b.a.getTime()), fx(b.da.getTime()) + 6);
+      svg.append(conTip(svgEl('rect', { x: x1, y: y - 6, width: x2 - x1, height: 12, rx: 4, fill: `var(--${b.colore})` }),
+        `<b>${b.etichetta}</b><br>rilevata dal ${mostraData(b.da)} al ${mostraData(b.a)}`));
+    });
+
+    interventi.forEach((iv) => {
+      const x = fx(iv.quando.getTime());
+      svg.append(conTip(svgEl('line', { x1: x, x2: x, y1: box.t, y2: box.t + box.h, stroke: 'var(--s1)', 'stroke-width': 2, 'stroke-dasharray': '5 4' }),
+        `<b>${mostraData(iv.quando)}</b><br>${iv.testo}`));
+    });
+    return svg;
+  }
+
+  // ============================================================
+  // DISEGNO DELLE SCHEDE
+  // ============================================================
+  function disegna() {
+    const v = vista();
+    v.innerHTML = '';
+    if (!S.dati) {
+      v.append(el('div', { class: 'card' }, el('p', { class: 'muted', text: 'Nessuna fotografia disponibile: il PC la manda appena è collegato.' })));
+      return;
+    }
+    const impianto = trovaImpianto(S.impianto);
+    switch (S.vista) {
+      case 'Stato flotta': return vistaFlotta(v);
+      case 'Impianto': return vistaImpianto(v, impianto);
+      case 'Interventi': return vistaInterventi(v, impianto);
+      case 'Diario': return vistaDiario(v, impianto);
+      case 'Ore di funzionamento': return vistaOre(v, impianto);
+      case 'Recupero termico': return vistaRecupero(v, impianto);
+      case 'Energia': return vistaEnergia(v, impianto);
+      case 'Contatori caldaia': return vistaContatori(v, impianto);
+      default: return vistaGuida(v);
+    }
+  }
+
+  function riquadro(valore, etichetta, colore) {
+    return el('div', { class: 'tile' },
+      el('div', { class: 'v', text: valore }),
+      el('div', { class: 'l', text: etichetta }),
+      el('div', { class: 'bar', style: `background: var(--${colore || 'bg5'})` }));
+  }
+
+  // ---------------- STATO FLOTTA ----------------
+  function vistaFlotta(v) {
+    const impianti = S.dati.impianti || [];
+    const azioni = azioniPerImpianto();
+    const uniche = findingsUnici(S.dati.findings || []);
+    const interventiRecenti = (S.dati.diario || []).filter((d) => {
+      const q = dataIt(d.data);
+      return q && (Date.now() - q.getTime()) < 30 * 864e5;
+    }).length;
+
+    const conUrgenza = impianti.filter((p) => (azioni.get(p.codice_k) || {}).priorita === 1).length;
+    const aggiornati = impianti.filter((p) => p.fresh).length;
+
+    v.append(el('div', { class: 'tiles' },
+      riquadro(impianti.length, 'impianti profilati', 'blue'),
+      riquadro(aggiornati, 'con dati aggiornati (ultimi 7 giorni)', 'green'),
+      riquadro(conUrgenza, 'con almeno un’azione urgente', 'red'),
+      riquadro(uniche.length, 'segnalazioni aperte', 'yellow'),
+      riquadro(interventiRecenti, 'interventi registrati (30 giorni)', 'blue')));
+
+    // quadro sinottico
+    const syn = el('div', { class: 'syn' });
+    impianti.slice()
+      .map((p) => ({ p, a: azioni.get(p.codice_k) || { n: 0, priorita: 9 } }))
+      .sort((x, y) => (x.a.priorita === 9 ? 9 : x.a.priorita) - (y.a.priorita === 9 ? 9 : y.a.priorita)
+        || String(x.p.sigla).localeCompare(String(y.p.sigla)))
+      .forEach(({ p, a }) => {
+        const prio = a.n ? a.priorita : 0;
+        const classe = !p.fresh ? 'p0' : 'p' + prio;
+        const sotto = a.n ? `${a.n} azion${a.n === 1 ? 'e' : 'i'}` : (p.fresh ? 'nessuna azione' : 'dati fermi');
+        const b = el('button', { class: classe, onclick: () => vaiA(p.impianto_ref, 'Impianto') },
+          `${PRIORITA_SEGNO[p.fresh ? prio : 0]} ${p.sigla}`, el('small', { text: sotto }));
+        syn.append(conTip(b, `<b>${p.nome_impianto}</b><br>${p.commessa || ''}<br>${sotto}`
+          + (p.fresh ? '' : '<br>dati fermi da oltre 7 giorni')));
+      });
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, 'Quadro sinottico', el('small', { text: 'un riquadro per impianto · clic per aprire la scheda' })),
+      syn,
+      el('div', { class: 'legend' },
+        el('span', {}, el('i', { style: 'background: var(--red)' }), '▲ urgente'),
+        el('span', {}, el('i', { style: 'background: var(--yellow)' }), '■ da programmare'),
+        el('span', {}, el('i', { style: 'background: var(--green)' }), '● da monitorare'),
+        el('span', {}, el('i', { style: 'background: var(--bg4)' }), '· nessuna azione o dati fermi'))));
+
+    // per tipo + cosa è cambiato
+    const gruppi = [1, 2, 3].map((prio) => {
+      const conteggio = new Map();
+      uniche.filter((f) => prioritaDi(f.finding_code) === prio).forEach((f) => {
+        const et = CODICE_LABEL[f.finding_code] || f.finding_code;
+        conteggio.set(et, (conteggio.get(et) || 0) + 1);
+      });
+      return {
+        priorita: prio, titolo: PRIORITA_LABEL[prio],
+        colore: prio === 1 ? 'red' : prio === 2 ? 'yellow' : 'green',
+        voci: [...conteggio].map(([etichetta, n]) => ({ etichetta, n })),
+      };
+    });
+
+    const cambio = el('div');
+    const runs = runOrdinati();
+    if (runs.length < 2) {
+      cambio.append(el('p', { class: 'muted small', text: 'Lo storico parte da questo calcolo: dal prossimo run del motore qui compaiono le segnalazioni nuove e quelle chiuse.' }));
+    } else {
+      const cur = runs[runs.length - 1], prev = runs[runs.length - 2];
+      const chiave = (h) => `${h.codice_k}|${h.finding_code}|${h.scope_label}`;
+      const ora = new Set((S.dati.storico || []).filter((h) => Number(h.run_id) === cur).map(chiave));
+      const prima = new Set((S.dati.storico || []).filter((h) => Number(h.run_id) === prev).map(chiave));
+      const nuove = [...ora].filter((k) => !prima.has(k));
+      const chiuse = [...prima].filter((k) => !ora.has(k));
+      cambio.append(el('p', { class: 'small' },
+        `Calcolo ${cur} rispetto al ${prev}: `,
+        chip(`${nuove.length} nuove`, nuove.length ? 'p1' : ''), ' ',
+        chip(`${chiuse.length} chiuse`, chiuse.length ? 'p3' : '')));
+      const lista = el('div', { class: 'small' });
+      nuove.slice(0, 12).forEach((k) => {
+        const [kk, code, scope] = k.split('|');
+        lista.append(el('div', {}, `▲ ${kk} · ${scope}: ${CODICE_LABEL[code] || code}`));
+      });
+      chiuse.slice(0, 12).forEach((k) => {
+        const [kk, code, scope] = k.split('|');
+        lista.append(el('div', { class: 'muted' }, `✓ ${kk} · ${scope}: ${CODICE_LABEL[code] || code} — non più rilevata`));
+      });
+      if (!nuove.length && !chiuse.length) lista.append(el('p', { class: 'muted', text: 'Nessuna variazione tra gli ultimi due calcoli.' }));
+      cambio.append(lista);
+    }
+
+    v.append(el('div', { class: 'cols2' },
+      el('div', { class: 'card' }, el('h2', { text: 'Segnalazioni per tipo' }),
+        uniche.length ? barreRaggruppate(gruppi) : el('p', { class: 'muted', text: 'Nessuna segnalazione aperta in flotta.' })),
+      el('div', { class: 'card' }, el('h2', { text: 'Cosa è cambiato' }), cambio)));
+
+    // azioni aperte
+    if ((S.dati.worklist || []).length) {
+      const righe = (S.dati.worklist || []).slice().sort((a, b) => (num(a.priority) || 3) - (num(b.priority) || 3));
+      v.append(el('div', { class: 'card' }, el('h2', { text: 'Azioni aperte' }),
+        el('div', { class: 'tbl-wrap' }, tabella(
+          ['', 'Impianto', 'Ambito', 'Azione', 'Perché'],
+          righe.map((w) => {
+            const p = num(w.priority) || 3;
+            const imp = impianti.find((x) => x.codice_k === w.codice_k);
+            return {
+              clic: imp ? () => vaiA(imp.impianto_ref, 'Interventi') : null,
+              celle: [
+                chip(`${PRIORITA_SEGNO[p]} ${PRIORITA_LABEL[p]}`, 'p' + p),
+                w.codice_k || '—', w.scope_label || '', w.action || '',
+                conTip(el('span', { class: 'muted small', text: accorcia(w.reason, 150) }), `<b>Perché</b><br>${(w.reason || '').replace(/</g, '&lt;')}`),
+              ],
+            };
+          })))));
+    }
+
+    // tabella impianti
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Impianti' }),
+      el('div', { class: 'tbl-wrap' }, tabella(
+        ['Stato', 'Codice', 'Impianto', 'Azioni', 'Circuiti', 'Zone', 'Topologia', 'Dati', 'Ultimo dato'],
+        impianti.slice().map((p) => {
+          const a = azioni.get(p.codice_k) || { n: 0, priorita: 0 };
+          const prio = a.n ? a.priorita : 0;
+          return {
+            ord: [a.n ? a.priorita : 9, p.sigla],
+            clic: () => vaiA(p.impianto_ref, 'Impianto'),
+            celle: [
+              chip(`${PRIORITA_SEGNO[prio]} ${PRIORITA_LABEL[prio]}`, 'p' + prio),
+              p.sigla, p.nome_impianto, String(a.n || 0),
+              String(p.circuit_count ?? ''), String(p.zone_count ?? ''),
+              pct(p.profile_confidence),
+              p.fresh ? 'aggiornati' : 'fermi',
+              mostraData(dataIso(p.last_measurement), true),
+            ],
+          };
+        }).sort((x, y) => (x.ord[0] - y.ord[0]) || String(x.ord[1]).localeCompare(String(y.ord[1]))),
+        [3, 4, 5, 6]))));
+  }
+
+  function tabella(intestazioni, righe, colonneNum) {
+    const t = el('table', { class: 'data' });
+    const thead = el('tr');
+    intestazioni.forEach((h, i) => thead.append(el('th', { class: (colonneNum || []).includes(i) ? 'num' : '', text: h })));
+    t.append(el('thead', {}, thead));
+    const tb = el('tbody');
+    righe.forEach((r) => {
+      const tr = el('tr', { class: r.clic ? 'clickable' : '' });
+      if (r.clic) tr.addEventListener('click', r.clic);
+      r.celle.forEach((c, i) => {
+        const td = el('td', { class: (colonneNum || []).includes(i) ? 'num' : '' });
+        td.append(c && c.nodeType ? c : document.createTextNode(c === null || c === undefined ? '' : String(c)));
+        tr.append(td);
+      });
+      tb.append(tr);
+    });
+    t.append(tb);
+    return t;
+  }
+
+  // ---------------- IMPIANTO ----------------
+  function vistaImpianto(v, p) {
+    if (!p) return;
+    const d = dettagli(p.impianto_ref);
+    const aperte = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref)).length;
+
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, `${p.sigla} — ${p.nome_impianto}`,
+        el('small', { text: `commessa ${p.commessa || 'n/d'} · storico dal ${String(p.first_measurement || '').slice(0, 10)} al ${String(p.last_measurement || '').slice(0, 10)}` }))));
+
+    v.append(el('div', { class: 'tiles' },
+      riquadro(p.point_count ?? 'n/d', 'point storici', 'blue'),
+      riquadro(p.circuit_count ?? 'n/d', 'circuiti', 'blue'),
+      riquadro(p.zone_count ?? 'n/d', 'zone', 'blue'),
+      riquadro(pct(p.profile_confidence), 'confidenza topologia', num(p.profile_confidence) >= 0.75 ? 'green' : 'yellow'),
+      riquadro(aperte, 'segnalazioni aperte', aperte ? 'red' : 'green')));
+
+    if ((num(p.ambiguous_mapping_count) || 0) > 0 || (num(p.unassigned_zone_count) || 0) > 0) {
+      v.append(el('div', { class: 'banner warn' },
+        `${p.ambiguous_mapping_count || 0} zone ambigue, ${p.unassigned_zone_count || 0} non assegnate: `
+        + 'la topologia va verificata a mano prima di fidarsi dei KPI di quelle zone.'));
+    }
+
+    v.append(el('div', { class: 'cols11' },
+      el('div', { class: 'card' }, el('h2', { text: 'Circuiti' }),
+        (d.circuiti || []).length ? tabella(['Circuito', 'Mandata', 'Setpoint', 'Miscelatrice', 'Pompa', 'Confidenza'],
+          (d.circuiti || []).map((c) => ({
+            celle: [c.circuit_label, si(c.mandata), si(c.setpoint), si(c.valvola), si(c.pompa), pct(c.confidence)],
+          })), [5]) : el('p', { class: 'muted', text: 'Nessun circuito rilevato.' })),
+      el('div', { class: 'card' }, el('h2', { text: 'Zone' }),
+        (d.zone || []).length ? tabella(['Zona', 'Sonde', 'Richiesta', 'Mapping', 'Circuito'],
+          (d.zone || []).map((z) => ({
+            celle: [z.zone_label, String(z.sonde || 0), si(z.richiesta),
+              ({ assigned: 'assegnata', ambiguous: 'ambigua', unassigned: 'non assegnata' })[z.mapping_status] || '—',
+              z.circuit_label || '—'],
+          })), [1]) : el('p', { class: 'muted', text: 'Nessuna zona rilevata.' }))));
+
+    const stato = d.kpi_status || [];
+    const box = el('div', { style: 'display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:10px' });
+    stato.forEach((s) => {
+      box.append(el('div', {},
+        chip(STATO_KPI_LABEL[s.status] || s.status, STATO_KPI_CHIP[s.status] || ''),
+        el('div', { style: 'margin-top:4px; font-weight:600', text: String(s.kpi_name || '').replace(/_/g, ' ') }),
+        el('div', { class: 'muted small', text: s.reason || '' })));
+    });
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Cosa il motore può calcolare qui' }),
+      stato.length ? box : el('p', { class: 'muted', text: 'KPI non ancora calcolati per questo impianto.' })));
+  }
+
+  const si = (b) => (b ? 'sì' : '—');
+  const accorcia = (t, n) => (String(t || '').length > n ? String(t).slice(0, n - 1) + '…' : String(t || ''));
+
+  // ---------------- INTERVENTI ----------------
+  function vistaInterventi(v, p) {
+    if (!p) return;
+    const findings = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref));
+    v.append(el('div', { class: 'card' }, el('h2', {}, `Interventi — ${p.sigla}`,
+      el('small', { text: p.nome_impianto }))));
+
+    if (!findings.length) {
+      v.append(el('div', { class: 'banner ok', text: 'Nessuna segnalazione aperta su questo impianto nella finestra analizzata.' }));
+    }
+
+    findings.forEach((f) => {
+      const prio = prioritaDi(f.finding_code);
+      const card = el('div', { class: 'item p' + prio });
+      card.append(el('h4', {}, f.scope_label || 'impianto', chip(`${PRIORITA_SEGNO[prio]} ${PRIORITA_LABEL[prio]}`, 'p' + prio)));
+      card.append(el('p', { text: verdettoChiaro(f.finding_code, f.evidence, f.title) }));
+
+      const nota = notaAffidabilita(f.evidence);
+      const storicoQui = storicoPer(p.codice_k).filter((h) => h.finding_code === f.finding_code && h.scope_label === f.scope_label);
+      const runVisti = new Set(storicoQui.map((h) => Number(h.run_id))).size;
+      card.append(el('div', { class: 'meta' },
+        `${CODICE_LABEL[f.finding_code] || f.finding_code} · finestra ${f.window_days} giorni · confidenza ${pct(f.confidence)}`
+        + (nota ? ` · ${nota}` : '') + (runVisti > 1 ? ` · presente da ${runVisti} calcoli` : '')));
+
+      const perMese = (f.evidence || {}).by_month_pct || (f.evidence || {}).by_month_authority_c;
+      if (perMese && typeof perMese === 'object' && Object.keys(perMese).length >= 2) {
+        const metrica = (f.evidence || {}).by_month_metric || 'andamento mensile';
+        const chiavi = Object.keys(perMese).sort();
+        const massimo = Math.max(...chiavi.map((k) => Math.abs(num(perMese[k]) || 0))) || 1;
+        const barre = el('div', { style: 'display:flex; gap:6px; align-items:flex-end; height:70px; margin-top:10px' });
+        chiavi.forEach((k) => {
+          const val = num(perMese[k]) || 0;
+          const h = Math.max(4, (Math.abs(val) / massimo) * 60);
+          const col = el('div', { style: 'display:flex; flex-direction:column; align-items:center; gap:4px; flex:1' },
+            el('div', { style: `width:100%; max-width:42px; height:${h}px; border-radius:3px 3px 0 0; background: var(--s2)` }),
+            el('div', { class: 'muted', style: 'font-size:10px', text: `${k.slice(-2)}/${k.slice(2, 4)}` }));
+          barre.append(conTip(col, `<b>${k}</b><br>${fmt(val, 0)} — ${metrica}`));
+        });
+        card.append(barre);
+        card.append(el('div', { class: 'muted small', style: 'margin-top:4px', text: `Per mese — ${metrica}. Serve a distinguere un problema permanente da un episodio.` }));
+      }
+
+      // interventi già registrati su questa segnalazione
+      (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k
+        && (!e.ambito || String(e.ambito).toLowerCase() === String(f.scope_label || '').toLowerCase())
+        && (!e.finding_code || e.finding_code === f.finding_code)).forEach((e) => {
+        const [testo, classe] = verdettoIntervento(e);
+        card.append(el('div', { class: 'small', style: 'margin-top:8px' }, `🔧 ${e.data} — ${e.intervento} `, chip(testo, classe)));
+      });
+
+      const dett = el('details', { class: 'tech' },
+        el('summary', { text: 'Dettaglio tecnico e registrazione intervento' }),
+        el('p', { class: 'small', text: f.message || '' }),
+        el('pre', { text: JSON.stringify(f.evidence || {}, null, 1) }),
+        formDiario(p, f.scope_label || 'impianto', f.finding_code));
+      card.append(dett);
+      v.append(card);
+    });
+  }
+
+  // ---------------- DIARIO ----------------
+  function vistaDiario(v, p) {
+    if (!p) return;
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, `Diario interventi — ${p.sigla}`, el('small', { text: p.nome_impianto })),
+      el('p', { class: 'muted small', text: 'Ogni intervento fatto sul campo, con la data. Il confronto tra le segnalazioni prima e dopo arriva dal calcolo successivo del motore.' }),
+      formDiario(p, null, null)));
+
+    const voci = (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k)
+      .slice().sort((a, b) => (dataIt(b.data) || 0) - (dataIt(a.data) || 0));
+
+    if (!voci.length) {
+      v.append(el('div', { class: 'card' }, el('p', { class: 'muted', text: 'Nessun intervento registrato su questo impianto.' })));
+    } else {
+      const lista = el('div');
+      voci.forEach((e) => {
+        const [testo, classe] = verdettoIntervento(e);
+        lista.append(el('div', { class: 'item ' + classe },
+          el('h4', {}, `${e.data} · ${e.ambito || 'impianto'}`, chip(testo, classe)),
+          el('p', { text: e.intervento }),
+          el('div', { class: 'meta', text: [e.finding_code ? (CODICE_LABEL[e.finding_code] || e.finding_code) : 'nessuna segnalazione collegata',
+            e.eseguito_da, e.note].filter(Boolean).join(' · ') })));
+      });
+      v.append(el('div', { class: 'card' }, el('h2', { text: 'Interventi registrati' }), lista));
+    }
+
+    // linea del tempo
+    const storicoQui = storicoPer(p.codice_k);
+    const perEtichetta = new Map();
+    storicoQui.forEach((h) => {
+      const et = `${h.scope_label} · ${CODICE_LABEL[h.finding_code] || h.finding_code}`;
+      const d = dataIso(h.run_at);
+      if (!d) return;
+      const cur = perEtichetta.get(et) || { etichetta: et, da: d, a: d, colore: ['', 'red', 'yellow', 'green'][prioritaDi(h.finding_code)] };
+      cur.da = d < cur.da ? d : cur.da;
+      cur.a = d > cur.a ? d : cur.a;
+      perEtichetta.set(et, cur);
+    });
+    if (perEtichetta.size && new Set(storicoQui.map((h) => h.run_id)).size >= 2) {
+      const interventi = voci.map((e) => ({ quando: dataIt(e.data), testo: e.intervento })).filter((x) => x.quando);
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, 'Linea del tempo', el('small', { text: 'barre: periodo in cui la segnalazione è stata rilevata · tratteggio: interventi' })),
+        graficoTimeline([...perEtichetta.values()], interventi)));
+    }
+  }
+
+  function formDiario(p, ambitoPre, codicePre) {
+    const d = dettagli(p.impianto_ref);
+    const ambiti = ['impianto'].concat((d.circuiti || []).map((c) => c.circuit_label), (d.zone || []).map((z) => z.zone_label));
+    const codici = [...new Set((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref).map((f) => f.finding_code))];
+
+    const inData = el('input', { type: 'date', value: oggiIso() });
+    const inAmbito = el('select', {}, ...ambiti.map((a) => el('option', { value: a, text: a, selected: ambitoPre && a === ambitoPre })));
+    const inCodice = el('select', {}, el('option', { value: '', text: 'nessuna' }),
+      ...codici.map((c) => el('option', { value: c, text: CODICE_LABEL[c] || c, selected: codicePre && c === codicePre })));
+    const inCosa = el('input', { type: 'text', placeholder: 'es. sostituito servocomando miscelatrice' });
+    const inChi = el('input', { type: 'text', placeholder: 'chi ha eseguito' });
+    const inNote = el('input', { type: 'text', placeholder: 'note' });
+    const esito = el('div', { class: 'small', style: 'margin-top:8px' });
+
+    const bottone = el('button', { class: 'btn primary', text: 'Salva nel diario' });
+    bottone.addEventListener('click', async () => {
+      if (!inCosa.value.trim()) { esito.textContent = 'Descrivi l’intervento prima di salvare.'; return; }
+      bottone.disabled = true;
+      esito.textContent = 'Invio al PC…';
+      try {
+        await inviaScrittura('diario', {
+          codice_k: p.codice_k, data: isoToIt(inData.value), ambito: inAmbito.value,
+          finding_code: inCodice.value, intervento: inCosa.value.trim(),
+          eseguito_da: inChi.value.trim(), note: inNote.value.trim(),
+        }, esito);
+        inCosa.value = ''; inChi.value = ''; inNote.value = '';
+      } finally { bottone.disabled = false; }
+    });
+
+    return el('div', {},
+      el('div', { class: 'formgrid', style: 'margin-top:10px' },
+        el('div', {}, el('label', { class: 'f', text: 'Data intervento' }), inData),
+        el('div', {}, el('label', { class: 'f', text: 'Circuito o zona' }), inAmbito),
+        el('div', {}, el('label', { class: 'f', text: 'Segnalazione collegata' }), inCodice),
+        el('div', { class: 'full' }, el('label', { class: 'f', text: 'Cosa è stato fatto' }), inCosa),
+        el('div', {}, el('label', { class: 'f', text: 'Eseguito da' }), inChi),
+        el('div', {}, el('label', { class: 'f', text: 'Note' }), inNote)),
+      el('div', { class: 'actions' }, bottone),
+      esito);
+  }
+
+  // ---------------- ORE DI FUNZIONAMENTO ----------------
+  function vistaOre(v, p) {
+    if (!p) return;
+    const d = dettagli(p.impianto_ref);
+    const intervalli = (d.energia_intervalli || []).filter((r) => num(r.on_hours) !== null);
+
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, `Ore di funzionamento — ${p.sigla}`,
+        el('small', { text: `fascia cliente: ${d.ore_cliente || 'non impostata (default lun-ven 08-16)'}` }))));
+
+    if (!intervalli.length) {
+      v.append(el('div', { class: 'banner info', text: 'Nessun conteggio ore disponibile: il motore conta le ore ON dentro gli intervalli tra due letture gas, quando la richiesta caldaia copre almeno il 90% del periodo.' }));
+      return;
+    }
+
+    const somma = (campo) => intervalli.reduce((a, r) => a + (num(r[campo]) || 0), 0);
+    const totOn = somma('on_hours'), totIn = somma('on_hours_in_client_window');
+    const totFuori = somma('on_hours_outside_client_window'), totCli = somma('client_hours');
+
+    v.append(el('div', { class: 'tiles' },
+      riquadro(fmt(totOn, 0, ' h'), 'ore di generazione (richiesta caldaia)', 'blue'),
+      riquadro(fmt(totIn, 0, ' h'), 'di cui in fascia cliente', 'green'),
+      riquadro(fmt(totFuori, 0, ' h'), 'fuori fascia (preaccensione, notte, weekend)', 'yellow'),
+      riquadro(totCli ? fmt((totIn / totCli) * 100, 0, '%') : 'n/d', 'copertura della fascia cliente', 'blue')));
+
+    const dati = intervalli.map((r) => ({
+      etichetta: `${String(r.date_from).slice(8, 10)}/${String(r.date_from).slice(5, 7)}`,
+      a: num(r.on_hours_in_client_window) || 0,
+      b: num(r.on_hours_outside_client_window) || 0,
+      rif: num(r.client_hours),
+    }));
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, 'Ore per intervallo di lettura', el('small', { text: 'ogni barra è il periodo tra due letture del contatore gas' })),
+      graficoBarreImpilate(dati, { nomeA: 'in fascia cliente', nomeB: 'fuori fascia', nomeRif: 'ore richieste dal cliente' }),
+      el('div', { class: 'legend' },
+        el('span', {}, el('i', { style: 'background: var(--s3)' }), 'in fascia cliente'),
+        el('span', {}, el('i', { style: 'background: var(--s2)' }), 'fuori fascia'),
+        el('span', {}, el('i', { style: 'background: var(--accent); height:3px; border-radius:2px' }), 'ore richieste dal cliente')),
+      el('p', { class: 'muted small', text: 'Le ore fuori fascia non sono per forza uno spreco: contengono la preaccensione necessaria a essere a temperatura all’apertura.' })));
+
+    const stagioni = (d.energia_stagioni || []).filter((s) => num(s.on_hours) !== null);
+    if (stagioni.length) {
+      v.append(el('div', { class: 'card' }, el('h2', { text: 'Per stagione' }),
+        tabella(['Stagione', 'Ore ON', 'kW medi', 'Fattore di carico'],
+          stagioni.map((s) => ({ celle: [s.season, fmt(s.on_hours, 0), fmt(s.avg_power_kw, 1), fmt(s.load_factor_pct, 0, '%')] })), [1, 2, 3])));
+    }
+
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Intervalli' }),
+      el('div', { class: 'tbl-wrap' }, tabella(
+        ['Da', 'A', 'Giorni', 'Ore ON', 'In fascia', 'Fuori fascia', 'Ore cliente', 'Copertura'],
+        intervalli.slice().reverse().map((r) => ({
+          celle: [r.date_from, r.date_to, fmt(r.days, 0), fmt(r.on_hours, 0), fmt(r.on_hours_in_client_window, 0),
+            fmt(r.on_hours_outside_client_window, 0), fmt(r.client_hours, 0), fmt(r.client_coverage_pct, 0, '%')],
+        })), [2, 3, 4, 5, 6, 7]))));
+  }
+
+  // ---------------- RECUPERO TERMICO ----------------
+  function vistaRecupero(v, p) {
+    if (!p) return;
+    const d = dettagli(p.impianto_ref);
+    const zone = d.recupero || [];
+
+    v.append(el('div', { class: 'card' }, el('h2', {}, `Recupero termico — ${p.sigla}`, el('small', { text: p.nome_impianto }))));
+
+    if (!zone.length) {
+      v.append(el('div', { class: 'banner info', text: 'Nessun evento di recupero calcolato: serve storico di riscaldamento reale nella finestra analizzata.' }));
+      return;
+    }
+
+    if ((d.drift || []).length) {
+      const etichette = { DEGRADING: 'in peggioramento', IMPROVING: 'in miglioramento', STABLE: 'stabile', INSUFFICIENT_DATA: 'dati insufficienti' };
+      const colori = { DEGRADING: 'red', IMPROVING: 'green', STABLE: 'blue', INSUFFICIENT_DATA: 'bg5' };
+      const t = el('div', { class: 'tiles' });
+      (d.drift || []).forEach((r) => {
+        t.append(riquadro(segno(r.drift_knn_pct), `${r.zone_label} · ${r.window_days} gg · ${etichette[r.drift_class] || r.drift_class}`, colori[r.drift_class] || 'bg5'));
+      });
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, 'Tendenza a pari clima', el('small', { text: 'scostamento del recupero recente rispetto agli eventi passati in condizioni simili' })),
+        t,
+        el('p', { class: 'muted small', text: 'Attenzione: a fine stagione il sole accelera il recupero e il KPI legge «miglioramento» anche senza interventi.' })));
+    }
+
+    if (!S.zonaRecupero || !zone.find((z) => z.zone_id === S.zonaRecupero)) S.zonaRecupero = zone[0].zone_id;
+    const sel = el('select', {}, ...zone.map((z) => el('option', { value: z.zone_id, text: z.zone_label, selected: z.zone_id === S.zonaRecupero })));
+    sel.onchange = () => { S.zonaRecupero = sel.value; disegna(); };
+
+    const zona = zone.find((z) => z.zone_id === S.zonaRecupero);
+    const eventi = (zona.eventi || []).map((e) => Object.assign({}, e, { quando: dataIso(e.start_ts) })).filter((e) => e.quando);
+    const scostamenti = eventi.map((e) => num(e.recovery_deviation_pct)).filter((x) => x !== null);
+    const mediana = mediano(scostamenti);
+    const anomali = scostamenti.filter((x) => Math.abs(x) > 50).length;
+
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, 'Zona', el('small', { text: 'gli eventi sono le ripartenze dopo uno spegnimento' })),
+      el('div', { style: 'max-width:320px' }, sel),
+      el('div', { class: 'tiles', style: 'margin-top:14px' },
+        riquadro(eventi.length, 'eventi di recupero', 'blue'),
+        riquadro(segno(mediana), 'scostamento mediano dal proprio standard', mediana === null || mediana >= -10 ? 'green' : 'yellow'),
+        riquadro(anomali, 'eventi anomali (oltre ±50%)', anomali ? 'red' : 'green'))));
+
+    const perMese = new Map();
+    eventi.forEach((e) => {
+      const k = `${e.quando.getFullYear()}-${String(e.quando.getMonth() + 1).padStart(2, '0')}`;
+      const v2 = num(e.recovery_deviation_pct);
+      if (v2 === null) return;
+      const cur = perMese.get(k) || { x: new Date(e.quando.getFullYear(), e.quando.getMonth(), 1), etichetta: k.slice(5) + '/' + k.slice(2, 4), valori: [] };
+      cur.valori.push(v2);
+      perMese.set(k, cur);
+    });
+    const mesi = [...perMese.values()].sort((a, b) => a.x - b.x).map((m) => ({
+      x: m.x, etichetta: m.etichetta, n: m.valori.length,
+      mediana: mediano(m.valori), p10: quantile(m.valori, 0.1), p90: quantile(m.valori, 0.9),
+    }));
+    if (mesi.length) {
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, `Scostamento dal recupero atteso — ${zona.zone_label}`, el('small', { text: 'linea: mediana mensile · fascia: dal 10° al 90° percentile' })),
+        graficoFascia(mesi),
+        el('p', { class: 'muted small', text: 'Zero significa «in linea con lo standard della zona». Sotto zero: la zona recupera più lentamente del solito a parità di condizioni.' })));
+    }
+
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Eventi' }),
+      el('div', { class: 'tbl-wrap' }, tabella(['Inizio', '°C/h', 'Scostamento', 'Ore OFF', 'T esterna', 'Confidenza'],
+        eventi.slice().sort((a, b) => b.quando - a.quando).map((e) => ({
+          celle: [mostraData(e.quando, true), fmt(e.recovery_rate, 2), segno(e.recovery_deviation_pct),
+            fmt(e.off_hours, 1), fmt(e.te_start, 1, ' °C'), pct(e.confidence)],
+        })), [1, 2, 3, 4, 5]))));
+  }
+
+  function mediano(v) {
+    const a = v.filter((x) => num(x) !== null).slice().sort((x, y) => x - y);
+    if (!a.length) return null;
+    const m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+  function quantile(v, q) {
+    const a = v.filter((x) => num(x) !== null).slice().sort((x, y) => x - y);
+    if (!a.length) return null;
+    const pos = (a.length - 1) * q, base = Math.floor(pos), resto = pos - base;
+    return a[base + 1] !== undefined ? a[base] + resto * (a[base + 1] - a[base]) : a[base];
+  }
+
+  // ---------------- ENERGIA ----------------
+  function vistaEnergia(v, p) {
+    if (!p) return;
+    const d = dettagli(p.impianto_ref);
+    const intervalli = d.energia_intervalli || [];
+    const stagioni = d.energia_stagioni || [];
+
+    v.append(el('div', { class: 'card' }, el('h2', {}, `Energia — ${p.sigla}`, el('small', { text: p.nome_impianto }))));
+
+    if (!intervalli.length) {
+      v.append(el('div', { class: 'banner info', text: 'Nessun dato energetico: serve lo storico delle letture gas per questo impianto.' }));
+      return;
+    }
+
+    if (stagioni.length) {
+      const t = el('div', { class: 'tiles' });
+      stagioni.slice().reverse().slice(0, 4).forEach((s) => {
+        t.append(riquadro(fmt(s.smc, 0, ' Smc'), `${s.season} · ${fmt(s.smc_per_gg, 2)} Smc/GG · R² ${fmt(s.signature_r2, 2)}`, 'blue'));
+      });
+      v.append(t);
+    }
+
+    const buona = (r) => ['OK', 'NON_VALUTABILE'].includes(r.reading_quality || 'OK');
+    const sospette = intervalli.filter((r) => !buona(r));
+    if (sospette.length) {
+      const card = el('div', { class: 'card' },
+        el('h2', {}, 'Letture sospette', el('small', { text: `${sospette.length} su ${intervalli.length}` })),
+        el('p', { class: 'small', text: 'Consumo specifico fuori scala rispetto allo storico dell’impianto: restano nello storico e nel totale di stagione, ma non entrano nella firma energetica.' }),
+        el('div', { class: 'tbl-wrap' }, tabella(['Da', 'A', 'Smc', 'GG', 'Smc/GG', 'Esito', 'Nota'],
+          sospette.map((r) => ({ celle: [r.date_from, r.date_to, fmt(r.smc, 0), fmt(r.gg, 0), fmt(r.smc_per_gg, 1), r.reading_quality, r.reading_note || ''] })), [2, 3, 4])));
+      v.append(card);
+    }
+
+    const validi = intervalli.filter((r) => num(r.gg) !== null && num(r.gg) > 5 && num(r.smc) !== null);
+    const punti = validi.filter(buona).map((r) => ({ x: num(r.gg), y: num(r.smc), nome: `${r.date_from} → ${r.date_to}` }));
+    const fuori = validi.filter((r) => !buona(r)).map((r) => ({ x: num(r.gg), y: num(r.smc), nome: `${r.date_from} → ${r.date_to}` }));
+
+    const cardFirma = el('div', { class: 'card' }, el('h2', {}, 'Firma energetica',
+      el('small', { text: 'consumo contro gradi giorno dell’intervallo' })));
+    if (punti.length >= 4) {
+      cardFirma.append(graficoDispersione(punti, fuori, { assex: 'gradi giorno nell’intervallo' }));
+      cardFirma.append(el('div', { class: 'legend' },
+        el('span', {}, el('i', { style: 'background: var(--s1); border-radius:50%' }), 'letture attendibili'),
+        fuori.length ? el('span', {}, el('i', { style: 'background: var(--muted)' }), 'letture sospette (escluse)') : null,
+        el('span', {}, el('i', { style: 'background: var(--yellow); height:3px; border-radius:2px' }), 'tendenza')));
+      cardFirma.append(el('p', { class: 'muted small', text: 'Punti sopra la retta: consumo più alto del normale per quel freddo. Sotto: più efficiente del normale. Con letture mensili la retta ha pochi punti per stagione: è un’indicazione, non una misura.' }));
+    } else {
+      cardFirma.append(el('p', { class: 'muted', text: 'Servono almeno 4 intervalli con gradi giorno validi e lettura attendibile.' }));
+    }
+    v.append(cardFirma);
+
+    const serie = intervalli.filter((r) => buona(r) && num(r.smc_per_gg) !== null)
+      .map((r) => ({ x: dataIso(r.date_from), y: num(r.smc_per_gg) })).filter((s) => s.x);
+    if (serie.length > 1) {
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, 'Consumo specifico nel tempo', el('small', { text: 'Smc per grado giorno' })),
+        graficoLinea(serie, { unita: 'Smc/GG' })));
+    }
+
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Intervalli di lettura' }),
+      el('div', { class: 'tbl-wrap' }, tabella(['Da', 'A', 'Giorni', 'Smc', 'GG', 'Smc/GG', 'Ore ON', 'kW medi', 'Esito'],
+        intervalli.slice().reverse().map((r) => ({
+          celle: [r.date_from, r.date_to, fmt(r.days, 0), fmt(r.smc, 0), fmt(r.gg, 0), fmt(r.smc_per_gg, 2),
+            fmt(r.on_hours, 0), fmt(r.avg_power_kw, 1), r.reading_quality || 'OK'],
+        })), [2, 3, 4, 5, 6, 7]))));
+  }
+
+  // ---------------- CONTATORI CALDAIA ----------------
+  function vistaContatori(v, p) {
+    if (!p) return;
+    const d = dettagli(p.impianto_ref);
+
+    const inData = el('input', { type: 'date', value: oggiIso() });
+    const inRif = el('input', { type: 'date' });
+    const inAcc = el('input', { type: 'number', min: '0', step: '1', placeholder: '0' });
+    const inOre = el('input', { type: 'number', min: '0', step: '0.5', placeholder: '0.0' });
+    const inNote = el('input', { type: 'text', placeholder: 'note' });
+    const esito = el('div', { class: 'small', style: 'margin-top:8px' });
+    const bottone = el('button', { class: 'btn primary', text: 'Salva lettura' });
+    bottone.addEventListener('click', async () => {
+      if (inAcc.value === '' || inOre.value === '') { esito.textContent = 'Inserisci accensioni e ore.'; return; }
+      bottone.disabled = true;
+      esito.textContent = 'Invio al PC…';
+      try {
+        await inviaScrittura('contatori', {
+          codice_k: p.codice_k, data: isoToIt(inData.value), accensioni: Number(inAcc.value),
+          ore_funzionamento: Number(inOre.value), riferimento: isoToIt(inRif.value), note: inNote.value.trim(),
+        }, esito);
+        inAcc.value = ''; inOre.value = ''; inNote.value = '';
+      } finally { bottone.disabled = false; }
+    });
+
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, `Contatori caldaia — ${p.sigla}`, el('small', { text: p.nome_impianto })),
+      el('p', { class: 'muted small', text: 'Da compilare quando ti colleghi al regolatore e leggi accensioni e ore sul display. Alimenta il KPI di carico del generatore al calcolo successivo.' }),
+      el('div', { class: 'formgrid' },
+        el('div', {}, el('label', { class: 'f', text: 'Data lettura' }), inData),
+        el('div', {}, el('label', { class: 'f', text: 'Data azzeramento (se nota)' }), inRif),
+        el('div', {}, el('label', { class: 'f', text: 'Accensioni a display' }), inAcc),
+        el('div', {}, el('label', { class: 'f', text: 'Ore bruciatore a display' }), inOre),
+        el('div', { class: 'full' }, el('label', { class: 'f', text: 'Note' }), inNote)),
+      el('div', { class: 'actions' }, bottone),
+      esito));
+
+    const letture = (S.dati.contatori || []).filter((c) => c.codice_k === p.codice_k);
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'Letture registrate' }),
+      letture.length ? tabella(['Data', 'Accensioni', 'Ore', 'Riferimento', 'Note'],
+        letture.slice().reverse().map((c) => ({ celle: [c.data, c.accensioni, c.ore_funzionamento, c.riferimento || '—', c.note || ''] })), [1, 2])
+        : el('p', { class: 'muted', text: 'Nessuna lettura registrata per questo impianto.' })));
+
+    if ((d.contatori_kpi || []).length) {
+      v.append(el('div', { class: 'card' }, el('h2', { text: 'Carico del generatore dalle letture' }),
+        el('div', { class: 'tbl-wrap' }, tabella(
+          ['Lettura', 'Ore ON dal rif.', 'Fattore di utilizzo', 'Accensioni/ora', 'Minuti per accensione', 'kW quando brucia', 'Classe'],
+          (d.contatori_kpi || []).map((r) => ({
+            celle: [r.reading_date, fmt(r.on_hours_since_ref, 0), fmt(r.burner_duty_pct, 0, '%'), fmt(r.starts_per_on_hour, 2),
+              fmt(r.minutes_per_start, 1), fmt(r.avg_power_when_firing_kw, 1), r.load_class || ''],
+          })), [1, 2, 3, 4, 5]))));
+    }
+  }
+
+  // ---------------- COME LEGGERE ----------------
+  function vistaGuida(v) {
+    v.append(el('div', { class: 'card' },
+      el('h2', { text: 'Come leggere questa pagina' }),
+      el('p', {}, el('b', { text: 'Da dove vengono i numeri. ' }),
+        'Il collector scarica da Coster lo storico dei point (temperature, setpoint, valvole, richieste). '
+        + 'Il motore ricostruisce la struttura dell’impianto (circuiti e zone), calcola i KPI sulle ore in cui l’impianto '
+        + 'sta davvero scaldando e li trasforma in segnalazioni. Ogni segnalazione porta con sé i dati che l’hanno prodotta '
+        + '(nel «Dettaglio tecnico»), così è sempre verificabile contro i grafici Coster.'),
+      el('p', {}, el('b', { text: 'Priorità. ' }),
+        '▲ Urgente: il generatore non regge o manca portata, da verificare subito. '
+        + '■ Da programmare: limiti di caldaia, preaccensione, valvole che non chiudono. '
+        + '● Da monitorare: regolazione, curve, ore con ambiente già al target.'),
+      el('p', {}, el('b', { text: 'Affidabilità. ' }),
+        'Sotto ogni segnalazione trovi i giorni di riscaldamento e i campioni reali su cui è basata. '
+        + 'Con campioni orari, 30 giorni di finestra valgono circa 250 misure reali per circuito. '
+        + 'Nessuna segnalazione viene emessa con meno di 5 giorni riscaldati.'),
+      el('p', {}, el('b', { text: 'Quanto sono freschi i dati. ' }),
+        'Questa pagina mostra una fotografia mandata dal PC dell’ufficio: si aggiorna da sola a ogni nuovo calcolo del motore. '
+        + 'In testata trovi l’ora dell’ultimo calcolo e dell’ultimo dato scaricato da Coster.')));
+
+    const glossario = [
+      ['Generatore sotto la domanda', 'La temperatura di caldaia (media oraria) resta oltre 6 °C sotto la richiesta calcolata, escluse le ripartenze da freddo, mentre due o più circuiti chiedono il massimo.', 'Non distingue potenza insufficiente da setpoint massimo troppo basso: guardare anche «Richiesta caldaia limitata».'],
+      ['Richiesta caldaia limitata', 'Il setpoint inviato alla caldaia è più basso di quello che i circuiti chiederebbero (limite massimo di caldaia).', 'È una scelta di regolazione, spesso corretta: va confrontata con la curva dei circuiti.'],
+      ['Valvola che non chiude / poco efficace', 'Con valvola quasi chiusa la mandata resta alla temperatura del collettore; oppure aprendo e chiudendo il salto termico non cambia.', 'Con campioni orari non si vede l’oscillazione della valvola.'],
+      ['Mandata fuori setpoint', 'Quota di tempo in cui la mandata sta a più di 3 °C dal setpoint, escluse le ore con ambiente già soddisfatto.', 'Senza miscelatrice la mandata è quella del collettore: il setpoint è solo informativo.'],
+      ['Curva climatica alta', 'A valvola quasi chiusa e ambiente a target, la mandata reale sta sotto il setpoint calcolato: c’è margine da tagliare.', 'In mezza stagione la curva non è vincolante; il margine va letto sulle ore più fredde.'],
+      ['Riscalda a target raggiunto', 'Ore in cui la valvola è aperta con ambiente almeno 0,8 °C sopra il target, esclusa la prima ora di ogni blocco.', 'Dipende da dove sta la sonda ambiente e da quale sonda usa il regolatore.'],
+      ['Preaccensione corta', 'Dopo notte, weekend e festività: in quanti blocchi la zona arriva a target (tolleranza 0,5 °C).', 'Misura il raggiungimento entro il blocco, non all’orario di apertura.'],
+      ['Recupero in peggioramento', 'La zona recupera più lentamente dei propri eventi passati a condizioni simili.', 'Senza radiazione solare il KPI legge le stagioni: a marzo tende a dire «miglioramento».'],
+      ['Firma energetica', 'Smc per grado giorno, per intervallo di lettura e per stagione.', 'Con letture mensili sono 6-7 punti a stagione: indicazione, non misura.'],
+    ];
+    const box = el('div');
+    glossario.forEach(([nome, cosa, limite]) => {
+      box.append(el('div', { class: 'item p0' },
+        el('h4', { text: nome }), el('p', { text: cosa }), el('div', { class: 'meta', text: 'Limite: ' + limite })));
+    });
+    v.append(el('div', { class: 'card' }, el('h2', { text: 'I KPI, uno per uno' }), box));
+  }
+
+  // ============================================================
+  // SCRITTURE (diario e contatori) — le esegue il PC
+  // ============================================================
+  async function inviaScrittura(tipo, dati, esito) {
+    try {
+      const op = await api('/scritture', { body: { tipo, dati } });
+      S.scritture.push(op.op_id);
+      esito.textContent = op.messaggio || 'In coda.';
+      esito.className = 'small muted';
+      const fine = await attendiScrittura(op.op_id, esito);
+      if (fine.stato === 'fatta') {
+        esito.textContent = fine.messaggio || 'Registrato.';
+        esito.className = 'small';
+        await controlla();     // rilegge la fotografia aggiornata
+      } else {
+        esito.textContent = fine.messaggio || 'Non riuscita.';
+        esito.className = 'small';
+      }
+    } catch (err) {
+      esito.textContent = err.message;
+      esito.className = 'small';
+    }
+  }
+
+  async function attendiScrittura(opId, esito) {
+    for (let i = 0; i < 45; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      try {
+        const st = await api('/scritture/' + opId);
+        if (['fatta', 'errore'].includes(st.stato)) return st;
+        if (esito && i === 3) esito.textContent = 'In attesa del PC…';
+      } catch (e) { /* riprova */ }
+    }
+    return { stato: 'errore', messaggio: 'Il PC non ha risposto: la registrazione resta in coda.' };
+  }
+
+  function aggiornaScritture() {
+    const attive = (S.stato && S.stato.scritture || []).filter((o) => ['in_coda', 'presa'].includes(o.stato));
+    if (attive.length) aggiornaPill('wait', `${attive.length} registrazion${attive.length === 1 ? 'e' : 'i'} in corso`);
+  }
+
+  // ============================================================
+  // AVVIO
+  // ============================================================
+  $('pinBtn').addEventListener('click', async () => {
+    const pin = $('pinInput').value.trim();
+    $('pinErr').hidden = true;
+    if (!pin) return;
+    try {
+      await entra(pin);
+    } catch (err) {
+      $('pinErr').hidden = false;
+      $('pinErr').textContent = err.pin ? 'PIN non valido.' : err.message;
+    }
+  });
+  $('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('pinBtn').click(); });
+  $('btnRefresh').addEventListener('click', () => controlla());
+
+  const salvato = storageGet(PIN_KEY);
+  if (salvato) {
+    entra(salvato).catch(() => { storageSet(PIN_KEY, null); });
+  } else {
+    $('pinInput').focus();
+  }
+})();
+</script>
+</body>
+</html>
