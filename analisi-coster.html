@@ -334,10 +334,18 @@
     if (!m) return '';
     return conAnno === false ? `${m[3]}/${m[2]}` : `${m[3]}/${m[2]}/${m[1]}`;
   }
-  /** Periodo analizzato in parole. */
+  /** Periodo in parole, con la provenienza: la finestra del motore è nominale
+      (90 giorni a ritroso) anche quando l'impianto ha dati da molto meno. */
   function periodoTesto(p) {
     if (!p || !p.da || !p.a) return '';
-    return `dal ${dataBreve(p.da)} al ${dataBreve(p.a)}`;
+    const intervallo = `dal ${dataBreve(p.da)} al ${dataBreve(p.a)}`;
+    if (p.fonte === 'dati') {
+      const ore = num(p.ore), giorni = num(p.giorni);
+      return `dati utili ${intervallo}`
+        + (ore !== null ? ` · ${fmt(ore, 0)} ore su ${giorni || '?'} giornate` : '');
+    }
+    if (p.fonte === 'finestra_tagliata') return `dati disponibili ${intervallo}`;
+    return intervallo;
   }
 
   // tooltip condiviso
@@ -588,18 +596,20 @@
 
   /** In quali giorni/mesi il problema si è davvero visto. */
   function quandoTesto(f) {
-    const ev = f.evidence || {};
-    const w = ev.generator_when || {};
+    const q = f.quando || null;
     const parti = [];
 
-    if (w.first && w.last) {
-      const ore = num(w.hours), giorni = num(w.days);
-      let t = `${dataBreve(w.first)} → ${dataBreve(w.last)}`;
+    if (q && q.da) {
+      const ore = num(q.ore), giorni = num(q.giorni);
+      const blocchi = num(q.blocchi), eventi = num(q.eventi);
+      let t = `${dataBreve(q.da)} → ${dataBreve(q.a)}`;
       if (ore !== null) t += ` · ${fmt(ore, 0)} ore su ${giorni || '?'} giornate`;
+      else if (blocchi !== null) t += ` · ${blocchi} accensioni interessate`;
+      else if (eventi !== null) t += ` · ${eventi} eventi`;
       parti.push(t);
-      const recenti = num(w.recent_hours);
-      if (w.closed) parti.push(`nessuna negli ultimi ${w.recent_days_window || 30} giorni`);
-      else if (recenti) parti.push(`${fmt(recenti, 0)} ore negli ultimi ${w.recent_days_window || 30} giorni`);
+      const recenti = num(q.recenti);
+      if (q.chiuso) parti.push(`nessuna negli ultimi ${q.finestra_recenti || 30} giorni`);
+      else if (recenti) parti.push(`${fmt(recenti, 0)} ore negli ultimi ${q.finestra_recenti || 30} giorni`);
     }
 
     const mesi = f.mesi && f.mesi.voci ? f.mesi.voci.filter((m) => num(m.valore) !== null) : [];
@@ -1159,7 +1169,7 @@
       const periodo = periodoTesto(f.periodo);
       card.append(el('div', { class: 'meta' },
         `${CODICE_LABEL[f.finding_code] || f.finding_code} · finestra ${f.window_days} giorni`
-        + (periodo ? ` (${periodo})` : '') + ` · confidenza ${pct(f.confidence)}`
+        + (periodo ? ` · ${periodo}` : '') + ` · confidenza ${pct(f.confidence)}`
         + (nota ? ` · ${nota}` : '') + (runVisti > 1 ? ` · presente da ${runVisti} calcoli` : '')));
 
       const quando = quandoTesto(f);
