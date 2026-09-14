@@ -97,6 +97,9 @@
   .item h4 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .item p { margin: 0; }
   .item .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .item .quando { font-size: 12.5px; margin-top: 6px; padding: 6px 10px; border-radius: 7px;
+                  background: rgba(122,176,216,.10); border: 1px solid rgba(122,176,216,.25); color: #bcd6e8; }
+  .item .quando b { color: var(--blue); }
   .item.p1 { border-left-color: var(--red); }
   .item.p2 { border-left-color: var(--yellow); }
   .item.p3 { border-left-color: var(--green); }
@@ -316,6 +319,26 @@
   const isoToIt = (iso) => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '');
 
   function chip(testo, classe) { return el('span', { class: 'chip ' + (classe || ''), text: testo }); }
+
+  const MESI_NOME = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
+                     'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  /** '2026-03' → 'marzo 2026' */
+  function meseNome(k) {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(k || ''));
+    if (!m) return String(k || '');
+    return `${MESI_NOME[Number(m[2]) - 1] || m[2]} ${m[1]}`;
+  }
+  /** '2026-03-16' → '16/03/2026' */
+  function dataBreve(iso, conAnno) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    if (!m) return '';
+    return conAnno === false ? `${m[3]}/${m[2]}` : `${m[3]}/${m[2]}/${m[1]}`;
+  }
+  /** Periodo analizzato in parole. */
+  function periodoTesto(p) {
+    if (!p || !p.da || !p.a) return '';
+    return `dal ${dataBreve(p.da)} al ${dataBreve(p.a)}`;
+  }
 
   // tooltip condiviso
   const tip = $('tip');
@@ -561,6 +584,35 @@
         default: return ripiego;
       }
     } catch (err) { return ripiego; }
+  }
+
+  /** In quali giorni/mesi il problema si è davvero visto. */
+  function quandoTesto(f) {
+    const ev = f.evidence || {};
+    const w = ev.generator_when || {};
+    const parti = [];
+
+    if (w.first && w.last) {
+      const ore = num(w.hours), giorni = num(w.days);
+      let t = `${dataBreve(w.first)} → ${dataBreve(w.last)}`;
+      if (ore !== null) t += ` · ${fmt(ore, 0)} ore su ${giorni || '?'} giornate`;
+      parti.push(t);
+      const recenti = num(w.recent_hours);
+      if (w.closed) parti.push(`nessuna negli ultimi ${w.recent_days_window || 30} giorni`);
+      else if (recenti) parti.push(`${fmt(recenti, 0)} ore negli ultimi ${w.recent_days_window || 30} giorni`);
+    }
+
+    const mesi = f.mesi && f.mesi.voci ? f.mesi.voci.filter((m) => num(m.valore) !== null) : [];
+    if (mesi.length) {
+      const bassoMale = /BASSI/.test(String((f.mesi && f.mesi.metrica) || ''));
+      const rilevanti = mesi.filter((m) => (bassoMale ? num(m.valore) < 70 : num(m.valore) > 0));
+      const elenco = (rilevanti.length ? rilevanti : mesi).map((m) => meseNome(m.mese));
+      if (elenco.length && !parti.length) parti.push(`rilevato in ${elenco.join(', ')}`);
+      else if (elenco.length) parti.push(`mesi interessati: ${elenco.join(', ')}`);
+    }
+
+    if (!parti.length) return '';
+    return parti.join(' · ');
   }
 
   function notaAffidabilita(ev) {
@@ -1104,26 +1156,39 @@
       const nota = notaAffidabilita(f.evidence);
       const storicoQui = storicoPer(p.codice_k).filter((h) => h.finding_code === f.finding_code && h.scope_label === f.scope_label);
       const runVisti = new Set(storicoQui.map((h) => Number(h.run_id))).size;
+      const periodo = periodoTesto(f.periodo);
       card.append(el('div', { class: 'meta' },
-        `${CODICE_LABEL[f.finding_code] || f.finding_code} · finestra ${f.window_days} giorni · confidenza ${pct(f.confidence)}`
+        `${CODICE_LABEL[f.finding_code] || f.finding_code} · finestra ${f.window_days} giorni`
+        + (periodo ? ` (${periodo})` : '') + ` · confidenza ${pct(f.confidence)}`
         + (nota ? ` · ${nota}` : '') + (runVisti > 1 ? ` · presente da ${runVisti} calcoli` : '')));
+
+      const quando = quandoTesto(f);
+      if (quando) card.append(el('div', { class: 'quando' }, el('b', { text: 'Quando: ' }), quando));
 
       const perMese = (f.evidence || {}).by_month_pct || (f.evidence || {}).by_month_authority_c;
       if (perMese && typeof perMese === 'object' && Object.keys(perMese).length >= 2) {
         const metrica = (f.evidence || {}).by_month_metric || 'andamento mensile';
         const chiavi = Object.keys(perMese).sort();
         const massimo = Math.max(...chiavi.map((k) => Math.abs(num(perMese[k]) || 0))) || 1;
+        // Su alcune metriche il valore alto è la cosa buona (es. «% di tempo
+        // entro 3 °C dal setpoint»): il colore dice se il mese è critico.
+        const bassoMale = /BASSI/.test(String(metrica));
         const barre = el('div', { style: 'display:flex; gap:6px; align-items:flex-end; height:70px; margin-top:10px' });
         chiavi.forEach((k) => {
           const val = num(perMese[k]) || 0;
           const h = Math.max(4, (Math.abs(val) / massimo) * 60);
+          const critico = bassoMale ? val < 70 : val >= 25;
           const col = el('div', { style: 'display:flex; flex-direction:column; align-items:center; gap:4px; flex:1' },
-            el('div', { style: `width:100%; max-width:42px; height:${h}px; border-radius:3px 3px 0 0; background: var(--s2)` }),
+            el('div', { style: `width:100%; max-width:42px; height:${h}px; border-radius:3px 3px 0 0; `
+              + `background: var(--${critico ? 's2' : 's3'})` }),
             el('div', { class: 'muted', style: 'font-size:10px', text: `${k.slice(-2)}/${k.slice(2, 4)}` }));
-          barre.append(conTip(col, `<b>${k}</b><br>${fmt(val, 0)} — ${metrica}`));
+          barre.append(conTip(col, `<b>${meseNome(k)}</b><br>${fmt(val, 1)} — ${metrica}`
+            + `<br>${critico ? 'mese critico' : 'mese nella norma'}`));
         });
         card.append(barre);
-        card.append(el('div', { class: 'muted small', style: 'margin-top:4px', text: `Per mese — ${metrica}. Serve a distinguere un problema permanente da un episodio.` }));
+        card.append(el('div', { class: 'muted small', style: 'margin-top:4px' },
+          `Per mese — ${metrica}. Arancione: mese critico. Verde: nella norma. `
+          + 'Serve a distinguere un problema permanente da un episodio.'));
       }
 
       // interventi già registrati su questa segnalazione
