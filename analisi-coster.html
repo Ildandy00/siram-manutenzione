@@ -84,6 +84,9 @@
   .syn .p2 { background: var(--yellow); }
   .syn .p3 { background: var(--green); }
   .syn .p0 { background: var(--bg4); color: var(--text); }
+  /* dati fermi: il colore della gravita' resta, ma il riquadro si vede spento e tratteggiato */
+  .syn button.stale { border-style: dashed; border-color: rgba(255,255,255,.45); opacity: .72; }
+  .syn .p0.stale { border-color: var(--border); }
 
   .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px;
           font-weight: 600; border: 1px solid var(--border); background: var(--bg3); color: var(--muted); }
@@ -967,13 +970,16 @@
       .sort((x, y) => (x.a.priorita === 9 ? 9 : x.a.priorita) - (y.a.priorita === 9 ? 9 : y.a.priorita)
         || String(x.p.sigla).localeCompare(String(y.p.sigla)))
       .forEach(({ p, a }) => {
+        // Il colore dice la gravita', sempre. I dati fermi non cancellano una
+        // segnalazione aperta: si vedono dal bordo tratteggiato e dalla scritta.
         const prio = a.n ? a.priorita : 0;
-        const classe = !p.fresh ? 'p0' : 'p' + prio;
-        const sotto = a.n ? `${a.n} azion${a.n === 1 ? 'e' : 'i'}` : (p.fresh ? 'nessuna azione' : 'dati fermi');
+        const classe = 'p' + prio + (p.fresh ? '' : ' stale');
+        const azioni_ = a.n ? `${a.n} azion${a.n === 1 ? 'e' : 'i'}` : 'nessuna azione';
+        const sotto = p.fresh ? azioni_ : `${azioni_} · dati fermi`;
         const b = el('button', { class: classe, onclick: () => vaiA(p.impianto_ref, 'Impianto') },
-          `${PRIORITA_SEGNO[p.fresh ? prio : 0]} ${p.sigla}`, el('small', { text: sotto }));
-        syn.append(conTip(b, `<b>${p.nome_impianto}</b><br>${p.commessa || ''}<br>${sotto}`
-          + (p.fresh ? '' : '<br>dati fermi da oltre 7 giorni')));
+          `${PRIORITA_SEGNO[prio]} ${p.sigla}`, el('small', { text: sotto }));
+        syn.append(conTip(b, `<b>${p.nome_impianto}</b><br>${p.commessa || ''}<br>${azioni_}`
+          + (p.fresh ? '' : '<br>dati fermi da oltre 7 giorni: le segnalazioni restano quelle dell’ultimo dato disponibile')));
       });
     v.append(el('div', { class: 'card' },
       el('h2', {}, 'Quadro sinottico', el('small', { text: 'un riquadro per impianto · clic per aprire la scheda' })),
@@ -982,7 +988,8 @@
         el('span', {}, el('i', { style: 'background: var(--red)' }), '▲ urgente'),
         el('span', {}, el('i', { style: 'background: var(--yellow)' }), '■ da programmare'),
         el('span', {}, el('i', { style: 'background: var(--green)' }), '● da monitorare'),
-        el('span', {}, el('i', { style: 'background: var(--bg4)' }), '· nessuna azione o dati fermi'))));
+        el('span', {}, el('i', { style: 'background: var(--bg4)' }), '· nessuna azione'),
+        el('span', {}, el('i', { style: 'background: transparent; border: 1px dashed rgba(255,255,255,.45)' }), 'bordo tratteggiato: dati fermi'))));
 
     // per tipo + cosa è cambiato
     const gruppi = [1, 2, 3].map((prio) => {
