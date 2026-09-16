@@ -1002,7 +1002,9 @@
     blocchi.sort((x, y) => y.urgenti - x.urgenti || y.azioni - x.azioni
       || x.nome.localeCompare(y.nome));
 
-    const riquadro = ({ p, a }) => {
+    // nome diverso da riquadro(): quello e' la funzione dei numeroni in alto,
+    // e una const con lo stesso nome la oscurerebbe in tutta questa funzione.
+    const riquadroImpianto = ({ p, a }) => {
       // Il colore dice la gravita', sempre. I dati fermi non cancellano una
       // segnalazione aperta: si vedono dal bordo tratteggiato e dalla scritta.
       const prio = a.n ? a.priorita : 0;
@@ -1018,7 +1020,7 @@
     const sinottico = el('div');
     blocchi.forEach((blocco) => {
       const syn = el('div', { class: 'syn' });
-      blocco.voci.forEach((voce) => syn.append(riquadro(voce)));
+      blocco.voci.forEach((voce) => syn.append(riquadroImpianto(voce)));
 
       const conta = [`${blocco.voci.length} impiant${blocco.voci.length === 1 ? 'o' : 'i'}`];
       if (blocco.urgenti) conta.push(`${blocco.urgenti} urgent${blocco.urgenti === 1 ? 'e' : 'i'}`);
