@@ -76,6 +76,10 @@
 
   /* Quadro sinottico */
   .syn { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .syn-gruppo + .syn-gruppo { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .syn-titolo { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 10px;
+                font-size: 12px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--accent); }
+  .syn-titolo small { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--muted); }
   .syn button { text-align: left; border-radius: 9px; border: 1px solid var(--border); padding: 8px 10px;
                 color: #1c1c1c; font: 600 13px 'Outfit', sans-serif; cursor: pointer; min-height: 56px; }
   .syn button small { display: block; font-weight: 500; font-size: 11px; opacity: .85; margin-top: 2px; }
@@ -227,6 +231,9 @@
   const PRIORITA_LABEL = { 1: 'Urgente', 2: 'Da programmare', 3: 'Da monitorare', 0: 'Nessuna azione' };
   const PRIORITA_SEGNO = { 1: '▲', 2: '■', 3: '●', 0: '·' };
 
+  // "***Pesaro - M028806" -> "Pesaro - M028806"
+  const nomeCommessa = (c) => (String(c || '').replace(/^\*+/, '').trim() || 'Senza commessa');
+
   const PRIORITA_PER_CODICE = {
     GENERATION_DEFICIT: 1, GENERATOR_UNDERPERFORMING: 1, HYDRAULIC_FLOW_ISSUE: 1,
     GENERATOR_UNDERPERFORMING_PAST: 3,
@@ -367,9 +374,17 @@
   function conTip(nodo, html) {
     nodo.addEventListener('mousemove', (e) => mostraTip(e, html));
     nodo.addEventListener('mouseleave', nascondiTip);
+    // Al clic la pagina si ridisegna e il nodo sparisce: il mouseleave non
+    // arriva mai e la finestrella resterebbe li' in mezzo. La chiudiamo qui.
+    nodo.addEventListener('click', nascondiTip);
     nodo.addEventListener('touchstart', (e) => mostraTip(e.touches[0], html), { passive: true });
     return nodo;
   }
+
+  // Reti di sicurezza: qualunque cosa succeda alla pagina, la finestrella sparisce.
+  window.addEventListener('scroll', nascondiTip, { passive: true });
+  window.addEventListener('blur', nascondiTip);
+  document.addEventListener('touchend', nascondiTip, { passive: true });
 
   // ============================================================
   // API
@@ -916,6 +931,7 @@
   // DISEGNO DELLE SCHEDE
   // ============================================================
   function disegna() {
+    nascondiTip();
     const v = vista();
     v.innerHTML = '';
     if (!S.dati) {
@@ -963,27 +979,59 @@
       riquadro(uniche.length, 'segnalazioni aperte', 'yellow'),
       riquadro(interventiRecenti, 'interventi registrati (30 giorni)', 'blue')));
 
-    // quadro sinottico
-    const syn = el('div', { class: 'syn' });
-    impianti.slice()
-      .map((p) => ({ p, a: azioni.get(p.codice_k) || { n: 0, priorita: 9 } }))
-      .sort((x, y) => (x.a.priorita === 9 ? 9 : x.a.priorita) - (y.a.priorita === 9 ? 9 : y.a.priorita)
-        || String(x.p.sigla).localeCompare(String(y.p.sigla)))
-      .forEach(({ p, a }) => {
-        // Il colore dice la gravita', sempre. I dati fermi non cancellano una
-        // segnalazione aperta: si vedono dal bordo tratteggiato e dalla scritta.
-        const prio = a.n ? a.priorita : 0;
-        const classe = 'p' + prio + (p.fresh ? '' : ' stale');
-        const azioni_ = a.n ? `${a.n} azion${a.n === 1 ? 'e' : 'i'}` : 'nessuna azione';
-        const sotto = p.fresh ? azioni_ : `${azioni_} · dati fermi`;
-        const b = el('button', { class: classe, onclick: () => vaiA(p.impianto_ref, 'Impianto') },
-          `${PRIORITA_SEGNO[prio]} ${p.sigla}`, el('small', { text: sotto }));
-        syn.append(conTip(b, `<b>${p.nome_impianto}</b><br>${p.commessa || ''}<br>${azioni_}`
-          + (p.fresh ? '' : '<br>dati fermi da oltre 7 giorni: le segnalazioni restano quelle dell’ultimo dato disponibile')));
-      });
+    // Quadro sinottico, un blocco per commessa: 114 riquadri tutti insieme
+    // non si leggono. Dentro ogni blocco prima gli impianti che chiedono
+    // qualcosa; i blocchi in ordine di urgenza.
+    const perCommessa = new Map();
+    impianti.forEach((p) => {
+      const nome = nomeCommessa(p.commessa);
+      if (!perCommessa.has(nome)) perCommessa.set(nome, []);
+      perCommessa.get(nome).push({ p, a: azioni.get(p.codice_k) || { n: 0, priorita: 9 } });
+    });
+
+    const blocchi = [...perCommessa.entries()].map(([nome, voci]) => {
+      voci.sort((x, y) => (x.a.priorita === 9 ? 9 : x.a.priorita) - (y.a.priorita === 9 ? 9 : y.a.priorita)
+        || String(x.p.sigla).localeCompare(String(y.p.sigla)));
+      return {
+        nome,
+        voci,
+        urgenti: voci.filter((x) => x.a.n && x.a.priorita === 1).length,
+        azioni: voci.reduce((somma, x) => somma + x.a.n, 0),
+      };
+    });
+    blocchi.sort((x, y) => y.urgenti - x.urgenti || y.azioni - x.azioni
+      || x.nome.localeCompare(y.nome));
+
+    const riquadro = ({ p, a }) => {
+      // Il colore dice la gravita', sempre. I dati fermi non cancellano una
+      // segnalazione aperta: si vedono dal bordo tratteggiato e dalla scritta.
+      const prio = a.n ? a.priorita : 0;
+      const classe = 'p' + prio + (p.fresh ? '' : ' stale');
+      const azioni_ = a.n ? `${a.n} azion${a.n === 1 ? 'e' : 'i'}` : 'nessuna azione';
+      const sotto = p.fresh ? azioni_ : `${azioni_} · dati fermi`;
+      const b = el('button', { class: classe, onclick: () => vaiA(p.impianto_ref, 'Impianto') },
+        `${PRIORITA_SEGNO[prio]} ${p.sigla}`, el('small', { text: sotto }));
+      return conTip(b, `<b>${p.nome_impianto}</b><br>${p.commessa || ''}<br>${azioni_}`
+        + (p.fresh ? '' : '<br>dati fermi da oltre 7 giorni: le segnalazioni restano quelle dell’ultimo dato disponibile'));
+    };
+
+    const sinottico = el('div');
+    blocchi.forEach((blocco) => {
+      const syn = el('div', { class: 'syn' });
+      blocco.voci.forEach((voce) => syn.append(riquadro(voce)));
+
+      const conta = [`${blocco.voci.length} impiant${blocco.voci.length === 1 ? 'o' : 'i'}`];
+      if (blocco.urgenti) conta.push(`${blocco.urgenti} urgent${blocco.urgenti === 1 ? 'e' : 'i'}`);
+      else if (blocco.azioni) conta.push(`${blocco.azioni} azion${blocco.azioni === 1 ? 'e' : 'i'}`);
+
+      sinottico.append(el('div', { class: 'syn-gruppo' },
+        el('h3', { class: 'syn-titolo' }, blocco.nome, el('small', { text: conta.join(' · ') })),
+        syn));
+    });
+
     v.append(el('div', { class: 'card' },
-      el('h2', {}, 'Quadro sinottico', el('small', { text: 'un riquadro per impianto · clic per aprire la scheda' })),
-      syn,
+      el('h2', {}, 'Quadro sinottico', el('small', { text: 'un riquadro per impianto, raggruppati per commessa · clic per aprire la scheda' })),
+      sinottico,
       el('div', { class: 'legend' },
         el('span', {}, el('i', { style: 'background: var(--red)' }), '▲ urgente'),
         el('span', {}, el('i', { style: 'background: var(--yellow)' }), '■ da programmare'),
