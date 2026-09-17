@@ -540,8 +540,12 @@
 
   function azioniPerImpianto() {
     const m = new Map();
+    // Chiave impianto_ref, non codice_k: 37 impianti su 114 (Misano, Verucchio,
+    // Corinaldo) il codice K non ce l'hanno, e con la chiave vuota finivano tutti
+    // nello stesso mucchio - percio' risultavano "nessuna azione" pur avendo
+    // segnalazioni aperte dentro la scheda.
     (S.dati.worklist || []).forEach((w) => {
-      const k = w.codice_k || '';
+      const k = w.impianto_ref || w.codice_k || '';
       const v = m.get(k) || { n: 0, priorita: 9 };
       v.n += 1;
       v.priorita = Math.min(v.priorita, num(w.priority) || 3);
@@ -969,7 +973,7 @@
       return q && (Date.now() - q.getTime()) < 30 * 864e5;
     }).length;
 
-    const conUrgenza = impianti.filter((p) => (azioni.get(p.codice_k) || {}).priorita === 1).length;
+    const conUrgenza = impianti.filter((p) => (azioni.get(p.impianto_ref) || {}).priorita === 1).length;
     const aggiornati = impianti.filter((p) => p.fresh).length;
 
     v.append(el('div', { class: 'tiles' },
@@ -986,7 +990,7 @@
     impianti.forEach((p) => {
       const nome = nomeCommessa(p.commessa);
       if (!perCommessa.has(nome)) perCommessa.set(nome, []);
-      perCommessa.get(nome).push({ p, a: azioni.get(p.codice_k) || { n: 0, priorita: 9 } });
+      perCommessa.get(nome).push({ p, a: azioni.get(p.impianto_ref) || { n: 0, priorita: 9 } });
     });
 
     const blocchi = [...perCommessa.entries()].map(([nome, voci]) => {
@@ -1113,7 +1117,7 @@
       el('div', { class: 'tbl-wrap' }, tabella(
         ['Stato', 'Codice', 'Impianto', 'Azioni', 'Circuiti', 'Zone', 'Topologia', 'Dati', 'Ultimo dato'],
         impianti.slice().map((p) => {
-          const a = azioni.get(p.codice_k) || { n: 0, priorita: 0 };
+          const a = azioni.get(p.impianto_ref) || { n: 0, priorita: 0 };
           const prio = a.n ? a.priorita : 0;
           return {
             ord: [a.n ? a.priorita : 9, p.sigla],
