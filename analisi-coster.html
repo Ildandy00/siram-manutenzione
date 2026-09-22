@@ -214,6 +214,49 @@
 @media(max-width:640px){.sk-per{grid-template-columns:1fr;gap:4px}}
 
   .sk-diario .small{font-size:12.5px}
+
+/* ---------- SCHEMA DELL'IMPIANTO (v5) ----------
+   Il disegno si costruisce da solo con la topologia del motore:
+   generazione -> distribuzione -> circuiti -> zone. */
+.sch{overflow-x:auto;padding-bottom:6px}
+.sch-in{min-width:max-content}
+.sch-riga{display:flex;gap:10px;align-items:stretch}
+.sch-box{position:relative;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:9px 12px 10px;min-width:180px}
+.sch-box.gen{border-left:3px solid var(--orange)}
+.sch-box .tt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  display:flex;align-items:center;gap:8px;justify-content:space-between;white-space:nowrap}
+.sch-p{display:grid;grid-template-columns:62px 1fr;gap:4px 8px;font-size:12px;margin-top:6px;align-items:baseline}
+.sch-p dt{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+.sch-p dd{margin:0;overflow-wrap:anywhere}
+.sch-p dd.no{color:var(--muted);font-style:italic}
+.sch-p dd .seg{color:var(--red);font-size:10px;margin-left:4px;white-space:nowrap}
+.sch-bus{position:relative;height:3px;background:var(--bg4);border-radius:2px;margin:16px 0 0}
+.sch-bus .et{position:absolute;top:-8px;left:10px;background:var(--bg2);padding:0 8px;font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.sch-bus .st{position:absolute;top:-16px;left:90px;width:2px;height:16px;background:var(--bg4)}
+.sch-circ-riga{display:flex;gap:10px;padding-top:18px;align-items:flex-start}
+.sch-circ{position:relative;flex:0 0 244px;background:var(--bg3);border:1px solid var(--border);
+  border-left:3px solid var(--bg4);border-radius:10px;padding:9px 12px 10px}
+.sch-circ::before{content:'';position:absolute;top:-18px;left:calc(50% - 1px);width:2px;height:18px;background:var(--bg4)}
+.sch-circ.p1{border-left-color:var(--red)}
+.sch-circ.p2{border-left-color:var(--yellow)}
+.sch-circ.p3{border-left-color:var(--green)}
+.sch-circ.clic{cursor:pointer}
+.sch-circ.clic:hover{background:var(--bg4)}
+.sch-nome{font-weight:600;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis}
+.sch-zone{margin-top:9px;border-top:1px dashed var(--border);padding-top:8px}
+.sch-zone .h{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.sch-z{font-size:12px;padding:6px 8px;background:rgba(255,255,255,.05);border-radius:7px;margin-top:5px}
+.sch-z b{font-weight:600}
+.sch-z small{display:block;color:var(--muted);font-size:11px;margin-top:2px;overflow-wrap:anywhere}
+.sch-z.dubbia{background:rgba(200,180,100,.08);border:1px dashed rgba(200,180,100,.45)}
+.sch-orf{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sch-orf .sch-z{flex:0 0 244px;margin-top:0}
+.sch-vuoto{color:var(--muted);font-size:12px;font-style:italic;padding:8px 0 0}
+.sch-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:14px;
+  border-top:1px solid var(--border);padding-top:10px}
+.sch-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 </style>
 </head>
 <body>
@@ -1209,6 +1252,137 @@
   }
 
   // ---------------- IMPIANTO ----------------
+  // ---------------- SCHEMA DELL'IMPIANTO ----------------
+  // Nomi dei point come sul sinottico Coster; il colore del bordo e' la
+  // priorita' della segnalazione aperta piu' grave su quel pezzo.
+  function pulisciNome(t) {
+    return String(t || '').replace(/\s*-\s*Percentuale\s*$/i, '').replace(/\s*\(Percentuale\)\s*/i, ' ').trim();
+  }
+  function rigaPunto(etichetta, valore, mancante, seg) {
+    const dd = valore
+      ? el('dd', {}, pulisciNome(valore), seg ? el('span', { class: 'seg', text: '● ' + seg }) : null)
+      : el('dd', { class: 'no', text: mancante || 'assente' });
+    return [el('dt', { text: etichetta }), dd];
+  }
+  function disegnaSchema(schema, findings, vai) {
+    const wrap = el('div', { class: 'sch' }); const inn = el('div', { class: 'sch-in' }); wrap.append(inn);
+    const g = schema.generazione || {};
+
+    const perCirc = {}, perZona = {}, perPunto = {};
+    (findings || []).forEach((f) => {
+      const pr = prioritaDi(f);
+      if (f.scope_type === 'circuit') { const x = perCirc[f.scope_id] = perCirc[f.scope_id] || { n: 0, p: 3 }; x.n++; x.p = Math.min(x.p, pr); }
+      else if (f.scope_type === 'zone') { const x = perZona[f.scope_id] = perZona[f.scope_id] || { n: 0, p: 3 }; x.n++; x.p = Math.min(x.p, pr); }
+      else if (f.scope_type === 'point') {
+        const nome = String(f.scope_label || '').split('·').pop().trim().toLowerCase();
+        if (nome) {
+          perPunto[nome] = f.finding_code === 'SENSOR_OUT_OF_RANGE' ? 'fuori scala'
+            : f.finding_code === 'SENSOR_STUCK' ? 'sonda ferma' : 'segnalata';
+        }
+      }
+    });
+    const segDi = (nome) => perPunto[String(pulisciNome(nome)).toLowerCase()] || null;
+
+    const riga = el('div', { class: 'sch-riga' });
+    (g.caldaie || []).forEach((c) => {
+      riga.append(el('div', { class: 'sch-box gen' },
+        el('div', { class: 'tt' }, el('span', { text: c.nome || 'Generatore' })),
+        el('dl', { class: 'sch-p' },
+          ...rigaPunto('misura', c.misura, 'nessuna sonda', segDi(c.misura)),
+          ...rigaPunto('richiesta', c.setpoint, 'nessun setpoint', segDi(c.setpoint)))));
+    });
+    if (!(g.caldaie || []).length) {
+      riga.append(el('div', { class: 'sch-box gen' },
+        el('div', { class: 'tt' }, el('span', { text: 'Generazione' })),
+        el('div', { class: 'sch-vuoto', text: 'nessuna sonda di caldaia riconosciuta' })));
+    }
+    (g.acs || []).forEach((c) => riga.append(el('div', { class: 'sch-box' },
+      el('div', { class: 'tt' }, el('span', { text: 'Acqua calda' })),
+      el('dl', { class: 'sch-p' },
+        ...rigaPunto('misura', c.misura, '—', segDi(c.misura)),
+        ...rigaPunto('richiesta', c.setpoint, '—', segDi(c.setpoint))))));
+    (g.collettore || []).forEach((c) => riga.append(el('div', { class: 'sch-box' },
+      el('div', { class: 'tt' }, el('span', { text: 'Collettore' })),
+      el('dl', { class: 'sch-p' },
+        ...rigaPunto('misura', c.misura, '—', segDi(c.misura)),
+        ...rigaPunto('richiesta', c.setpoint, '—', segDi(c.setpoint))))));
+    if (g.esterna) {
+      riga.append(el('div', { class: 'sch-box' },
+        el('div', { class: 'tt' }, el('span', { text: 'Esterna' })),
+        el('dl', { class: 'sch-p' }, ...rigaPunto('misura', g.esterna, '—', segDi(g.esterna)))));
+    }
+    inn.append(riga);
+
+    const circuiti = schema.circuiti || [];
+    inn.append(el('div', { class: 'sch-bus' }, el('span', { class: 'st' }),
+      el('span', { class: 'et', text: circuiti.length ? 'distribuzione' : 'nessun circuito' })));
+
+    const zonePerId = {}; (schema.zone || []).forEach((z) => { zonePerId[z.id] = z; });
+    const rigaC = el('div', { class: 'sch-circ-riga' });
+    circuiti.forEach((c) => {
+      const s = perCirc[c.id];
+      const box = el('div', {
+        class: 'sch-circ' + (s ? ' p' + s.p : '') + (s && vai ? ' clic' : ''),
+        title: s && vai ? 'Apri le schede intervento' : null,
+        onclick: (s && vai) ? () => vai() : null,
+      });
+      box.append(el('div', { class: 'tt' },
+        el('span', { class: 'sch-nome', text: c.label }),
+        s ? chip(s.n + (s.n > 1 ? ' segnalazioni' : ' segnalazione'), 'p' + s.p) : chip(pct(c.conf))));
+      box.append(el('dl', { class: 'sch-p' },
+        ...rigaPunto('mandata', c.mandata, 'nessuna sonda', segDi(c.mandata)),
+        ...rigaPunto('richiesta', c.setpoint, 'nessun setpoint', segDi(c.setpoint)),
+        ...(c.valvola ? rigaPunto('valvola', c.valvola, '', segDi(c.valvola)) : []),
+        ...((c.pompe || []).length ? rigaPunto('pompa', c.pompe.join(', '), '') : []),
+        ...((c.ritorni || []).length ? rigaPunto('ritorno', c.ritorni.join(', '), '') : [])));
+      const zone = (c.zone || []).map((id) => zonePerId[id]).filter(Boolean);
+      if ((schema.zone || []).length) {
+        const zbox = el('div', { class: 'sch-zone' },
+          el('div', { class: 'h', text: zone.length ? 'zone servite' : 'nessuna zona collegata' }));
+        zone.forEach((z) => {
+          const sz = perZona[z.id];
+          zbox.append(el('div', { class: 'sch-z' + (sz ? ' dubbia' : '') },
+            el('b', { text: z.label }),
+            (z.sonde || []).length ? el('small', { text: 'ambiente: ' + z.sonde.map(pulisciNome).join(', ') }) : null,
+            (z.richiesta || []).length ? el('small', { text: 'richiesta: ' + z.richiesta.map(pulisciNome).join(', ') }) : null,
+            (!(z.sonde || []).length && !(z.richiesta || []).length) ? el('small', { text: 'nessuna sonda' }) : null));
+        });
+        box.append(zbox);
+      }
+      rigaC.append(box);
+    });
+    if (circuiti.length) inn.append(rigaC);
+    else inn.append(el('div', { class: 'sch-vuoto', text: 'Il motore non ha riconosciuto circuiti su questo impianto.' }));
+    if (circuiti.length && !(schema.zone || []).length) {
+      inn.append(el('div', { class: 'sch-vuoto', text: 'Nessuna zona: i circuiti ci sono ma non si sa quali ambienti servono. '
+        + 'Le zone si assegnano a mano in config\\zone_manual_config.xlsx.' }));
+    }
+
+    const orfane = (schema.zone || []).filter((z) => z.stato !== 'assigned' || !z.circuito_id);
+    if (orfane.length) {
+      const box = el('div', { class: 'sch-orf' });
+      orfane.forEach((z) => box.append(el('div', { class: 'sch-z dubbia' },
+        el('b', { text: z.label }),
+        el('small', { text: z.stato === 'ambiguous'
+          ? 'zona ambigua — il candidato più probabile è "' + (z.circuito || z.alternativa || '?') + '"'
+          : 'zona non assegnata a nessun circuito' }),
+        (z.richiesta || []).length ? el('small', { text: 'richiesta: ' + z.richiesta.map(pulisciNome).join(', ') }) : null)));
+      inn.append(el('div', {}, el('div', { class: 'sch-bus', style: 'margin-top:18px' },
+        el('span', { class: 'et', text: 'zone da chiarire' })), box));
+    }
+
+    const pu = schema.punti || {};
+    wrap.append(el('div', { class: 'sch-leg' },
+      el('span', {}, el('i', { style: 'background:var(--red)' }), 'urgente'),
+      el('span', {}, el('i', { style: 'background:var(--yellow)' }), 'da programmare'),
+      el('span', {}, el('i', { style: 'background:var(--green)' }), 'da monitorare'),
+      el('span', { text: 'la percentuale è la confidenza con cui il motore ha ricostruito il circuito' }),
+      el('span', { text: 'i nomi sono quelli del sinottico Coster' }),
+      pu.totali ? el('span', { text: `${pu.totali} point letti, ${pu.senza_ruolo || 0} ancora senza ruolo` }) : null,
+      circuiti.length > 4 ? el('span', { text: '→ scorri di lato per gli altri circuiti' }) : null));
+    return wrap;
+  }
+
   function vistaImpianto(v, p) {
     if (!p) return;
     const d = dettagli(p.impianto_ref);
@@ -1229,6 +1403,15 @@
       v.append(el('div', { class: 'banner warn' },
         `${p.ambiguous_mapping_count || 0} zone ambigue, ${p.unassigned_zone_count || 0} non assegnate: `
         + 'la topologia va verificata a mano prima di fidarsi dei KPI di quelle zone.'));
+    }
+
+    if (d.schema) {
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, 'Schema dell’impianto',
+          el('small', { text: 'come il motore lo ha ricostruito dai point Coster' })),
+        disegnaSchema(d.schema,
+          (S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref),
+          () => vaiA(p.impianto_ref, 'Interventi'))));
     }
 
     v.append(el('div', { class: 'cols11' },
