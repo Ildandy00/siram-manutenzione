@@ -176,6 +176,44 @@
   /* Accesso */
   #gate { max-width: 380px; margin: 60px auto; }
   #app[hidden] { display: none; }
+
+  /* Schede interventi (v4): segnalazioni riunite per causa, periodi e calendario */
+
+.scheda{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.scheda.p1{border-left-color:var(--red)}.scheda.p2{border-left-color:var(--yellow)}.scheda.p3{border-left-color:var(--green)}
+.sk-testa{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sk-chip{display:inline-flex;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg3);color:var(--muted)}
+.sk-chip.red{color:var(--red);border-color:rgba(200,120,120,.4);background:rgba(200,120,120,.12)}
+.sk-chip.yellow{color:var(--yellow);border-color:rgba(200,180,100,.4);background:rgba(200,180,100,.12)}
+.sk-chip.green{color:var(--green);border-color:rgba(143,190,122,.4);background:rgba(143,190,122,.12)}
+.sk-titolo{font-size:18px;line-height:1.3;margin:8px 0 4px}
+.sk-sotto{color:var(--accent);margin:0 0 14px;max-width:880px}
+.sk-numeri{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:6px}
+.sk-num{background:var(--bg3);border-radius:10px;padding:10px 14px}.sk-num .v{font-size:20px;font-weight:700;line-height:1.2}.sk-num .l{font-size:12px;color:var(--muted)}
+.sk-h{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+.sk-h small{text-transform:none;letter-spacing:0;font-weight:400}
+.sk-periodi{display:flex;flex-direction:column;gap:8px}
+.sk-per{display:grid;grid-template-columns:180px 1fr;gap:14px;background:var(--bg3);border-radius:10px;padding:10px 14px;border-left:4px solid var(--border)}
+.sk-per .q small{display:block;color:var(--muted);font-size:12px}.sk-per p{margin:0}.sk-per .d{color:var(--muted);font-size:12px;margin-top:3px}
+.sk-per.r{border-left-color:var(--red)}.sk-per.o{border-left-color:var(--orange)}.sk-per.y{border-left-color:var(--yellow)}.sk-per.g{border-left-color:var(--green)}
+.sk-cal{display:flex;gap:16px;flex-wrap:wrap}.sk-mese .mt{font-size:12px;color:var(--accent);font-weight:600;margin-bottom:5px}
+.sk-griglia{display:grid;grid-template-columns:repeat(7,18px);gap:3px}
+.sk-griglia span{width:18px;height:18px;border-radius:4px;font-size:9px;line-height:18px;text-align:center;color:rgba(0,0,0,.6);background:#4a4a4a;cursor:pointer}
+.sk-griglia span.t{background:transparent;color:#888;cursor:default}.sk-griglia span.fuori{background:transparent;color:#666;cursor:default}
+.sk-griglia span.n{color:#888}.sk-griglia span.r{background:var(--red)}.sk-griglia span.o{background:var(--orange)}
+.sk-griglia span.y{background:var(--yellow)}.sk-griglia span.g{background:var(--green)}.sk-griglia span.sel{outline:2px solid #fff;outline-offset:1px}
+.sk-leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.sk-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:#4a4a4a}
+.sk-leg i.r{background:var(--red)}.sk-leg i.o{background:var(--orange)}.sk-leg i.y{background:var(--yellow)}.sk-leg i.g{background:var(--green)}
+.sk-giorno{margin-top:10px;background:var(--bg3);border-radius:10px;padding:10px 14px;font-size:13px}
+.sk-lista{margin:0;padding-left:20px}.sk-lista li{margin-bottom:6px}
+.sk-det{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.sk-det summary{cursor:pointer;color:var(--muted);font-size:13px;font-weight:600}
+.sk-det ul{color:var(--muted);font-size:12.5px;margin:8px 0 0;padding-left:20px}.sk-det li{margin-bottom:6px}
+.sk-det .mm{font-size:12px;opacity:.8;margin-top:2px}
+@media(max-width:640px){.sk-per{grid-template-columns:1fr;gap:4px}}
+
+  .sk-diario .small{font-size:12.5px}
 </style>
 </head>
 <body>
@@ -235,6 +273,8 @@
   const nomeCommessa = (c) => (String(c || '').replace(/^\*+/, '').trim() || 'Senza commessa');
 
   const PRIORITA_PER_CODICE = {
+    // una sonda in avaria viene prima: finche' c'e', i KPI che la leggono non valgono
+    SENSOR_OUT_OF_RANGE: 1, SENSOR_STUCK: 2,
     GENERATION_DEFICIT: 1, GENERATOR_UNDERPERFORMING: 1, HYDRAULIC_FLOW_ISSUE: 1,
     GENERATOR_UNDERPERFORMING_PAST: 3,
     UPSTREAM_REQUEST_CAPPED: 2, HYDRAULIC_UPSTREAM_LIMIT: 2, THERMAL_EFFICIENCY_DRIFT: 2,
@@ -244,6 +284,8 @@
   };
 
   const CODICE_LABEL = {
+    SENSOR_OUT_OF_RANGE: 'Sonda fuori scala',
+    SENSOR_STUCK: 'Sonda ferma',
     GENERATION_DEFICIT: 'Generatore sotto la domanda', GENERATOR_UNDERPERFORMING: 'Generatore sotto richiesta',
     GENERATOR_UNDERPERFORMING_PAST: 'Generatore sotto richiesta (episodio chiuso)',
     HYDRAULIC_FLOW_ISSUE: 'Portata insufficiente', UPSTREAM_REQUEST_CAPPED: 'Richiesta caldaia limitata',
@@ -523,7 +565,18 @@
   // ============================================================
   // CALCOLI COMUNI
   // ============================================================
-  function prioritaDi(codice) { return PRIORITA_PER_CODICE[codice] || 3; }
+  // La priorita' di default e' quella del TIPO di segnalazione, ma il motore puo'
+  // averne calcolata una sul caso singolo guardando l'entita': un generatore 3 °C
+  // sotto la richiesta e uno che ne perde 25 portano lo stesso codice e non sono
+  // la stessa urgenza. Se c'e', vince quella.
+  function prioritaDi(f) {
+    if (f && typeof f === 'object') {
+      const p = num((f.evidence || {}).priorita);
+      if (p >= 1 && p <= 3) return p;
+      return PRIORITA_PER_CODICE[f.finding_code] || 3;
+    }
+    return PRIORITA_PER_CODICE[f] || 3;
+  }
 
   function findingsUnici(righe) {
     const visti = new Set();
@@ -534,7 +587,7 @@
       visti.add(k);
       out.push(f);
     });
-    return out.sort((a, b) => prioritaDi(a.finding_code) - prioritaDi(b.finding_code)
+    return out.sort((a, b) => prioritaDi(a) - prioritaDi(b)
       || String(a.scope_label).localeCompare(String(b.scope_label)));
   }
 
@@ -1048,7 +1101,7 @@
     // per tipo + cosa è cambiato
     const gruppi = [1, 2, 3].map((prio) => {
       const conteggio = new Map();
-      uniche.filter((f) => prioritaDi(f.finding_code) === prio).forEach((f) => {
+      uniche.filter((f) => prioritaDi(f) === prio).forEach((f) => {
         const et = CODICE_LABEL[f.finding_code] || f.finding_code;
         conteggio.set(et, (conteggio.get(et) || 0) + 1);
       });
@@ -1208,18 +1261,99 @@
   const accorcia = (t, n) => (String(t || '').length > n ? String(t).slice(0, n - 1) + '…' : String(t || ''));
 
   // ---------------- INTERVENTI ----------------
+function disegnaScheda(s, el, extra) {
+    const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const GS=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+    const PRI={1:['Urgente','red'],2:['Da programmare','yellow'],3:['Da monitorare','green']};
+    const card=el('div',{class:'scheda p'+s.priorita});
+    const [pl,pc]=PRI[s.priorita]||PRI[3];
+    card.append(el('div',{class:'sk-testa'}, el('span',{class:'sk-chip '+pc,text:pl}), el('span',{class:'sk-chip',text:s.etichetta||s.ambito}),
+      ...(s.segnalazioni||[]).length>1?[el('span',{class:'sk-chip',text:`${s.segnalazioni.length} segnalazioni riunite`})]:[]));
+    card.append(el('h3',{class:'sk-titolo',text:s.titolo}));
+    if(s.riassunto) card.append(el('p',{class:'sk-sotto',text:s.riassunto}));
+    if((s.numeri||[]).length) card.append(el('div',{class:'sk-numeri'},...s.numeri.map(([v,l])=>el('div',{class:'sk-num'},el('div',{class:'v',text:v}),el('div',{class:'l',text:l})))));
+    if((s.sonde||[]).length){
+      card.append(el('h4',{class:'sk-h',text:'Sonde'}));
+      card.append(el('div',{class:'sk-periodi'},...s.sonde.map(r=>el('div',{class:'sk-per r'},el('div',{class:'q'},el('b',{text:r.nome}),el('small',{text:r.ambito})),el('div',{},el('p',{text:r.problema}),el('div',{class:'d',text:r.consiglio}))))));
+    }
+    if((s.periodi||[]).length){
+      card.append(el('h4',{class:'sk-h',text:s.famiglia==='preaccensione'?'Ripartenze in ritardo':'Cosa è successo, periodo per periodo'}));
+      card.append(el('div',{class:'sk-periodi'},...s.periodi.map(p=>el('div',{class:'sk-per '+p.classe},
+        el('div',{class:'q'},el('b',{text:p.quando}),el('small',{text:p.conta||''})),
+        el('div',{},el('p',{},el('b',{text:p.titolo+(p.testo?'. ':'')}),p.testo||''),p.dati?el('div',{class:'d',text:p.dati}):null)))));
+    }
+    if((s.conseguenze||[]).length){
+      card.append(el('h4',{class:'sk-h',text:'Conseguenze sui circuiti'}));
+      card.append(el('ul',{class:'sk-lista'},...s.conseguenze.map(t=>el('li',{text:t}))));
+    }
+    if(s.calendario){
+      card.append(el('h4',{class:'sk-h'},'Giorno per giorno ',el('small',{text:'— tocca un giorno per i valori'})));
+      const box=el('div',{class:'sk-giorno',text:'Tocca un giorno del calendario.'});
+      const cal=el('div',{class:'sk-cal'}); let sel=null;
+      const d1=new Date(s.calendario.da+'T12:00'), d2=new Date(s.calendario.a+'T12:00');
+      let y=d1.getFullYear(), m=d1.getMonth();
+      while(y<d2.getFullYear()||(y===d2.getFullYear()&&m<=d2.getMonth())){
+        const g=el('div',{class:'sk-griglia'});
+        ['L','M','M','G','V','S','D'].forEach(x=>g.append(el('span',{class:'t',text:x})));
+        const primo=(new Date(y,m,1).getDay()+6)%7; for(let i=0;i<primo;i++) g.append(el('span',{class:'t'}));
+        const ng=new Date(y,m+1,0).getDate();
+        for(let d=1;d<=ng;d++){
+          const k=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`, v=s.calendario.giorni[k];
+          const c=el('span',{class:v?v[0]:'fuori',text:String(d)});
+          if(v){ const yy=y,mm=m,dd=d; c.addEventListener('click',()=>{ if(sel) sel.classList.remove('sel'); sel=c; c.classList.add('sel');
+            const dt=new Date(yy,mm,dd); box.innerHTML=''; box.append(el('b',{text:`${GS[dt.getDay()]} ${dd} ${MESI[mm]} ${yy}`}),' · '+v[1]); }); }
+          g.append(c);
+        }
+        cal.append(el('div',{class:'sk-mese'},el('div',{class:'mt',text:`${MESI[m]} ${y}`}),g));
+        m++; if(m>11){m=0;y++;}
+      }
+      card.append(cal);
+      if((s.legenda||[]).length) card.append(el('div',{class:'sk-leg'},...s.legenda.map(([c,t])=>el('span',{},el('i',{class:c}),t))));
+      card.append(box);
+    }
+    if((s.controlli||[]).length){
+      card.append(el('h4',{class:'sk-h',text:'Cosa controllare'}));
+      card.append(el('ul',{class:'sk-lista'},...s.controlli.map(t=>el('li',{html:t}))));
+    }
+    if(extra && extra.diarioVoci) card.append(extra.diarioVoci);
+    const seg=el('details',{class:'sk-det'},el('summary',{text:`Segnalazioni del motore riunite in questa scheda (${(s.segnalazioni||[]).length})`}),
+      el('ul',{},...(s.segnalazioni||[]).map(x=>el('li',{},el('b',{text:`${x.ambito} · ${x.etichetta}`}),x.quanto?` · ${x.quanto}`:'',el('div',{class:'mm',text:x.messaggio_motore||''})))));
+    card.append(seg);
+    if((s.calcolo||[]).length) card.append(el('details',{class:'sk-det'},el('summary',{text:'Come è stato calcolato'}),el('ul',{},...s.calcolo.map(t=>el('li',{text:t})))));
+    if(extra && extra.form) card.append(el('details',{class:'sk-det'},el('summary',{text:'Registra intervento'}),extra.form));
+    return card;
+  }
+
   function vistaInterventi(v, p) {
     if (!p) return;
     const findings = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref));
+    const schede = (S.dati.schede || []).filter((s) => s.impianto_ref === p.impianto_ref)
+      .sort((a, b) => (a.priorita - b.priorita) || (a.famiglia === 'generatore' ? -1 : b.famiglia === 'generatore' ? 1 : 0));
     v.append(el('div', { class: 'card' }, el('h2', {}, `Interventi — ${p.sigla}`,
       el('small', { text: p.nome_impianto }))));
 
-    if (!findings.length) {
+    if (!findings.length && !schede.length) {
       v.append(el('div', { class: 'banner ok', text: 'Nessuna segnalazione aperta su questo impianto nella finestra analizzata.' }));
     }
 
-    findings.forEach((f) => {
-      const prio = prioritaDi(f.finding_code);
+    // v4: prima le schede leggibili; le segnalazioni già riunite in una scheda non si ripetono sotto
+    const coperti = new Set();
+    schede.forEach((s) => (s.segnalazioni || []).forEach((x) => coperti.add(x.finding_key)));
+    schede.forEach((s) => {
+      const ambito = String((s.diario || {}).ambito || 'impianto').toLowerCase();
+      const voci = (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k
+        && (!e.finding_code || (s.codici || []).includes(e.finding_code))
+        && (!e.ambito || String(e.ambito).toLowerCase() === ambito));
+      const diarioVoci = voci.length ? el('div', { class: 'sk-diario' },
+        el('h4', { class: 'sk-h', text: 'Interventi già registrati' }),
+        ...voci.map((e) => { const [testo, classe] = verdettoIntervento(e);
+          return el('div', { class: 'small', style: 'margin-top:6px' }, `🔧 ${e.data} — ${e.intervento} `, chip(testo, classe)); })) : null;
+      v.append(disegnaScheda(s, el, { diarioVoci,
+        form: formDiario(p, (s.diario || {}).ambito || 'impianto', (s.diario || {}).codice || '') }));
+    });
+
+    findings.filter((f) => !coperti.has(f.finding_key)).forEach((f) => {
+      const prio = prioritaDi(f);
       const card = el('div', { class: 'item p' + prio });
       card.append(el('h4', {}, f.scope_label || 'impianto', chip(`${PRIORITA_SEGNO[prio]} ${PRIORITA_LABEL[prio]}`, 'p' + prio)));
       card.append(el('p', { text: verdettoChiaro(f.finding_code, f.evidence, f.title) }));
