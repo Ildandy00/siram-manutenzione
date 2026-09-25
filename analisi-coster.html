@@ -1359,16 +1359,19 @@
     }
 
     const orfane = (schema.zone || []).filter((z) => z.stato !== 'assigned' || !z.circuito_id);
+    const senzaCircuito = orfane.filter((z) => z.stato === 'no_circuit');
     if (orfane.length) {
       const box = el('div', { class: 'sch-orf' });
       orfane.forEach((z) => box.append(el('div', { class: 'sch-z dubbia' },
         el('b', { text: z.label }),
         el('small', { text: z.stato === 'ambiguous'
           ? 'zona ambigua — il candidato più probabile è "' + (z.circuito || z.alternativa || '?') + '"'
-          : 'zona non assegnata a nessun circuito' }),
+          : z.stato === 'no_circuit'
+            ? 'senza circuito con sonda di mandata (circuito diretto o aerotermi): verificato'
+            : 'zona non assegnata a nessun circuito' }),
         (z.richiesta || []).length ? el('small', { text: 'richiesta: ' + z.richiesta.map(pulisciNome).join(', ') }) : null)));
       inn.append(el('div', {}, el('div', { class: 'sch-bus', style: 'margin-top:18px' },
-        el('span', { class: 'et', text: 'zone da chiarire' })), box));
+        el('span', { class: 'et', text: senzaCircuito.length === orfane.length ? 'zone senza circuito proprio' : 'zone da chiarire' })), box));
     }
 
     const pu = schema.punti || {};
@@ -1424,7 +1427,7 @@
         (d.zone || []).length ? tabella(['Zona', 'Sonde', 'Richiesta', 'Mapping', 'Circuito'],
           (d.zone || []).map((z) => ({
             celle: [z.zone_label, String(z.sonde || 0), si(z.richiesta),
-              ({ assigned: 'assegnata', ambiguous: 'ambigua', unassigned: 'non assegnata' })[z.mapping_status] || '—',
+              ({ assigned: 'assegnata', ambiguous: 'ambigua', unassigned: 'non assegnata', no_circuit: 'senza circuito' })[z.mapping_status] || '—',
               z.circuit_label || '—'],
           })), [1]) : el('p', { class: 'muted', text: 'Nessuna zona rilevata.' }))));
 
