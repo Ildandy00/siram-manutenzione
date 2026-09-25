@@ -461,10 +461,11 @@
 
     const c = L.contatori.find(x => x.id === idContatore);
     if (c && c.ultimaLettura !== null && val < c.ultimaLettura) {
-      const ok = confirm(
-        'La nuova lettura (' + fmtNum(val) + ') \u00E8 minore della precedente (' + fmtNum(c.ultimaLettura) + ').\n\n' +
-        'Giro di quadrante, contatore sostituito o errore di battitura?\n\nSalvo lo stesso?');
-      if (!ok) { inp.focus(); return; }
+      es.className = 'let-ct-esito warn';
+      es.textContent = '\u26A0 Lettura inferiore alla precedente (' + fmtNum(c.ultimaLettura) + '): non salvabile. Ricontrolla il contatore.';
+      avviso('Lettura inferiore alla precedente: non salvata', 'err');
+      inp.focus();
+      return;
     }
 
     // Evento e commento dai pulsanti
