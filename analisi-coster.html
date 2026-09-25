@@ -212,6 +212,40 @@
 .sk-det ul{color:var(--muted);font-size:12.5px;margin:8px 0 0;padding-left:20px}.sk-det li{margin-bottom:6px}
 .sk-det .mm{font-size:12px;opacity:.8;margin-top:2px}
 @media(max-width:640px){.sk-per{grid-template-columns:1fr;gap:4px}}
+/* Scheda v2 (26/09/2026): vista semplice. Freddo = blu (validato su #444: 2a78d6 / 6da7ec / b7d3f6) */
+.scheda.nuova{--cf1:#2a78d6;--cf2:#6da7ec;--cf3:#b7d3f6;--cc:#d95926;border-left-width:6px;padding:18px 20px 14px}
+.scheda.nuova.c-verde{--c:var(--green);border-left-color:var(--green)}.scheda.nuova.c-giallo{--c:var(--yellow);border-left-color:var(--yellow)}
+.scheda.nuova.c-arancio{--c:var(--orange);border-left-color:var(--orange)}.scheda.nuova.c-rosso{--c:var(--red);border-left-color:var(--red)}
+.sk-sem{display:inline-flex;align-items:center;gap:7px;padding:3px 12px 3px 8px;border-radius:999px;font-weight:700;font-size:12.5px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.sk-sem::before{content:"";width:11px;height:11px;border-radius:50%;background:var(--c)}
+.sk-dove{color:var(--muted);font-size:12.5px}
+.sk-titolo2{font-size:21px;line-height:1.25;margin:8px 0 4px;font-weight:700}
+.sk-cons{margin:0 0 12px;font-size:14.5px;max-width:900px}
+.sk-kpis{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.sk-kpi{flex:1 1 170px;background:var(--bg3);border-radius:10px;padding:9px 14px}
+.sk-kpi .k{display:block;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.sk-kpi b{display:block;font-size:24px;line-height:1.15;color:var(--c)}.sk-kpi b small{font-size:14px;color:var(--muted);font-weight:600}
+.sk-kpi.ok b{color:var(--green)}.sk-kpi.f1 b,.sk-kpi.f2 b,.sk-kpi.f3 b{color:var(--cf2)}
+.sk-kpi .t{font-size:12.5px;color:var(--muted)}
+.sk-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:0 5px;margin-right:6px;vertical-align:1px}
+.sk-gtit{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline;font-size:13px;margin-top:4px}
+.sk-leg2{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted)}
+.sk-leg2 span{display:inline-flex;align-items:center;gap:5px}.sk-leg2 i{display:inline-block;width:9px;height:9px;border-radius:50%}
+.sk-graf{width:100%;min-height:40px;touch-action:pan-y}.sk-graf svg{display:block;width:100%}
+.sk-lettura{font-size:12.5px;min-height:18px;color:var(--accent)}
+.sk-lun{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+.sk-lun span{font-size:12px;padding:3px 8px;border-radius:7px;background:color-mix(in srgb,var(--green) 14%,transparent);border-left:4px solid var(--green)}
+.sk-lun span.f1,.sk-lun span.f2,.sk-lun span.f3{background:rgba(57,135,229,.16)}
+.sk-lun span.f1{border-left-color:var(--cf1)}.sk-lun span.f2{border-left-color:var(--cf2)}.sk-lun span.f3{border-left-color:var(--cf3);font-weight:600}
+.sk-az{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;border-radius:10px;padding:10px 14px;margin:12px 0 6px;background:color-mix(in srgb,var(--c) 13%,transparent)}
+.sk-az .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--c);padding-top:2px}
+.sk-kpilist{list-style:none;padding-left:0!important}.sk-kpilist li{margin-bottom:5px}
+.sk-vecchia{margin-top:10px;padding:12px 14px;border:1px dashed var(--border);border-radius:10px}
+.sk-vecchia .sk-titolo{font-size:15px}
+.sk-gloss table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.sk-gloss td{padding:5px 8px 5px 0;border-bottom:1px solid var(--border);vertical-align:top;color:var(--accent)}
+.sk-gloss td.k{font-weight:600;color:var(--text);white-space:nowrap}.sk-gloss td.c{font-size:10.5px;color:#777;font-family:monospace}
+@media(max-width:640px){.sk-titolo2{font-size:18px}.sk-kpi b{font-size:20px}.sk-gloss td.c{display:none}}
 
   .sk-diario .small{font-size:12.5px}
 
@@ -343,6 +377,21 @@
     computed: 'calcolato', available_not_computed: 'dati presenti, non calcolato', unavailable: 'non disponibile',
   };
   const STATO_KPI_CHIP = { computed: 'p3', available_not_computed: 'p2', unavailable: '' };
+  // 26/09/2026: nomi dei KPI del motore in italiano (il nome tecnico resta nel tooltip)
+  const KPI_NOME = {
+    chronic_generator_load: 'Carico del generatore',
+    climate_curve_oversizing: 'Curva climatica alta',
+    cross_coupling: 'Interferenza tra circuiti',
+    energy_signature: 'Firma energetica (gas e gradi giorno)',
+    generation_deficit: 'Generatore sotto la domanda',
+    hydraulic_control_quality: 'Mandata al setpoint',
+    mixing_valve_effectiveness: 'Efficacia della valvola miscelatrice',
+    poor_condensing: 'Condensazione (temperatura di ritorno)',
+    restart_preheat: 'Ripartenza dopo il weekend',
+    sensor_health: 'Stato sonde',
+    thermal_efficiency_drift: 'Recupero in peggioramento',
+    unnecessary_heating_hours: 'Riscalda a target raggiunto',
+  };
 
   // ============================================================
   // STATO
@@ -1436,7 +1485,7 @@
     stato.forEach((s) => {
       box.append(el('div', {},
         chip(STATO_KPI_LABEL[s.status] || s.status, STATO_KPI_CHIP[s.status] || ''),
-        el('div', { style: 'margin-top:4px; font-weight:600', text: String(s.kpi_name || '').replace(/_/g, ' ') }),
+        el('div', { style: 'margin-top:4px; font-weight:600', title: s.kpi_name || '', text: KPI_NOME[s.kpi_name] || String(s.kpi_name || '').replace(/_/g, ' ') }),
         el('div', { class: 'muted small', text: s.reason || '' })));
     });
     v.append(el('div', { class: 'card' }, el('h2', { text: 'Cosa il motore può calcolare qui' }),
@@ -1447,7 +1496,156 @@
   const accorcia = (t, n) => (String(t || '').length > n ? String(t).slice(0, n - 1) + '…' : String(t || ''));
 
   // ---------------- INTERVENTI ----------------
+// ---- Scheda v2 (26/09/2026): vista semplice + dettagli tecnici ----
+const KPI_GLOSSARIO = [
+  ['Comfort ambiente', 'La temperatura più alta raggiunta in stanza nel giorno, confrontata con l’obiettivo. Verde entro 1 °C; sotto è blu, più scuro/chiaro quanto più è lontano.', ''],
+  ['Mandata al setpoint', 'L’acqua del circuito arriva alla temperatura chiesta dalla centralina (al massimo 1 °C sotto) almeno una volta nel giorno.', 'HYDRAULIC_POOR_TRACKING'],
+  ['Mandata troppo calda', 'La mandata sta stabilmente sopra il valore chiesto.', 'SUPPLY_CHRONIC_OVERTEMP'],
+  ['Circuito al limite', 'La centralina chiede già la temperatura massima al circuito, con la valvola quasi tutta aperta, e la stanza resta fredda.', ''],
+  ['Ripartenza dopo il weekend', 'Temperatura alle 8 del primo giorno d’uso dopo una pausa, confrontata con gli altri giorni.', ''],
+  ['Preaccensione corta', 'Dopo pause lunghe l’obiettivo non si raggiunge: servirebbe accendere prima.', 'PREHEAT_TOO_SHORT_AFTER_LONG_OFF'],
+  ['Generatore sotto richiesta', 'Il generatore produce meno della temperatura che gli viene chiesta.', 'GENERATOR_UNDERPERFORMING'],
+  ['Generatore sotto la domanda', 'Con più circuiti al massimo, la temperatura di generazione resta sotto la richiesta.', 'GENERATION_DEFICIT'],
+  ['Richiesta caldaia limitata', 'Al generatore arriva una richiesta più bassa di quella dei circuiti.', 'UPSTREAM_REQUEST_CAPPED'],
+  ['Limite a monte', 'Valvola aperta, ma a monte non arriva acqua abbastanza calda.', 'HYDRAULIC_UPSTREAM_LIMIT'],
+  ['Portata insufficiente', 'Valvola quasi tutta aperta e acqua calda a monte, ma la mandata resta fredda: pompa, filtri, bilanciamento.', 'HYDRAULIC_FLOW_ISSUE'],
+  ['Valvola poco efficace', 'La valvola miscelatrice si muove ma la temperatura di mandata cambia poco.', 'MIX_LOW_AUTHORITY'],
+  ['Valvola che non chiude', 'La valvola resta bassa ma la mandata segue il collettore.', 'MIX_VALVE_LOW_POSITION_COLLECTOR_LIKE'],
+  ['Regolazione instabile', 'La mandata oscilla intorno al valore chiesto senza stabilizzarsi.', 'HYDRAULIC_HUNTING'],
+  ['Riscalda a target raggiunto', 'Ore di riscaldamento con la stanza già sopra l’obiettivo: energia sprecata.', 'HEATING_WHILE_SATISFIED'],
+  ['Curva climatica alta', 'La curva chiede temperature di mandata più alte del necessario.', 'CLIMATE_CURVE_OVERSIZED'],
+  ['Recupero in peggioramento', 'A parità di clima, la stanza impiega più tempo di prima ad andare in temperatura.', 'THERMAL_EFFICIENCY_DRIFT'],
+  ['Stato sonde', 'Sonde fuori scala (valori impossibili) o ferme sullo stesso valore.', 'SENSOR_OUT_OF_RANGE · SENSOR_STUCK'],
+];
+
+function disegnaGlossario(el) {
+  return el('details', { class: 'sk-det sk-gloss' }, el('summary', { text: 'Glossario dei KPI' }),
+    el('table', {}, el('tbody', {}, ...KPI_GLOSSARIO.map(([k, t, c]) => el('tr', {},
+      el('td', { class: 'k', text: k }), el('td', { text: t }), el('td', { class: 'c', text: c }))))));
+}
+
+function coloreComfort(def, soglie) {          // def = obiettivo - raggiunto
+  if (def < -soglie.caldo) return 'var(--cc)';
+  if (def <= soglie.ok) return 'var(--green)';
+  if (def <= 2) return 'var(--cf1)';
+  if (def <= 3) return 'var(--cf2)';
+  return 'var(--cf3)';
+}
+
+function graficoComfort(g, box, lettura) {
+  const GG = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+  const MM = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const f1 = (x) => (x == null ? '–' : Number(x).toFixed(1).replace('.', ','));
+  const d0 = new Date(g.da + 'T12:00');
+  const giorno = (i) => new Date(d0.getTime() + i * 864e5);
+  const etich = (i) => { const d = giorno(i); return `${GG[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`; };
+  const soglie = g.soglie || { ok: 1, caldo: 3 };
+  const W = Math.max(260, box.clientWidth || 0), H = W < 480 ? 160 : 180;
+  const pl = 30, pr = 6, pt = 8, pb = 20, n = g.v.length;
+  const x = (i) => pl + (i + 0.5) * (W - pl - pr) / n;
+  const vals = [];
+  g.v.forEach(([u, a, , t]) => { if (a != null) vals.push(a); if (u && t != null) vals.push(t); });
+  if (!vals.length) { box.textContent = 'Nessuna misura in stanza nel periodo.'; return; }
+  const y0 = Math.max(10, Math.floor(Math.min(...vals)) - 0.5), y1 = Math.min(30, Math.ceil(Math.max(...vals)) + 0.5);
+  const y = (v) => pt + (y1 - Math.max(y0, Math.min(y1, v))) * (H - pt - pb) / (y1 - y0);
+  const ns = 'http://www.w3.org/2000/svg';
+  let s = `<svg xmlns="${ns}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Comfort giorno per giorno">`;
+  const passo = (y1 - y0) > 7 ? 2 : 1;
+  for (let v = Math.ceil(y0); v <= y1; v += passo) {
+    s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.08)"/>`;
+    s += `<text x="${pl - 5}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="#888">${v}°</text>`;
+  }
+  for (let i = 0; i < n; i++) {
+    const d = giorno(i);
+    if (d.getDate() === 1 || i === 0) {
+      const xx = x(i) - (W - pl - pr) / n / 2;
+      if (d.getDate() === 1) s += `<line x1="${xx}" x2="${xx}" y1="${pt}" y2="${H - pb}" stroke="rgba(255,255,255,.1)" stroke-dasharray="2 3"/>`;
+      if (d.getDate() === 1 || d.getDate() < 25) s += `<text x="${xx + 3}" y="${H - 5}" font-size="10" fill="#888">${d.getDate() === 1 ? MM[d.getMonth()] : etich(i).slice(4)}</text>`;
+    }
+  }
+  const bw = Math.max(2, Math.min(7, (W - pl - pr) / n * 0.55));
+  g.v.forEach(([u, a, , t], i) => {
+    if (a == null) return;
+    const xx = x(i);
+    if (!u || t == null) { s += `<circle cx="${xx}" cy="${y(a)}" r="${Math.min(2, bw / 2)}" fill="#777" opacity=".6"/>`; return; }
+    const def = t - a, c = coloreComfort(def, soglie);
+    if (Math.abs(def) > 0.05) s += `<line x1="${xx}" x2="${xx}" y1="${y(t)}" y2="${y(a)}" stroke="${c}" stroke-width="${Math.max(1.5, bw * 0.45)}" stroke-linecap="round" opacity=".55"/>`;
+    s += `<line x1="${xx - bw * 0.8}" x2="${xx + bw * 0.8}" y1="${y(t)}" y2="${y(t)}" stroke="#eee" stroke-width="1.5" opacity=".75"/>`;
+    s += `<circle cx="${xx}" cy="${y(a)}" r="${Math.max(2.4, bw * 0.55)}" fill="${c}"/>`;
+  });
+  s += `<rect class="cur" x="0" y="${pt}" width="1" height="${H - pt - pb}" fill="#aaa" opacity="0"/></svg>`;
+  box.innerHTML = s;
+  const svg = box.querySelector('svg'), cur = svg.querySelector('.cur');
+  const base = lettura.dataset.base;
+  const mostra = (ev) => {
+    const rc = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(n - 1, Math.floor((ev.clientX - rc.left - pl) / ((W - pl - pr) / n))));
+    const [u, a, a8, t] = g.v[i];
+    cur.setAttribute('x', x(i) - 0.5); cur.setAttribute('opacity', '.35');
+    lettura.textContent = (u && t != null)
+      ? `${etich(i)} · raggiunti ${f1(a)} °C · obiettivo ${f1(t)} °C` + (a8 != null ? ` · alle 8: ${f1(a8)} °C` : '')
+      : `${etich(i)} · giorno senza uso` + (a != null ? ` · massima ${f1(a)} °C` : '');
+  };
+  svg.addEventListener('pointermove', mostra);
+  svg.addEventListener('pointerdown', mostra);
+  svg.addEventListener('pointerleave', () => { cur.setAttribute('opacity', '0'); lettura.textContent = base; });
+}
+
 function disegnaScheda(s, el, extra) {
+  if (!s.semplice) return disegnaSchedaTecnica(s, el, extra);
+  const x = s.semplice;
+  const f1 = (v) => (v == null ? '–' : Number(v).toFixed(1).replace('.', ','));
+  const card = el('div', { class: 'scheda nuova c-' + x.colore });
+  card.append(el('div', { class: 'sk-testa' }, el('span', { class: 'sk-sem', text: x.semaforo }),
+    el('span', { class: 'sk-dove', text: s.etichetta || s.ambito || '' })));
+  card.append(el('h3', { class: 'sk-titolo2', text: x.titolo }));
+  if (x.conseguenza) card.append(el('p', { class: 'sk-cons', text: x.conseguenza }));
+  if ((x.numeri || []).length) card.append(el('div', { class: 'sk-kpis' }, ...x.numeri.map(([k, st, v, u, t]) =>
+    el('div', { class: 'sk-kpi ' + (st || '') }, el('span', { class: 'k', text: k }),
+      el('b', {}, String(v), u ? el('small', { text: ' ' + u }) : null), el('span', { class: 't', text: t })))));
+  if (x.grafico) {
+    const g = x.grafico;
+    const box = el('div', { class: 'sk-graf' });
+    const lettura = el('div', { class: 'sk-lettura', 'data-base': 'Passa il dito o il mouse sul grafico per leggere un giorno.',
+      text: 'Passa il dito o il mouse sul grafico per leggere un giorno.' });
+    const leg = el('div', { class: 'sk-leg2' }, ...[['#eee', 'obiettivo', 1], ['var(--green)', 'in obiettivo (±1°)'],
+      ['var(--cf1)', '1–2° sotto'], ['var(--cf2)', '2–3° sotto'], ['var(--cf3)', 'oltre 3° sotto'],
+      ['var(--cc)', 'oltre 3° sopra'], ['#777', 'senza uso']].map(([c, t, lin]) =>
+      el('span', {}, el('i', { style: `background:${c};` + (lin ? 'height:2px;width:12px;border-radius:1px' : '') }), t)));
+    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), `${g.kpi}: ${g.zona}, giorno per giorno`), leg));
+    card.append(box, lettura);
+    let fatto = 0;
+    const disegna = () => { if (box.clientWidth && box.clientWidth !== fatto) { fatto = box.clientWidth; graficoComfort(g, box, lettura); } };
+    if (window.ResizeObserver) new ResizeObserver(disegna).observe(box); else setTimeout(disegna, 50);
+  }
+  if (x.lunedi && (x.lunedi.valori || []).length) {
+    const altri = x.lunedi.altri;
+    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), 'Ripartenza dopo il weekend: alle 8'),
+      el('span', { class: 'muted small', text: `negli altri giorni circa ${f1(altri)} °C` })));
+    card.append(el('div', { class: 'sk-lun' }, ...x.lunedi.valori.map(([d, v]) => {
+      const def = altri - v, cl = v == null ? '' : def > 3 ? 'f3' : def > 2 ? 'f2' : def > 1 ? 'f1' : '';
+      return el('span', { class: cl, text: `${d.slice(8, 10)}/${d.slice(5, 7)} · ${f1(v)}°` });
+    })));
+  }
+  const az = x.azione || {};
+  card.append(el('div', { class: 'sk-az' },
+    el('span', { class: 'k', text: 'Cosa fare' }), el('span', { text: az.cosa || '' }),
+    el('span', { class: 'k', text: 'Chi' }), el('span', { text: az.chi || '—' }),
+    el('span', { class: 'k', text: 'Entro' }), el('span', { text: az.quando || '' })));
+  if (extra && extra.diarioVoci) card.append(extra.diarioVoci);
+  const tec = el('details', { class: 'sk-det sk-tec' }, el('summary', { text: 'Dettagli tecnici' }));
+  if ((x.dettagli || []).length) tec.append(el('ul', { class: 'sk-kpilist' }, ...x.dettagli.map(([k, t]) =>
+    el('li', {}, el('span', { class: 'sk-tag', text: k }), t))));
+  const vecchia = disegnaSchedaTecnica(s, el, {});
+  vecchia.className = 'sk-vecchia';
+  const pri = vecchia.querySelector('.sk-chip'); if (pri) pri.remove();   // la priorità vecchia confonderebbe col colore nuovo
+  tec.append(vecchia);
+  card.append(tec);
+  if (extra && extra.form) card.append(el('details', { class: 'sk-det' }, el('summary', { text: 'Registra intervento' }), extra.form));
+  return card;
+}
+
+function disegnaSchedaTecnica(s, el, extra) {
     const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
     const GS=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
     const PRI={1:['Urgente','red'],2:['Da programmare','yellow'],3:['Da monitorare','green']};
@@ -1598,6 +1796,7 @@ function disegnaScheda(s, el, extra) {
       card.append(dett);
       v.append(card);
     });
+    if (schede.length || findings.length) v.append(el('div', { class: 'card' }, disegnaGlossario(el)));
   }
 
   // ---------------- DIARIO ----------------
