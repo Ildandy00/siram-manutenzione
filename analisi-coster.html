@@ -1502,7 +1502,7 @@ const KPI_GLOSSARIO = [
   ['Mandata al setpoint', 'L’acqua del circuito arriva alla temperatura chiesta dalla centralina (al massimo 1 °C sotto) almeno una volta nel giorno.', 'HYDRAULIC_POOR_TRACKING'],
   ['Mandata troppo calda', 'La mandata sta stabilmente sopra il valore chiesto.', 'SUPPLY_CHRONIC_OVERTEMP'],
   ['Circuito al limite', 'La centralina chiede già la temperatura massima al circuito, con la valvola quasi tutta aperta, e la stanza resta fredda.', ''],
-  ['Ripartenza dopo il weekend', 'Temperatura alle 8 del primo giorno d’uso dopo una pausa, confrontata con gli altri giorni.', ''],
+  ['Ripartenza dopo il weekend', 'Temperatura all’apertura (inizio dell’orario chiesto dal cliente; alle 8 se il calendario manca) del primo giorno d’uso dopo una pausa, confrontata con gli altri giorni.', ''],
   ['Preaccensione corta', 'Dopo pause lunghe l’obiettivo non si raggiunge: servirebbe accendere prima.', 'PREHEAT_TOO_SHORT_AFTER_LONG_OFF'],
   ['Generatore sotto richiesta', 'Il generatore produce meno della temperatura che gli viene chiesta.', 'GENERATOR_UNDERPERFORMING'],
   ['Generatore sotto la domanda', 'Con più circuiti al massimo, la temperatura di generazione resta sotto la richiesta.', 'GENERATION_DEFICIT'],
@@ -1583,8 +1583,8 @@ function graficoComfort(g, box, lettura) {
     const [u, a, a8, t] = g.v[i];
     cur.setAttribute('x', x(i) - 0.5); cur.setAttribute('opacity', '.35');
     lettura.textContent = (u && t != null)
-      ? `${etich(i)} · raggiunti ${f1(a)} °C · obiettivo ${f1(t)} °C` + (a8 != null ? ` · alle 8: ${f1(a8)} °C` : '')
-      : `${etich(i)} · giorno senza uso` + (a != null ? ` · massima ${f1(a)} °C` : '');
+      ? `${etich(i)} · raggiunti ${f1(a)} °C · obiettivo ${f1(t)} °C` + (a8 != null ? ` · ${g.cliente ? 'all’apertura' : 'alle 8'}: ${f1(a8)} °C` : '')
+      : `${etich(i)} · ${g.cliente ? 'chiuso (calendario cliente)' : 'giorno senza uso'}` + (a != null ? ` · massima ${f1(a)} °C` : '');
   };
   svg.addEventListener('pointermove', mostra);
   svg.addEventListener('pointerdown', mostra);
@@ -1620,7 +1620,7 @@ function disegnaScheda(s, el, extra) {
   }
   if (x.lunedi && (x.lunedi.valori || []).length) {
     const altri = x.lunedi.altri;
-    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), 'Ripartenza dopo il weekend: alle 8'),
+    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), `Ripartenza dopo il weekend: ${x.lunedi.quando || 'alle 8'}`),
       el('span', { class: 'muted small', text: `negli altri giorni circa ${f1(altri)} °C` })));
     card.append(el('div', { class: 'sk-lun' }, ...x.lunedi.valori.map(([d, v]) => {
       const def = altri - v, cl = v == null ? '' : def > 3 ? 'f3' : def > 2 ? 'f2' : def > 1 ? 'f1' : '';
