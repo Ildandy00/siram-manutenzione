@@ -239,6 +239,33 @@
 .sk-lun span.f1{border-left-color:var(--cf1)}.sk-lun span.f2{border-left-color:var(--cf2)}.sk-lun span.f3{border-left-color:var(--cf3);font-weight:600}
 .sk-az{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;border-radius:10px;padding:10px 14px;margin:12px 0 6px;background:color-mix(in srgb,var(--c) 13%,transparent)}
 .sk-az .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--c);padding-top:2px}
+/* Scheda v2.2 (27/09/2026): un grafico al posto del testo */
+.scheda.nuova.c-grigio{--c:#8a8a8a;border-left-color:#6a6a6a}
+.scheda.sv{display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px}
+.sv-testa{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.sv-kpi{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px}
+.sv-dove{margin-left:auto;color:var(--muted);font-size:12.5px;text-align:right}
+.sv-titolo{margin:0;font-size:19px;line-height:1.25;font-weight:700;text-wrap:balance}
+.sv-titolo small{display:block;font-size:13.5px;font-weight:400;color:var(--muted);margin-top:3px}
+.sv-graf{display:flex;flex-direction:column;gap:2px;min-width:0}
+.sv-et{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 10px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.sv-leg{display:flex;flex-wrap:wrap;gap:10px;font-weight:400;text-transform:none;letter-spacing:0}
+.sv-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.sv-box{width:100%;min-height:40px;touch-action:pan-y}.sv-box svg{display:block;width:100%;height:auto;font-family:'Outfit',sans-serif}
+.sv-lett{font-family:'DM Mono',monospace;font-size:11.5px;min-height:17px;color:var(--text);font-variant-numeric:tabular-nums}
+.sv-lett.vuota{color:#7c7c7c}
+.sv-numeri{display:flex;flex-wrap:wrap;gap:8px}
+.sv-num{flex:1 1 130px;background:var(--bg3);border-radius:10px;padding:8px 12px}
+.sv-num b{display:block;font-size:22px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums}
+.sv-num b small{font-size:13px;color:var(--muted);font-weight:600}
+.sv-num span{display:block;font-size:12px;color:var(--muted);line-height:1.3}
+.sv-num.ok b{color:var(--green)}.sv-num.f1 b,.sv-num.f2 b,.sv-num.f3 b{color:var(--cf2)}.sv-num.caldo b{color:var(--cc)}
+.sv-sonde{display:flex;flex-direction:column;gap:8px}
+.sv-sonda{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:4px 12px;align-items:center}
+.sv-sonda .n{font-size:12.5px;line-height:1.25}.sv-sonda .n small{display:block;color:var(--muted);font-size:11px}
+.sv-vuoto{background:var(--bg3);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:13px}
+.scheda.sv .sk-az{margin:0}
+@media(max-width:640px){.sv-sonda{grid-template-columns:1fr}.sv-dove{margin-left:0;text-align:left;width:100%}.sv-titolo{font-size:17px}}
 .sk-kpilist{list-style:none;padding-left:0!important}.sk-kpilist li{margin-bottom:5px}
 .sk-vecchia{margin-top:10px;padding:12px 14px;border:1px dashed var(--border);border-radius:10px}
 .sk-vecchia .sk-titolo{font-size:15px}
@@ -1591,54 +1618,282 @@ function graficoComfort(g, box, lettura) {
   svg.addEventListener('pointerleave', () => { cur.setAttribute('opacity', '0'); lettura.textContent = base; });
 }
 
+// ---------------- SCHEDE v2.2 (27/09/2026): un grafico al posto del testo ----------------
+// Ogni scheda: semaforo, titolo breve, un grafico che racconta il problema, al massimo tre
+// numeri, cosa fare. Il testo del motore resta in "Dettagli tecnici".
+// Colori: verde = a posto; blu = più freddo del richiesto (più chiaro = più lontano);
+// arancio scuro (--cc) = più caldo del necessario. Riga bianca = quello che è chiesto.
+const SV_NS = 'http://www.w3.org/2000/svg';
+const SV_GG = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+const SV_MM = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+const svF1 = (x) => (x == null ? '–' : Number(x).toFixed(1).replace('.', ','));
+const svSegno = (x) => (x == null ? '–' : (x > 0 ? '+' : x < 0 ? '−' : '') + svF1(Math.abs(x)));
+const svEsc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const svData = (iso) => { const d = new Date(iso + 'T12:00'); return `${SV_GG[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`; };
+const svGiorno = (da, i) => new Date(new Date(da + 'T12:00').getTime() + i * 864e5).toISOString().slice(0, 10);
+
+function svFreddo(sotto) {              // sotto = gradi sotto il richiesto (positivo)
+  if (sotto <= 1) return 'var(--green)';
+  if (sotto <= 3) return 'var(--cf1)';
+  if (sotto <= 6) return 'var(--cf2)';
+  return 'var(--cf3)';
+}
+
+// Contenitore: etichetta + legenda, area del grafico, riga di lettura. Il disegno parte quando
+// il contenitore ha una larghezza (e si rifà se cambia).
+function svBlocco(el, card, titolo, legenda, disegna) {
+  const box = el('div', { class: 'sv-box' });
+  const lett = el('div', { class: 'sv-lett vuota' });
+  card.append(el('div', { class: 'sv-graf' },
+    el('div', { class: 'sv-et' }, el('span', { text: titolo }),
+      el('span', { class: 'sv-leg' }, ...(legenda || []).map(([c, t]) => el('span', {}, el('i', { style: `background:${c}` }), t)))),
+    box, lett));
+  let fatto = 0;
+  const vai = () => { const w = box.clientWidth; if (w && w !== fatto) { fatto = w; disegna(box, lett, w); } };
+  if (window.ResizeObserver) new ResizeObserver(vai).observe(box); else setTimeout(vai, 60);
+}
+
+// Telaio comune a tutti i grafici giornalieri: griglia, asse dei mesi, lettura al passaggio.
+function svTelaio(box, lett, W, n, H, dom, tick, da, disegna, leggi, base) {
+  const pl = 34, pr = 6, pt = 6, pb = 18;
+  const passo = (W - pl - pr) / n;
+  const x = (i) => pl + (i + 0.5) * passo;
+  const y = (v) => pt + (dom[1] - Math.max(dom[0], Math.min(dom[1], v))) * (H - pt - pb) / (dom[1] - dom[0]);
+  let s = `<svg xmlns="${SV_NS}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img">`;
+  tick.forEach((t) => {
+    s += `<line x1="${pl}" x2="${W - pr}" y1="${y(t.v)}" y2="${y(t.v)}" stroke="${t.forte ? 'rgba(255,255,255,.4)' : 'var(--grid)'}"${t.forte ? ' stroke-width="1.3"' : ''}/>`;
+    s += `<text x="${pl - 5}" y="${y(t.v) + 3.5}" text-anchor="end" font-size="10" fill="${t.forte ? '#ddd' : '#8a8a8a'}">${t.t}</text>`;
+  });
+  for (let i = 0; i < n; i++) {
+    const d = new Date(new Date(da + 'T12:00').getTime() + i * 864e5);
+    if (d.getDate() === 1) {
+      const xx = pl + i * passo;
+      s += `<line x1="${xx}" x2="${xx}" y1="${pt}" y2="${H - pb}" stroke="var(--grid)" stroke-dasharray="2 3"/>`;
+      if (xx < W - 28) s += `<text x="${xx + 3}" y="${H - 5}" font-size="10" fill="#8a8a8a">${SV_MM[d.getMonth()]}</text>`;
+    }
+  }
+  s += disegna({ x, y, passo, W, H, pl, pr, pt, pb });
+  s += `<rect class="cur" x="0" y="${pt}" width="1.5" height="${H - pt - pb}" fill="#bbb" opacity="0"/></svg>`;
+  box.innerHTML = s;
+  const svg = box.querySelector('svg'), cur = svg.querySelector('.cur');
+  lett.textContent = base; lett.classList.add('vuota');
+  const mostra = (ev) => {
+    const rc = svg.getBoundingClientRect(), px = (ev.clientX - rc.left) * W / rc.width;
+    const i = Math.max(0, Math.min(n - 1, Math.floor((px - pl) / passo)));
+    cur.setAttribute('x', x(i) - 0.75); cur.setAttribute('opacity', '.4');
+    lett.textContent = leggi(i); lett.classList.remove('vuota');
+  };
+  svg.addEventListener('pointermove', mostra);
+  svg.addEventListener('pointerdown', mostra);
+  svg.addEventListener('pointerleave', () => { cur.setAttribute('opacity', '0'); lett.textContent = base; lett.classList.add('vuota'); });
+}
+
+// 1. Ambiente: massima del giorno contro l'obiettivo.
+function svAmbiente(el, card, g) {
+  const v = g.v || [], vals = [];
+  v.forEach(([u, a, , t]) => { if (a != null) vals.push(a); if (u && t != null) vals.push(t); });
+  if (!vals.length) return;
+  const lo = Math.max(8, Math.floor(Math.min(...vals)) - 0.5), hi = Math.min(30, Math.ceil(Math.max(...vals)) + 0.5);
+  const st = (hi - lo) > 8 ? 4 : 2, tick = [];
+  for (let t = Math.ceil(lo / st) * st; t <= hi; t += st) tick.push({ v: t, t: `${t}°` });
+  svBlocco(el, card, `Ambiente · ${g.zona}`, [['var(--green)', 'in obiettivo'], ['var(--cf2)', 'sotto'], ['var(--cc)', 'troppo caldo'], ['rgba(255,255,255,.75)', 'obiettivo']],
+    (box, lett, W) => svTelaio(box, lett, W, v.length, 120, [lo, hi], tick, g.da, ({ x, y, passo }) => {
+      const bw = Math.max(1.5, Math.min(6, passo * 0.6)); let s = '';
+      v.forEach(([u, a, , t], i) => {
+        if (a == null) return;
+        if (!u || t == null) { s += `<circle cx="${x(i)}" cy="${y(a)}" r="${Math.min(1.8, bw / 2)}" fill="#6f6f6f"/>`; return; }
+        const c = coloreComfort(t - a, g.soglie || { ok: 1, caldo: 3 });
+        if (Math.abs(t - a) > 0.1) s += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(t)}" y2="${y(a)}" stroke="${c}" stroke-width="${Math.max(1.2, bw * .4)}" stroke-linecap="round" opacity=".32"/>`;
+        s += `<line x1="${x(i) - bw * .7}" x2="${x(i) + bw * .7}" y1="${y(t)}" y2="${y(t)}" stroke="rgba(255,255,255,.75)" stroke-width="1.3"/>`;
+        s += `<circle cx="${x(i)}" cy="${y(a)}" r="${Math.max(2.2, bw * .55)}" fill="${c}"/>`;
+      });
+      return s;
+    }, (i) => {
+      const [u, a, a8, t] = v[i], d = svGiorno(g.da, i);
+      return (u && t != null)
+        ? `${svData(d)} · ${svF1(a)} °C su ${svF1(t)} °C` + (a8 != null ? ` · ${g.cliente ? 'all’apertura' : 'alle 8'} ${svF1(a8)} °C` : '')
+        : `${svData(d)} · ${g.cliente ? 'chiuso' : 'non in uso'}` + (a != null ? ` · ${svF1(a)} °C` : '');
+    }, 'Pallino = temperatura più alta del giorno, trattino = obiettivo'));
+}
+
+// 2. Scarto dal richiesto (mandata sul setpoint, generatore sulla richiesta), un pallino al giorno.
+function svScarto(el, card, vis, titolo) {
+  const gg = vis.giorni || [], banda = vis.banda || 1;
+  const piene = gg.filter((r) => r.length > 3 && r[2] != null && r[3] != null);
+  if (!piene.length) return;
+  let lo = Math.min(...piene.map((r) => r[3] - r[2])), hi = Math.max(...piene.map((r) => r[3] - r[2]));
+  lo = Math.max(-40, Math.floor(Math.min(lo, -banda - 2) / 5) * 5); hi = Math.min(40, Math.ceil(Math.max(hi, banda + 2) / 5) * 5);
+  const pt = (hi - lo) > 40 ? 10 : 5, tick = [];
+  for (let t = Math.ceil(lo / pt) * pt; t <= hi; t += pt) tick.push({ v: t, t: t === 0 ? '0' : (t > 0 ? '+' : '−') + Math.abs(t) + '°', forte: t === 0 });
+  const rif = String(vis.rif || '').replace(' di mandata', '');
+  svBlocco(el, card, titolo, [['var(--green)', 'ci arriva'], ['var(--cf2)', 'sotto'], ['var(--cc)', 'sopra']],
+    (box, lett, W) => svTelaio(box, lett, W, gg.length, 130, [lo, hi], tick, gg[0][0], ({ x, y, passo, W: w, pl, pr }) => {
+      const bw = Math.max(1.6, Math.min(5, passo * 0.55));
+      let s = `<rect x="${pl}" y="${y(banda)}" width="${w - pl - pr}" height="${y(-banda) - y(banda)}" fill="rgba(143,190,122,.10)"/>`;
+      s += `<text x="${w - pr - 3}" y="${y(0) - 4}" text-anchor="end" font-size="10" fill="#d0d0d0">${svEsc(rif)}</text>`;
+      gg.forEach((r, i) => {
+        if (r.length < 4 || r[2] == null || r[3] == null) return;
+        const m = r[3] - r[2], b = r[5] ?? m;
+        const c = m > banda ? 'var(--cc)' : b >= -banda ? 'var(--green)' : svFreddo(-b);
+        if (Math.abs(m) > 0.3) s += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(0)}" y2="${y(m)}" stroke="${c}" stroke-width="${Math.max(1.2, bw * .45)}" opacity=".45"/>`;
+        s += `<circle cx="${x(i)}" cy="${y(m)}" r="${Math.max(2.2, bw * .6)}" fill="${c}"/>`;
+      });
+      return s;
+    }, (i) => {
+      const r = gg[i];
+      if (r.length < 4 || r[2] == null) return `${svData(r[0])} · spento`;
+      const m = r[3] - r[2], b = r[5] ?? m;
+      return `${svData(r[0])} · ${rif} ${svF1(r[2])} °C · ${vis.mis} ${svF1(r[3])} °C (${svSegno(m)})`
+        + (m > banda ? '' : b >= -banda ? ' · ci arriva' : ` · al massimo ${svF1(-b)} °C sotto`);
+    }, `Riga bianca = ${rif}; ogni pallino è un giorno: sopra la riga più caldo, sotto più freddo`));
+}
+
+// 3. Ore di riscaldamento del giorno, con in arancio quelle con la stanza già calda.
+function svOre(el, card, vis) {
+  const gg = vis.giorni || [], mx = Math.max(4, ...gg.map((r) => r[2] || 0));
+  const top = Math.ceil(mx / 4) * 4, tick = [];
+  for (let t = 0; t <= top; t += Math.max(2, top / 4)) tick.push({ v: t, t: `${t} h` });
+  svBlocco(el, card, 'Ore di riscaldamento al giorno', [['var(--cc)', 'con la stanza già oltre l’obiettivo'], ['#6c6c6c', 'servite']],
+    (box, lett, W) => svTelaio(box, lett, W, gg.length, 120, [0, top], tick, gg[0][0], ({ x, y, passo }) => {
+      const bw = Math.max(1.5, Math.min(7, passo * 0.7)); let s = '';
+      gg.forEach((r, i) => {
+        if (r.length < 4 || !r[2]) return;
+        const tot = r[2], inu = r[3];
+        if (tot - inu > 0) s += `<rect x="${x(i) - bw / 2}" y="${y(tot)}" width="${bw}" height="${Math.max(0, y(inu) - y(tot) - (inu ? 1 : 0))}" rx="1" fill="#6c6c6c"/>`;
+        if (inu > 0) s += `<rect x="${x(i) - bw / 2}" y="${y(inu)}" width="${bw}" height="${y(0) - y(inu)}" rx="1" fill="var(--cc)"/>`;
+      });
+      return s;
+    }, (i) => { const r = gg[i]; return r.length < 4 ? `${svData(r[0])} · spento` : `${svData(r[0])} · ${r[2]} h di riscaldamento, ${r[3]} h con la stanza già calda`; },
+    'Barra = ore di riscaldamento; in arancio quelle con la stanza già sopra l’obiettivo'));
+}
+
+// 4. Ripartenze: temperatura all'apertura dopo weekend e festivi.
+function svRipartenze(el, card, lun, g) {
+  const val = (lun.valori || []).filter((r) => r[1] != null);
+  if (!val.length) return;
+  const ob = (g?.v || []).filter((r) => r[0] && r[3] != null).map((r) => r[3]).sort((a, b) => a - b);
+  const obiettivo = ob.length ? ob[Math.floor(ob.length / 2)] : null;
+  const tutti = val.map((v) => v[1]).concat([lun.altri, obiettivo].filter((v) => v != null));
+  const lo = Math.floor(Math.min(...tutti)) - 1, hi = Math.ceil(Math.max(...tutti)) + 1;
+  const tick = []; for (let t = lo; t <= hi; t += (hi - lo) > 6 ? 2 : 1) tick.push({ v: t, t: `${t}°` });
+  svBlocco(el, card, `Temperatura ${lun.quando || 'alle 8'} dopo weekend e festivi`,
+    [['var(--green)', 'in obiettivo'], ['var(--cf2)', 'freddo'], ['rgba(255,255,255,.75)', 'obiettivo'], ['#9a9a9a', 'gli altri giorni']],
+    (box, lett, W) => {
+      const n = val.length, H = 130, pl = 34, pr = 6, pt = 8, pb = 18;
+      const x = (i) => pl + (i + 0.5) * (W - pl - pr) / n;
+      const y = (v) => pt + (hi - v) * (H - pt - pb) / (hi - lo);
+      let s = `<svg xmlns="${SV_NS}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img">`;
+      tick.forEach((t) => { s += `<line x1="${pl}" x2="${W - pr}" y1="${y(t.v)}" y2="${y(t.v)}" stroke="var(--grid)"/><text x="${pl - 5}" y="${y(t.v) + 3.5}" text-anchor="end" font-size="10" fill="#8a8a8a">${t.t}</text>`; });
+      if (obiettivo != null) s += `<line x1="${pl}" x2="${W - pr}" y1="${y(obiettivo)}" y2="${y(obiettivo)}" stroke="rgba(255,255,255,.75)" stroke-width="1.3"/>`;
+      if (lun.altri != null) s += `<line x1="${pl}" x2="${W - pr}" y1="${y(lun.altri)}" y2="${y(lun.altri)}" stroke="#9a9a9a" stroke-width="1.3" stroke-dasharray="4 4"/>`;
+      const ogni = Math.ceil(n / Math.max(3, Math.floor(W / 70)));
+      val.forEach(([d, v], i) => {
+        const c = obiettivo != null ? coloreComfort(obiettivo - v, g?.soglie || { ok: 1, caldo: 3 }) : 'var(--cf2)';
+        if (obiettivo != null && obiettivo - v > 1) s += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(obiettivo)}" y2="${y(v)}" stroke="${c}" stroke-width="2" opacity=".5"/>`;
+        s += `<circle cx="${x(i)}" cy="${y(v)}" r="5" fill="${c}"/>`;
+        if (i % ogni === 0) s += `<text x="${x(i)}" y="${H - 5}" text-anchor="middle" font-size="10" fill="#8a8a8a">${d.slice(8, 10)}/${d.slice(5, 7)}</text>`;
+      });
+      s += `<rect class="cur" x="0" y="${pt}" width="1.5" height="${H - pt - pb}" fill="#bbb" opacity="0"/></svg>`;
+      box.innerHTML = s;
+      const svg = box.querySelector('svg'), cur = svg.querySelector('.cur');
+      const base = `Pallino = ogni ripartenza; tratteggio = gli altri giorni (${svF1(lun.altri)} °C)`;
+      lett.textContent = base; lett.classList.add('vuota');
+      const mostra = (ev) => {
+        const rc = svg.getBoundingClientRect(), px = (ev.clientX - rc.left) * W / rc.width;
+        const i = Math.max(0, Math.min(n - 1, Math.floor((px - pl) / ((W - pl - pr) / n))));
+        cur.setAttribute('x', x(i) - .75); cur.setAttribute('opacity', '.4');
+        lett.textContent = `${svData(val[i][0])} · ${svF1(val[i][1])} °C ${lun.quando || ''}` + (obiettivo != null ? ` (obiettivo ${svF1(obiettivo)} °C)` : '');
+        lett.classList.remove('vuota');
+      };
+      svg.addEventListener('pointermove', mostra); svg.addEventListener('pointerdown', mostra);
+      svg.addEventListener('pointerleave', () => { cur.setAttribute('opacity', '0'); lett.textContent = base; lett.classList.add('vuota'); });
+    });
+}
+
+// 5. Sonde: una riga per sonda, minimo e massimo di ogni giorno; i 300 °C in rosso in alto.
+function svSonde(el, card, sonde) {
+  const lista = el('div', { class: 'sv-sonde' }); card.append(lista);
+  sonde.forEach((sd) => {
+    const and = sd.andamento || [];
+    const rotti = and.filter((r) => r[2] != null && r[2] >= 250).length;
+    const stato = sd.stato === 'ferma' ? `ferma a ${svF1(sd.valore)} °C`
+      : rotti ? `${rotti} giorni su ${and.length} a 300 °C`
+      : and.length ? 'fuori scala in passato, regolare negli ultimi 90 giorni' : (sd.problema || '');
+    const box = el('div', { class: 'sv-box' }), lett = el('div', { class: 'sv-lett vuota' });
+    lista.append(el('div', { class: 'sv-sonda' }, el('div', { class: 'n' }, sd.nome || '', el('small', { text: stato })),
+      el('div', { class: 'sv-graf' }, box, lett)));
+    if (!and.length) { lett.textContent = 'Nessuna lettura negli ultimi 90 giorni'; return; }
+    const buoni = and.flatMap((r) => [r[1], r[2]]).filter((v) => v != null && v < 250 && v > -40);
+    const lo = buoni.length ? Math.floor(Math.min(...buoni) / 5) * 5 - 5 : 0;
+    const hi = buoni.length ? Math.ceil(Math.max(...buoni) / 5) * 5 + 5 : 40;
+    const tetto = hi + (hi - lo) * 0.2;
+    const ultimo = and[and.length - 1];
+    let fatto = 0;
+    const vai = () => {
+      const W = box.clientWidth; if (!W || W === fatto) return; fatto = W;
+      svTelaio(box, lett, W, and.length, 64, [lo, tetto], [{ v: lo, t: `${lo}°` }, { v: hi, t: `${hi}°` }], and[0][0], ({ x, y, passo, pl }) => {
+        const bw = Math.max(1.4, Math.min(4, passo * 0.6));
+        let s = rotti ? `<text x="${pl + 2}" y="${y(tetto) + 8}" font-size="9.5" fill="#d48282">300 °C</text>` : '';
+        and.forEach((r, i) => {
+          const [, a, b] = r;
+          if (a == null || b == null) return;
+          if (a >= 250) { s += `<rect x="${x(i) - bw / 2}" y="${y(tetto) + 10}" width="${bw}" height="4" rx="1" fill="var(--red)"/>`; return; }
+          const rottoB = b >= 250, yb = rottoB ? y(tetto) + 12 : y(b);
+          s += `<line x1="${x(i)}" x2="${x(i)}" y1="${yb}" y2="${y(a)}" stroke="${rottoB ? 'var(--red)' : '#9fb7cf'}" stroke-width="${bw}" stroke-linecap="round" opacity="${rottoB ? .9 : .7}"/>`;
+        });
+        return s;
+      }, (i) => { const r = and[i]; const t = (v) => (v == null ? '–' : v >= 250 ? '300 °C' : svF1(v) + ' °C'); return `${svData(r[0])} · da ${t(r[1])} a ${t(r[2])}`; },
+      `Ultima lettura: ${ultimo[2] != null && ultimo[2] >= 250 ? '300 °C (sonda interrotta)' : svF1(ultimo[2]) + ' °C'}`);
+    };
+    if (window.ResizeObserver) new ResizeObserver(vai).observe(box); else setTimeout(vai, 60);
+  });
+}
+
 function disegnaScheda(s, el, extra) {
   if (!s.semplice) return disegnaSchedaTecnica(s, el, extra);
   const x = s.semplice;
-  const f1 = (v) => (v == null ? '–' : Number(v).toFixed(1).replace('.', ','));
-  const card = el('div', { class: 'scheda nuova c-' + x.colore });
-  card.append(el('div', { class: 'sk-testa' }, el('span', { class: 'sk-sem', text: x.semaforo }),
-    el('span', { class: 'sk-dove', text: s.etichetta || s.ambito || '' })));
-  card.append(el('h3', { class: 'sk-titolo2', text: x.titolo }));
-  if (x.conseguenza) card.append(el('p', { class: 'sk-cons', text: x.conseguenza }));
-  if ((x.numeri || []).length) card.append(el('div', { class: 'sk-kpis' }, ...x.numeri.map(([k, st, v, u, t]) =>
-    el('div', { class: 'sk-kpi ' + (st || '') }, el('span', { class: 'k', text: k }),
-      el('b', {}, String(v), u ? el('small', { text: ' ' + u }) : null), el('span', { class: 't', text: t })))));
-  if (x.grafico) {
-    const g = x.grafico;
-    const box = el('div', { class: 'sk-graf' });
-    const lettura = el('div', { class: 'sk-lettura', 'data-base': 'Passa il dito o il mouse sul grafico per leggere un giorno.',
-      text: 'Passa il dito o il mouse sul grafico per leggere un giorno.' });
-    const leg = el('div', { class: 'sk-leg2' }, ...[['#eee', 'obiettivo', 1], ['var(--green)', 'in obiettivo (±1°)'],
-      ['var(--cf1)', '1–2° sotto'], ['var(--cf2)', '2–3° sotto'], ['var(--cf3)', 'oltre 3° sotto'],
-      ['var(--cc)', 'oltre 3° sopra'], ['#777', 'senza uso']].map(([c, t, lin]) =>
-      el('span', {}, el('i', { style: `background:${c};` + (lin ? 'height:2px;width:12px;border-radius:1px' : '') }), t)));
-    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), `${g.kpi}: ${g.zona}, giorno per giorno`), leg));
-    card.append(box, lettura);
-    let fatto = 0;
-    const disegna = () => { if (box.clientWidth && box.clientWidth !== fatto) { fatto = box.clientWidth; graficoComfort(g, box, lettura); } };
-    if (window.ResizeObserver) new ResizeObserver(disegna).observe(box); else setTimeout(disegna, 50);
+  const grigia = !!x.ripiego;
+  const card = el('div', { class: 'scheda nuova sv c-' + (grigia ? 'grigio' : x.colore) });
+  const kpi = (x.numeri && x.numeri[0] && x.numeri[0][0]) || (s.famiglia === 'sonde' ? 'Stato sonde' : (s.segnalazioni && s.segnalazioni[0] && s.segnalazioni[0].etichetta) || '');
+  card.append(el('div', { class: 'sv-testa' }, el('span', { class: 'sk-sem', text: x.semaforo }),
+    kpi ? el('span', { class: 'sv-kpi', text: kpi }) : null,
+    el('span', { class: 'sv-dove', text: s.etichetta || s.ambito || '' })));
+  const riga = x.conseguenza && x.conseguenza.length <= 120 ? x.conseguenza : '';
+  card.append(el('h3', { class: 'sv-titolo' }, x.titolo, riga ? el('small', { text: riga }) : null));
+
+  const v = s.visivo, g = x.grafico;
+  if (grigia) {
+    // niente grafico: il sottotitolo dice già che va guardata in Coster
+  } else if ((s.famiglia === 'circuito' || s.famiglia === 'generatore') && v && v.tipo === 'scarto') {
+    const tit = s.famiglia === 'generatore' ? 'Generatore rispetto alla richiesta' : 'Mandata rispetto al setpoint';
+    const comfortPrima = x.numeri && x.numeri[0] && x.numeri[0][0] === 'Comfort ambiente';
+    if (comfortPrima && g) { svAmbiente(el, card, g); svScarto(el, card, v, tit); }
+    else { svScarto(el, card, v, tit); if (g) svAmbiente(el, card, g); }
+  } else if (s.famiglia === 'preaccensione' && x.lunedi && (x.lunedi.valori || []).length) {
+    svRipartenze(el, card, x.lunedi, g);
+  } else if (s.famiglia === 'soddisfatto' && v && v.tipo === 'ore') {
+    svOre(el, card, v); if (g) svAmbiente(el, card, g);
+  } else if (s.famiglia === 'sonde' && (s.sonde || []).some((r) => r.andamento)) {
+    svSonde(el, card, s.sonde);
+  } else if (g) {
+    svAmbiente(el, card, g);
   }
-  if (x.lunedi && (x.lunedi.valori || []).length) {
-    const altri = x.lunedi.altri;
-    card.append(el('div', { class: 'sk-gtit' }, el('b', {}, el('span', { class: 'sk-tag', text: 'KPI' }), `Ripartenza dopo il weekend: ${x.lunedi.quando || 'alle 8'}`),
-      el('span', { class: 'muted small', text: `negli altri giorni circa ${f1(altri)} °C` })));
-    card.append(el('div', { class: 'sk-lun' }, ...x.lunedi.valori.map(([d, v]) => {
-      const def = altri - v, cl = v == null ? '' : def > 3 ? 'f3' : def > 2 ? 'f2' : def > 1 ? 'f1' : '';
-      return el('span', { class: cl, text: `${d.slice(8, 10)}/${d.slice(5, 7)} · ${f1(v)}°` });
-    })));
-  }
+
+  if ((x.numeri || []).length) card.append(el('div', { class: 'sv-numeri' }, ...x.numeri.slice(0, 3).map(([k, st, val, u, t]) =>
+    el('div', { class: 'sv-num ' + (st || (/troppo calda|target raggiunto/i.test(k) ? 'caldo' : '')) },
+      el('b', {}, String(val), u ? el('small', { text: ' ' + u }) : null), el('span', { text: t })))));
   const az = x.azione || {};
   card.append(el('div', { class: 'sk-az' },
-    el('span', { class: 'k', text: 'Cosa fare' }), el('span', { text: az.cosa || '' }),
-    el('span', { class: 'k', text: 'Chi' }), el('span', { text: az.chi || '—' }),
-    el('span', { class: 'k', text: 'Entro' }), el('span', { text: az.quando || '' })));
+    el('span', { class: 'k', text: 'Cosa' }), el('span', { text: az.cosa || '' }),
+    el('span', { class: 'k', text: 'Chi' }), el('span', { class: 'muted', text: [az.chi, az.quando].filter((t) => t && t !== '—').join(' · ') || '—' })));
   if (extra && extra.diarioVoci) card.append(extra.diarioVoci);
   const tec = el('details', { class: 'sk-det sk-tec' }, el('summary', { text: 'Dettagli tecnici' }));
+  if (x.conseguenza && !riga) tec.append(el('p', { class: 'muted small', text: x.conseguenza }));
   if ((x.dettagli || []).length) tec.append(el('ul', { class: 'sk-kpilist' }, ...x.dettagli.map(([k, t]) =>
     el('li', {}, el('span', { class: 'sk-tag', text: k }), t))));
   const vecchia = disegnaSchedaTecnica(s, el, {});
   vecchia.className = 'sk-vecchia';
-  const pri = vecchia.querySelector('.sk-chip'); if (pri) pri.remove();   // la priorità vecchia confonderebbe col colore nuovo
+  const pri = vecchia.querySelector('.sk-chip'); if (pri) pri.remove();
   tec.append(vecchia);
   card.append(tec);
   if (extra && extra.form) card.append(el('details', { class: 'sk-det' }, el('summary', { text: 'Registra intervento' }), extra.form));
@@ -1891,14 +2146,25 @@ function disegnaSchedaTecnica(s, el, extra) {
     if (!p) return;
     const d = dettagli(p.impianto_ref);
     const intervalli = (d.energia_intervalli || []).filter((r) => num(r.on_hours) !== null);
+    // v18.10: il motore scrive in kpi_status 'operating_hours' il motivo e la fonte della fascia cliente
+    const statoOre = (d.kpi_status || []).find((s) => s.kpi_name === 'operating_hours');
+    const motivoOre = statoOre && statoOre.reason ? String(statoOre.reason) : '';
+    const fascia = motivoOre.includes('fascia cliente: ')
+      ? motivoOre.split('fascia cliente: ')[1].split(' — ')[0]
+      : (d.ore_cliente || 'lun-ven 08-16 (predefinita)');
 
     v.append(el('div', { class: 'card' },
       el('h2', {}, `Ore di funzionamento — ${p.sigla}`,
-        el('small', { text: `fascia cliente: ${d.ore_cliente || 'non impostata (default lun-ven 08-16)'}` }))));
+        el('small', { text: `fascia cliente: ${fascia}` }))));
 
     if (!intervalli.length) {
-      v.append(el('div', { class: 'banner info', text: 'Nessun conteggio ore disponibile: il motore conta le ore ON dentro gli intervalli tra due letture gas, quando la richiesta caldaia copre almeno il 90% del periodo.' }));
+      v.append(el('div', { class: 'banner info', text: motivoOre
+        ? `Ore non disponibili: ${motivoOre}.`
+        : 'Nessun conteggio ore disponibile: il motore conta le ore ON tra due letture gas, quando i dati Coster coprono almeno il 90% del periodo.' }));
       return;
+    }
+    if (motivoOre.includes(' — ')) {
+      v.append(el('div', { class: 'banner info', text: motivoOre.split(' — ').slice(1).join(' — ') }));
     }
 
     const somma = (campo) => intervalli.reduce((a, r) => a + (num(r[campo]) || 0), 0);
