@@ -410,6 +410,7 @@
     climate_curve_oversizing: 'Curva climatica alta',
     cross_coupling: 'Interferenza tra circuiti',
     energy_signature: 'Firma energetica (gas e gradi giorno)',
+    gas_meter_shared: 'Contatore gas in comune',
     generation_deficit: 'Generatore sotto la domanda',
     hydraulic_control_quality: 'Mandata al setpoint',
     mixing_valve_effectiveness: 'Efficacia della valvola miscelatrice',
@@ -2301,6 +2302,15 @@ function disegnaSchedaTecnica(s, el, extra) {
     const stagioni = d.energia_stagioni || [];
 
     v.append(el('div', { class: 'card' }, el('h2', {}, `Energia — ${p.sigla}`, el('small', { text: p.nome_impianto }))));
+
+    // v18.15: contatore gas in comune con altri impianti (es. Elementare + Palestra Villa Verucchio)
+    const condiviso = (d.kpi_status || []).find((s) => s.kpi_name === 'gas_meter_shared');
+    if (condiviso && intervalli.length) {
+      const con = String(condiviso.reason || '').replace(/^contatore gas in comune con:\s*/i, '').split('.')[0];
+      v.append(el('div', { class: 'banner info' },
+        el('b', { text: `Contatore gas in comune con ${con}. ` }),
+        'Consumi e firma energetica sono di tutto il gruppo; le ore ON sono di questo impianto, i kW medi contano le ore di tutte le caldaie.'));
+    }
 
     if (!intervalli.length) {
       v.append(el('div', { class: 'banner info', text: 'Nessun dato energetico: serve lo storico delle letture gas per questo impianto.' }));
