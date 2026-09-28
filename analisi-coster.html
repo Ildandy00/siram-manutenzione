@@ -242,6 +242,19 @@
 /* Scheda v2.2 (27/09/2026): un grafico al posto del testo */
 .scheda.nuova.c-grigio{--c:#8a8a8a;border-left-color:#6a6a6a}
 .scheda.sv{display:flex;flex-direction:column;gap:10px;padding:14px 18px 10px}
+.rc-lista{display:flex;flex-direction:column;gap:6px}
+.rc-riga{display:grid;grid-template-columns:minmax(130px,1.2fr) 64px 64px minmax(220px,2.4fr) 150px;gap:14px;align-items:center;width:100%;
+  background:var(--bg3);border:1px solid transparent;border-radius:10px;padding:8px 12px;text-align:left;color:var(--text);font:inherit;cursor:pointer}
+.rc-riga:hover{border-color:var(--border)}.rc-riga.on{border-color:var(--s1)}
+.rc-riga.rc-testa{background:none;cursor:default;padding:0 12px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.rc-nome{font-weight:600;line-height:1.25}.rc-nome small{display:block;color:var(--muted);font-weight:400;font-size:11.5px;margin-top:2px}
+.rc-num b{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.rc-tend .v{font-size:18px;font-weight:700;margin-right:8px;font-variant-numeric:tabular-nums}
+.rc-tend small,.rc-90{display:block;color:var(--muted);font-size:11.5px;line-height:1.3;margin-top:3px}
+.rc-spark svg{display:block;width:150px;height:40px}
+.rc-lab{display:none;font-size:11px;color:var(--muted)}
+details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+@media(max-width:820px){.rc-lab{display:block}.rc-riga{grid-template-columns:1fr 64px 64px}.rc-riga>:nth-child(4),.rc-riga>:nth-child(5){grid-column:1/-1}.rc-riga.rc-testa{display:none}}
 .sv-testa{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
 .sv-kpi{font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:1px 6px}
 .sv-dove{margin-left:auto;color:var(--muted);font-size:12.5px;text-align:right}
@@ -2210,6 +2223,125 @@ function disegnaSchedaTecnica(s, el, extra) {
   }
 
   // ---------------- RECUPERO TERMICO ----------------
+  // 28/09/2026: vista compatta. Una riga per zona (numeri + tendenza + andamento mensile in
+  // miniatura) e sotto il dettaglio della zona scelta: ogni punto e' una ripartenza, con la
+  // finestra degli ultimi 30 giorni evidenziata e il periodo con cui e' stata confrontata.
+  const TEND = {
+    IMPROVING: ['più veloce', 'p3'], DEGRADING: ['più lenta', 'p1'], STABLE: ['come prima', 'info'],
+    SEASON_EFFECT: ['effetto stagione', ''], INSUFFICIENT_DATA: ['dati insufficienti', ''],
+  };
+  const ggmm = (iso) => { const d = dataIso(iso); return d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` : '?'; };
+  const MESI_BREVI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+  function eventiZona(z) {
+    return (z.eventi || []).map((e) => Object.assign({}, e, { quando: dataIso(e.start_ts), dev: num(e.recovery_deviation_pct) }))
+      .filter((e) => e.quando).sort((a, b) => a.quando - b.quando);
+  }
+  function mesiZona(eventi) {
+    const m = new Map();
+    eventi.forEach((e) => {
+      if (e.dev === null) return;
+      const k = e.quando.getFullYear() * 12 + e.quando.getMonth();
+      if (!m.has(k)) m.set(k, { k, x: new Date(e.quando.getFullYear(), e.quando.getMonth(), 1), valori: [] });
+      m.get(k).valori.push(e.dev);
+    });
+    return [...m.values()].sort((a, b) => a.k - b.k).map((x) => ({ ...x, n: x.valori.length, mediana: mediano(x.valori) }));
+  }
+
+  // miniatura: mediana mensile dello scostamento; mese con meno di 5 ripartenze = punto vuoto
+  function rcMiniatura(mesi) {
+    const W = 150, H = 40, pad = 5;
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'andamento mensile' });
+    if (!mesi.length) return svg;
+    const lim = Math.max(30, ...mesi.map((m) => Math.min(80, Math.abs(m.mediana || 0))));
+    const y = (v) => H / 2 - (Math.max(-lim, Math.min(lim, v)) / lim) * (H / 2 - pad);
+    const x = (i) => (mesi.length === 1 ? W / 2 : pad + (i * (W - 2 * pad)) / (mesi.length - 1));
+    svg.append(svgEl('line', { x1: 0, x2: W, y1: H / 2, y2: H / 2, stroke: 'rgba(255,255,255,.18)', 'stroke-dasharray': '3 3' }));
+    svg.append(svgEl('polyline', { points: mesi.map((m, i) => `${x(i)},${y(m.mediana)}`).join(' '), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    mesi.forEach((m, i) => {
+      const c = svgEl('circle', { cx: x(i), cy: y(m.mediana), r: 3, fill: m.n >= 5 ? 'var(--s1)' : 'var(--bg3)', stroke: 'var(--s1)', 'stroke-width': 1.5 });
+      const t = svgEl('title', {});
+      t.textContent = `${MESI_BREVI[m.x.getMonth()]} ${m.x.getFullYear()}: ${segno(m.mediana)} (${m.n} ripartenze)`;
+      c.append(t);
+      svg.append(c);
+    });
+    return svg;
+  }
+
+  function rcTendenza(dr) {
+    if (!dr) return el('div', { class: 'rc-tend' }, el('small', { text: 'tendenza non calcolata' }));
+    const [lab, cls] = TEND[dr.drift_class] || [dr.drift_class, ''];
+    const calcolata = !['INSUFFICIENT_DATA'].includes(dr.drift_class);
+    const pr = dr.periodo_recente, pc = dr.periodo_confronto;
+    let sotto;
+    if (dr.motivo) sotto = dr.motivo;
+    else if (pr && pc) sotto = `${dr.recent_events} ripartenze ${ggmm(pr.first)}–${ggmm(pr.last)} contro ${dr.baseline_events} dal ${ggmm(pc.first)} al ${ggmm(pc.last)}, a clima simile`;
+    else sotto = `${dr.recent_events} ripartenze recenti contro ${dr.baseline_events} precedenti, a clima simile`;
+    return el('div', { class: 'rc-tend' },
+      el('div', {}, el('span', { class: 'v', text: calcolata ? segno(dr.drift_knn_pct) : '—' }), chip(lab, cls)),
+      el('small', { text: sotto }));
+  }
+
+  function rcDettaglio(zona, eventi, dr) {
+    // larghezza reale del riquadro: su telefono il grafico non si rimpicciolisce, si stringe
+    const W = Math.round(Math.max(330, Math.min(900, (vista().clientWidth || 900) - 70))), H = 210, L = 44, R = 12, T = 30, B = 26;
+    const pw = W - L - R, ph = H - T - B;
+    const box = el('div', { class: 'sv-box' });
+    const lett = el('div', { class: 'sv-lett vuota', text: 'passa sopra un punto per i dettagli della ripartenza' });
+    const dev = eventi.filter((e) => e.dev !== null);
+    if (!dev.length) return el('div', {}, lett);
+    const t0 = eventi[0].quando.getTime(), t1 = Math.max(eventi[eventi.length - 1].quando.getTime(), t0 + 864e5);
+    const lim = Math.min(100, Math.max(40, Math.ceil(Math.max(...dev.map((e) => Math.abs(e.dev))) / 20) * 20));
+    const x = (t) => L + ((t - t0) / (t1 - t0)) * pw;
+    const y = (v) => T + ph / 2 - (Math.max(-lim, Math.min(lim, v)) / lim) * (ph / 2);
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `ripartenze ${zona.zone_label}` });
+    const testo = (xx, yy, str, attrs) => { const n = svgEl('text', Object.assign({ x: xx, y: yy, fill: 'var(--muted)', 'font-size': 11 }, attrs || {})); n.textContent = str; return n; };
+
+    // periodi confrontati (dalla tendenza a 30 giorni)
+    const pr = dr && dr.periodo_recente, pc = dr && dr.periodo_confronto;
+    if (pr) {
+      const a = x(dataIso(pr.first).getTime()), b = x(dataIso(pr.last).getTime());
+      svg.append(svgEl('rect', { x: a - 4, y: T, width: Math.max(8, b - a + 8), height: ph, fill: 'rgba(85,152,231,.10)', rx: 4 }));
+      svg.append(svgEl('line', { x1: a - 4, x2: b + 4, y1: 12, y2: 12, stroke: 'var(--s1)', 'stroke-width': 2 }));
+      svg.append(testo(b + 4, 24, W < 600 ? '30 gg' : `ultimi 30 gg · ${segno(dr.drift_knn_pct)}`, { 'text-anchor': 'end', fill: 'var(--text)' }));
+    }
+    if (pc) {
+      const a = x(dataIso(pc.first).getTime()), b = x(dataIso(pc.last).getTime());
+      svg.append(svgEl('line', { x1: a, x2: b, y1: 12, y2: 12, stroke: 'rgba(255,255,255,.35)', 'stroke-width': 2 }));
+      svg.append(testo(a, 24, W < 600 ? 'confronto' : `confronto · ${dr.baseline_events} ripartenze`));
+    }
+    // asse y: 0 e ±lim
+    [lim, 0, -lim].forEach((v) => {
+      svg.append(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 0 ? 'rgba(255,255,255,.3)' : 'var(--grid)', 'stroke-dasharray': v === 0 ? '4 4' : null }));
+      svg.append(testo(L - 6, y(v) + 4, (v > 0 ? '+' : '') + v + '%', { 'text-anchor': 'end' }));
+    });
+    // mesi sull'asse x
+    const d0 = new Date(t0);
+    for (let m = new Date(d0.getFullYear(), d0.getMonth() + 1, 1); m.getTime() <= t1; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) {
+      svg.append(svgEl('line', { x1: x(m.getTime()), x2: x(m.getTime()), y1: T, y2: T + ph, stroke: 'var(--grid)' }));
+      if (x(m.getTime()) < W - R - 22) svg.append(testo(x(m.getTime()) + 3, H - 8, MESI_BREVI[m.getMonth()]));
+    }
+    // un punto per ripartenza; oltre ±50% anello giallo
+    dev.forEach((e) => {
+      const anom = Math.abs(e.dev) > 50;
+      const cx = x(e.quando.getTime()), cy = y(e.dev);
+      svg.append(svgEl('circle', { cx, cy, r: 4, fill: anom ? 'var(--bg2)' : 'var(--s1)', stroke: anom ? 'var(--yellow)' : 'var(--bg2)', 'stroke-width': anom ? 2 : 1.5 }));
+      const hit = svgEl('circle', { cx, cy, r: 9, fill: 'transparent', style: 'cursor:pointer' });
+      const info = `${mostraData(e.quando, true)} · ${segno(e.dev)} · ${fmt(e.recovery_rate, 2)} °C/h · esterna ${fmt(e.te_start, 1, ' °C')} · spento ${fmt(e.off_hours, 0)} h`;
+      hit.addEventListener('mouseenter', () => { lett.textContent = info; lett.classList.remove('vuota'); });
+      hit.addEventListener('click', () => { lett.textContent = info; lett.classList.remove('vuota'); });
+      svg.append(hit);
+    });
+    box.append(svg);
+    return el('div', { class: 'sv-graf' },
+      el('div', { class: 'sv-et' }, el('span', { text: `${zona.zone_label} — ogni punto è una ripartenza` }),
+        el('span', { class: 'sv-leg' },
+          el('span', {}, el('i', { style: 'background:var(--s1);border-radius:50%' }), 'ripartenza'),
+          el('span', {}, el('i', { style: 'border:2px solid var(--yellow);border-radius:50%;width:7px;height:7px' }), 'oltre ±50%'))),
+      box, lett,
+      el('p', { class: 'muted small', style: 'margin:6px 0 0', text: 'Sopra zero la zona si è scaldata più in fretta del solito a parità di condizioni, sotto zero più lentamente.' }));
+  }
+
   function vistaRecupero(v, p) {
     if (!p) return;
     const d = dettagli(p.impianto_ref);
@@ -2221,64 +2353,46 @@ function disegnaSchedaTecnica(s, el, extra) {
       v.append(el('div', { class: 'banner info', text: 'Nessun evento di recupero calcolato: serve storico di riscaldamento reale nella finestra analizzata.' }));
       return;
     }
-
-    if ((d.drift || []).length) {
-      const etichette = { DEGRADING: 'in peggioramento', IMPROVING: 'in miglioramento', STABLE: 'stabile', INSUFFICIENT_DATA: 'dati insufficienti' };
-      const colori = { DEGRADING: 'red', IMPROVING: 'green', STABLE: 'blue', INSUFFICIENT_DATA: 'bg5' };
-      const t = el('div', { class: 'tiles' });
-      (d.drift || []).forEach((r) => {
-        t.append(riquadro(segno(r.drift_knn_pct), `${r.zone_label} · ${r.window_days} gg · ${etichette[r.drift_class] || r.drift_class}`, colori[r.drift_class] || 'bg5'));
-      });
-      v.append(el('div', { class: 'card' },
-        el('h2', {}, 'Tendenza a pari clima', el('small', { text: 'scostamento del recupero recente rispetto agli eventi passati in condizioni simili' })),
-        t,
-        el('p', { class: 'muted small', text: 'Attenzione: a fine stagione il sole accelera il recupero e il KPI legge «miglioramento» anche senza interventi.' })));
-    }
+    const drift = d.drift || [];
+    const tendenza = (z, gg) => drift.find((r) => r.window_days === gg && (r.zone_id ? r.zone_id === z.zone_id : r.zone_label === z.zone_label));
 
     if (!S.zonaRecupero || !zone.find((z) => z.zone_id === S.zonaRecupero)) S.zonaRecupero = zone[0].zone_id;
-    const sel = el('select', {}, ...zone.map((z) => el('option', { value: z.zone_id, text: z.zone_label, selected: z.zone_id === S.zonaRecupero })));
-    sel.onchange = () => { S.zonaRecupero = sel.value; disegna(); };
+
+    const lista = el('div', { class: 'rc-lista' },
+      el('div', { class: 'rc-riga rc-testa' },
+        el('span', { text: 'Zona' }), el('span', { text: 'Tipico' }), el('span', { text: 'Anomale' }),
+        el('span', { text: 'Ultimi 30 giorni' }), el('span', { text: 'Mese per mese' })));
+    zone.forEach((z) => {
+      const ev = eventiZona(z);
+      const devs = ev.map((e) => e.dev).filter((x) => x !== null);
+      const med = mediano(devs);
+      const anom = devs.filter((x) => Math.abs(x) > 50).length;
+      const d90 = tendenza(z, 90);
+      const riga = el('button', { class: 'rc-riga' + (z.zone_id === S.zonaRecupero ? ' on' : ''), type: 'button',
+        onclick: () => { S.zonaRecupero = z.zone_id; disegna(); } },
+        el('div', { class: 'rc-nome' }, z.zone_label,
+          el('small', { text: ev.length ? `${ev.length} ripartenze · ${ggmm(ev[0].start_ts)}–${ggmm(ev[ev.length - 1].start_ts)}` : 'nessuna ripartenza' })),
+        el('div', { class: 'rc-num' }, el('b', { text: segno(med), style: med !== null && med < -10 ? 'color:var(--yellow)' : null }), el('span', { class: 'rc-lab', text: 'tipico' })),
+        el('div', { class: 'rc-num' }, el('b', { text: String(anom), style: anom ? 'color:var(--yellow)' : null }), el('span', { class: 'rc-lab', text: 'anomale' })),
+        el('div', {}, rcTendenza(tendenza(z, 30)),
+          d90 && d90.drift_class !== 'INSUFFICIENT_DATA' ? el('small', { class: 'rc-90', text: `90 gg: ${segno(d90.drift_knn_pct)} · ${(TEND[d90.drift_class] || [d90.drift_class])[0]}` }) : null),
+        el('div', { class: 'rc-spark' }, rcMiniatura(mesiZona(ev))));
+      lista.append(riga);
+    });
+    v.append(el('div', { class: 'card' },
+      el('h2', {}, 'Ripartenze per zona', el('small', { text: 'velocità di risalita dopo uno spegnimento, rispetto a ripartenze simili della stessa zona' })),
+      lista));
 
     const zona = zone.find((z) => z.zone_id === S.zonaRecupero);
-    const eventi = (zona.eventi || []).map((e) => Object.assign({}, e, { quando: dataIso(e.start_ts) })).filter((e) => e.quando);
-    const scostamenti = eventi.map((e) => num(e.recovery_deviation_pct)).filter((x) => x !== null);
-    const mediana = mediano(scostamenti);
-    const anomali = scostamenti.filter((x) => Math.abs(x) > 50).length;
-
+    const eventi = eventiZona(zona);
     v.append(el('div', { class: 'card' },
-      el('h2', {}, 'Zona', el('small', { text: 'gli eventi sono le ripartenze dopo uno spegnimento' })),
-      el('div', { style: 'max-width:320px' }, sel),
-      el('div', { class: 'tiles', style: 'margin-top:14px' },
-        riquadro(eventi.length, 'eventi di recupero', 'blue'),
-        riquadro(segno(mediana), 'scostamento mediano dal proprio standard', mediana === null || mediana >= -10 ? 'green' : 'yellow'),
-        riquadro(anomali, 'eventi anomali (oltre ±50%)', anomali ? 'red' : 'green'))));
-
-    const perMese = new Map();
-    eventi.forEach((e) => {
-      const k = `${e.quando.getFullYear()}-${String(e.quando.getMonth() + 1).padStart(2, '0')}`;
-      const v2 = num(e.recovery_deviation_pct);
-      if (v2 === null) return;
-      const cur = perMese.get(k) || { x: new Date(e.quando.getFullYear(), e.quando.getMonth(), 1), etichetta: k.slice(5) + '/' + k.slice(2, 4), valori: [] };
-      cur.valori.push(v2);
-      perMese.set(k, cur);
-    });
-    const mesi = [...perMese.values()].sort((a, b) => a.x - b.x).map((m) => ({
-      x: m.x, etichetta: m.etichetta, n: m.valori.length,
-      mediana: mediano(m.valori), p10: quantile(m.valori, 0.1), p90: quantile(m.valori, 0.9),
-    }));
-    if (mesi.length) {
-      v.append(el('div', { class: 'card' },
-        el('h2', {}, `Scostamento dal recupero atteso — ${zona.zone_label}`, el('small', { text: 'linea: mediana mensile · fascia: dal 10° al 90° percentile' })),
-        graficoFascia(mesi),
-        el('p', { class: 'muted small', text: 'Zero significa «in linea con lo standard della zona». Sotto zero: la zona recupera più lentamente del solito a parità di condizioni.' })));
-    }
-
-    v.append(el('div', { class: 'card' }, el('h2', { text: 'Eventi' }),
-      el('div', { class: 'tbl-wrap' }, tabella(['Inizio', '°C/h', 'Scostamento', 'Ore OFF', 'T esterna', 'Confidenza'],
-        eventi.slice().sort((a, b) => b.quando - a.quando).map((e) => ({
-          celle: [mostraData(e.quando, true), fmt(e.recovery_rate, 2), segno(e.recovery_deviation_pct),
-            fmt(e.off_hours, 1), fmt(e.te_start, 1, ' °C'), pct(e.confidence)],
-        })), [1, 2, 3, 4, 5]))));
+      rcDettaglio(zona, eventi, tendenza(zona, 30)),
+      el('details', { class: 'rc-el' }, el('summary', { text: `Elenco ripartenze (${eventi.length})` }),
+        el('div', { class: 'tbl-wrap' }, tabella(['Inizio', '°C/h', 'Scostamento', 'Ore OFF', 'T esterna', 'Confidenza'],
+          eventi.slice().reverse().map((e) => ({
+            celle: [mostraData(e.quando, true), fmt(e.recovery_rate, 2), segno(e.recovery_deviation_pct),
+              fmt(e.off_hours, 1), fmt(e.te_start, 1, ' °C'), pct(e.confidence)],
+          })), [1, 2, 3, 4, 5])))));
   }
 
   function mediano(v) {
