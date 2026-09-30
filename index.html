@@ -24,6 +24,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .login-title{font-size:34px;font-weight:700;margin-bottom:6px}
 .login-sub{font-size:16px;color:var(--muted);margin-bottom:36px}
 .user-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:400px;margin-bottom:36px}
+.user-grid .user-tile:last-child:nth-child(odd){grid-column:1/-1}
 .user-tile{background:var(--bg2);border:2.5px solid var(--bg4);border-radius:20px;padding:24px 12px 20px;text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:140px;transition:border-color .12s,background .12s}
 .user-tile.selected{border-color:var(--accent);background:rgba(47,129,247,.1)}
 .user-tile:active{background:var(--bg3)}
@@ -249,6 +250,7 @@ select.nif-input option{background:var(--bg2)}
         <div class="user-tile" onclick="selUser('Stefano')" id="tile-Stefano"><div class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">S</div><div class="tile-name">Stefano</div><div class="tile-zona">Pesaro</div></div>
         <div class="user-tile" onclick="selUser('Michele')" id="tile-Michele"><div class="av" style="background:linear-gradient(135deg,#3fb950,#16a34a)">Mi</div><div class="tile-name">Michele</div><div class="tile-zona">Verucchio</div></div>
         <div class="user-tile" onclick="selUser('Ezio')"    id="tile-Ezio"><div class="av" style="background:linear-gradient(135deg,#fb8f44,#c2410c)">E</div><div class="tile-name">Ezio</div><div class="tile-zona">Misano · Gabicce</div></div>
+        <div class="user-tile" onclick="selUser('Rajji')"    id="tile-Rajji"><div class="av" style="background:linear-gradient(135deg,#2dd4bf,#0f766e)">R</div><div class="tile-name">Rajji</div><div class="tile-zona">—</div></div>
       </div>
       <div class="pin-section" id="pinSection">
         <div class="pin-label" id="pinLabel">Inserisci PIN</div>
@@ -468,7 +470,7 @@ const PROXY_URL = 'https://siram-proxy.onrender.com';
 async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(); }
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
-const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'}};
+const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'},Rajji:{pin:'2005',zona:'—',color:'linear-gradient(135deg,#2dd4bf,#0f766e)',initial:'R'}};
 
 // === COMMESSE (ricavate dal comune dell'impianto) ===
 const COMMESSE=[
