@@ -24,6 +24,7 @@
   --stefano: #9a84c8;
   --michele: #7ab87a;
   --ezio:    #c89060;
+  --rajji:   #5fb3b3;
   --ferie:    #6aaec8;
   --permesso: #9a80c8;
   --malattia: #c87878;
@@ -106,6 +107,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 .ev-stefano { background: rgba(139,92,246,.2);  color: #c4b5fd; }
 .ev-michele { background: rgba(34,197,94,.2);   color: #86efac; }
 .ev-ezio    { background: rgba(249,115,22,.2);  color: #fdba74; }
+.ev-rajji   { background: rgba(45,212,191,.2); color: #99f6e4; }
 .ev-ferie   {
   background: repeating-linear-gradient(45deg, rgba(14,165,233,.08), rgba(14,165,233,.08) 3px, rgba(14,165,233,.18) 3px, rgba(14,165,233,.18) 6px);
   color: #7dd3fc; border: 1px dashed rgba(14,165,233,.5); border-radius: 5px;
@@ -276,6 +278,7 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .op-av-card.stefano::before { background: var(--stefano); }
 .op-av-card.michele::before { background: var(--michele); }
 .op-av-card.ezio::before    { background: var(--ezio); }
+.op-av-card.rajji::before   { background: var(--rajji); }
 .op-av-nome { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
 .op-av-zona { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
 .op-av-nums { display: flex; gap: 16px; margin-bottom: 12px; }
@@ -611,7 +614,7 @@ tr.int-completato td * { text-decoration: line-through; }
           </select>
           <select class="fc" style="width:130px" id="filtOp" onchange="renderInterventi()">
             <option value="">Tutti gli operai</option>
-            <option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option>
+            <option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option><option>Rajji</option>
           </select>
         </div>
         <div id="backlogSection" style="display:none;margin-bottom:20px">
@@ -800,6 +803,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="achip-Stefano" onclick="toggleAssegnaChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
           <div class="op-chip" id="achip-Michele" onclick="toggleAssegnaChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
           <div class="op-chip" id="achip-Ezio" onclick="toggleAssegnaChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
+          <div class="op-chip" id="achip-Rajji" onclick="toggleAssegnaChip('Rajji')"><div class="op-chip-av" style="background:#5fb3b3">R</div><div class="op-chip-name">Rajji</div><div class="op-chip-zona">—</div></div>
         </div>
       </div>
       <div class="fg"><label>Data *</label><input class="fc" type="date" id="assegnaData"/></div>
@@ -827,6 +831,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="rchip-Stefano" onclick="setRceeOperaio('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
           <div class="op-chip" id="rchip-Michele" onclick="setRceeOperaio('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
           <div class="op-chip" id="rchip-Ezio" onclick="setRceeOperaio('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
+          <div class="op-chip" id="rchip-Rajji" onclick="setRceeOperaio('Rajji')"><div class="op-chip-av" style="background:#5fb3b3">R</div><div class="op-chip-name">Rajji</div><div class="op-chip-zona">—</div></div>
         </div>
         <div id="rchip-Contenitore" onclick="setRceeOperaio('')" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Contenitore (nessun operaio)</div>
       </div>
@@ -916,6 +921,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="repchip-Stefano" onclick="toggleRepChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
           <div class="op-chip" id="repchip-Michele" onclick="toggleRepChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
           <div class="op-chip" id="repchip-Ezio" onclick="toggleRepChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
+          <div class="op-chip" id="repchip-Rajji" onclick="toggleRepChip('Rajji')"><div class="op-chip-av" style="background:#5fb3b3">R</div><div class="op-chip-name">Rajji</div><div class="op-chip-zona">—</div></div>
         </div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-top:8px">🔔 In reperibilità dalle 17:00 alle 06:00 e nel weekend.</p>
@@ -968,6 +974,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="chip-Stefano" onclick="toggleOpChip('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div><div class="op-chip-zona">Pesaro</div></div>
           <div class="op-chip" id="chip-Michele" onclick="toggleOpChip('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div><div class="op-chip-zona">Verucchio</div></div>
           <div class="op-chip" id="chip-Ezio" onclick="toggleOpChip('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div><div class="op-chip-zona">Misano</div></div>
+          <div class="op-chip" id="chip-Rajji" onclick="toggleOpChip('Rajji')"><div class="op-chip-av" style="background:#5fb3b3">R</div><div class="op-chip-name">Rajji</div><div class="op-chip-zona">—</div></div>
         </div>
         <div id="chip-Contenitore" onclick="toggleContenitoreNew()" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Metti nel Contenitore (nessun operaio)</div>
       </div>
@@ -977,7 +984,7 @@ tr.int-completato td * { text-decoration: line-through; }
       </div>
       <div class="fc-row">
         <div class="fg"><label>2° operaio (multi-giorno)</label>
-          <select class="fc" id="nOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
+          <select class="fc" id="nOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option><option>Rajji</option></select></div>
       </div>
       <div class="fg"><label>Note per l'operaio</label>
         <textarea class="fc" id="nNote" placeholder="Es. Portare ricambi filtro..."></textarea></div>
@@ -1022,6 +1029,7 @@ tr.int-completato td * { text-decoration: line-through; }
           <div class="op-chip" id="dchip-Stefano" onclick="setDetOperaio('Stefano')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div></div>
           <div class="op-chip" id="dchip-Michele" onclick="setDetOperaio('Michele')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div></div>
           <div class="op-chip" id="dchip-Ezio" onclick="setDetOperaio('Ezio')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div></div>
+          <div class="op-chip" id="dchip-Rajji" onclick="setDetOperaio('Rajji')"><div class="op-chip-av" style="background:#5fb3b3">R</div><div class="op-chip-name">Rajji</div></div>
         </div>
         <div id="dchip-Contenitore" onclick="setDetOperaio('')" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;border-radius:10px;border:1.5px dashed var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;user-select:none">📦 Contenitore (nessun operaio)</div>
       </div>
@@ -1044,7 +1052,7 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="fc-row" style="margin-top:10px">
         <div class="fg"><label>Data fine lavori</label><input class="fc" type="date" id="detDataFine"/></div>
         <div class="fg"><label>2° operaio (multi-giorno)</label>
-          <select class="fc" id="detOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
+          <select class="fc" id="detOpSecondario2"><option value="">Nessuno</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option><option>Rajji</option></select></div>
       </div>
       <div id="detSecondo" style="margin-top:8px"></div>
       <div id="detDriveBox" style="margin-top:10px;display:none">
@@ -1075,7 +1083,7 @@ tr.int-completato td * { text-decoration: line-through; }
     <div class="modal-body">
       <div class="fc-row">
         <div class="fg"><label>Operaio *</label>
-          <select class="fc" id="aOp"><option value="">Seleziona...</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option></select></div>
+          <select class="fc" id="aOp"><option value="">Seleziona...</option><option>Matteo</option><option>Stefano</option><option>Michele</option><option>Ezio</option><option>Rajji</option></select></div>
         <div class="fg"><label>Tipo *</label>
           <select class="fc" id="aTipo"><option>Ferie</option><option>Permesso</option><option>Malattia</option></select></div>
       </div>
@@ -1264,7 +1272,7 @@ function apriAnalisi() {
 const MESI       = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const MESI_SHORT = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
 const GIORNI_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060' };
+const OPERAI_HEX = { Matteo:'#7a9ec8', Stefano:'#9a84c8', Michele:'#7ab87a', Ezio:'#c89060', Rajji:'#5fb3b3' };
 
 const COMMESSE_R = [
   {key:'Pesaro',color:'#7a9ec8',match:['pesaro']},
@@ -1565,7 +1573,7 @@ function esportaReport() {
 // ============================================================
 function renderAvanzamento() {
   (function(){
-    const TECNICI = ['Matteo','Stefano','Michele','Ezio'];
+    const TECNICI = ['Matteo','Stefano','Michele','Ezio','Rajji'];
     const straord = S.interventi.filter(i => i.tipoVisita === 'Straordinaria');
     const stats = TECNICI.map(nome => {
       const prese  = straord.filter(i => i.operaio === nome).length;
@@ -1609,6 +1617,7 @@ function renderAvanzamento() {
     { nome:'Stefano', zona:'Pesaro',          cls:'stefano', col:'var(--stefano)' },
     { nome:'Michele', zona:'Verucchio',       cls:'michele', col:'var(--michele)' },
     { nome:'Ezio',    zona:'Misano · Gabicce', cls:'ezio',   col:'var(--ezio)' },
+    { nome:'Rajji',   zona:'—',               cls:'rajji',  col:'var(--rajji)' },
   ];
 
   function statOperaio(nomeOperaio) {
@@ -1816,14 +1825,14 @@ function openAssegnaRcee(idx) {
   document.getElementById('rceeAssTitle').textContent = s.descrizione || s.codiceAnagrafica || s.codiceImpianto;
   document.getElementById('rceeAssInfo').innerHTML =
     `RCEE ${s.alimentazione || ''} · ${s.potenzaImpianto || '?'} kW · periodicità ${s.periodicita || '?'} anni<br>Prossima scadenza: <strong>${s.prossimaScadenza || '?'}</strong> (${s.giorni} gg)`;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n => document.getElementById('rchip-'+n).classList.remove('selected'));
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n => document.getElementById('rchip-'+n).classList.remove('selected'));
   setRceeOperaioUI();
   document.getElementById('rceeAssData').value = toLocaleDateStr(new Date());
   document.getElementById('modalAssegnaRcee').classList.add('open');
 }
 function setRceeOperaio(nome) { rceeOperaioSel = nome; setRceeOperaioUI(); }
 function setRceeOperaioUI() {
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n => {
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n => {
     const c = document.getElementById('rchip-'+n); if (c) c.classList.toggle('selected', rceeOperaioSel === n);
   });
   const cont = document.getElementById('rchip-Contenitore');
@@ -2004,6 +2013,7 @@ function openPratica(id) {
     { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
     { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
     { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
+    { nome:'Rajji',   colore:'#5fb3b3', iniziale:'R'  },
   ];
   const intPratica = S.interventi.filter(i => (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento);
   const intListHtml = intPratica.length===0
@@ -2266,7 +2276,7 @@ const _pintChipSel = {};
 function togglePintChip(idPratica, nomeOperaio) {
   if(!_pintChipSel[idPratica]) _pintChipSel[idPratica] = new Set();
   const sel = _pintChipSel[idPratica];
-  const OPERAI_COL = {Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060'};
+  const OPERAI_COL = {Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060',Rajji:'#5fb3b3'};
   const chip = document.getElementById('pint_chip_'+idPratica+'_'+nomeOperaio);
   if(!chip) return;
   if(sel.has(nomeOperaio)) {
@@ -2506,16 +2516,16 @@ function openAssegna(id) {
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   document.getElementById('assegnaTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
   document.getElementById('assegnaInfo').innerHTML=`<span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${i.note?`<span style="margin-left:10px;font-style:italic">${i.note}</span>`:''}`;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('achip-'+n).classList.remove('selected'));
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>document.getElementById('achip-'+n).classList.remove('selected'));
   document.getElementById('assegnaData').value=toLocaleDateStr(new Date());
   document.getElementById('modalAssegna').classList.add('open');
 }
 
 function toggleAssegnaChip(nome) { document.getElementById('achip-'+nome).classList.toggle('selected'); }
-function toggleRepChip(nome) { ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected')); document.getElementById('repchip-'+nome).classList.add('selected'); }
+function toggleRepChip(nome) { ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected')); document.getElementById('repchip-'+nome).classList.add('selected'); }
 
 async function confermaAssegna() {
-  const operai=['Matteo','Stefano','Michele','Ezio'].filter(n=>document.getElementById('achip-'+n).classList.contains('selected'));
+  const operai=['Matteo','Stefano','Michele','Ezio','Rajji'].filter(n=>document.getElementById('achip-'+n).classList.contains('selected'));
   const data=document.getElementById('assegnaData').value;
   if(!operai.length){toast('Seleziona almeno un operaio','err');return;}
   if(!data){toast('Seleziona una data','err');return;}
@@ -2582,7 +2592,7 @@ function renderInterventi() {
 let detOperaioSel='';
 function setDetOperaio(nome) { detOperaioSel=nome; renderDetAssegna(); }
 function renderDetAssegna() {
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>{ const c=document.getElementById('dchip-'+n); if(c) c.classList.toggle('selected', detOperaioSel===n); });
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>{ const c=document.getElementById('dchip-'+n); if(c) c.classList.toggle('selected', detOperaioSel===n); });
   const cont=document.getElementById('dchip-Contenitore');
   if(cont){
     const on = detOperaioSel==='';
@@ -2784,7 +2794,7 @@ function openModalIntervento(dataPreimpostata) {
   document.getElementById('nAntEmpty').style.display='none';
   opSelezionati=new Set();
   contenitoreNewSel=false;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
   setContenitoreNewUI();
   nExtraItems=[];
   renderExtraList();
@@ -2801,7 +2811,7 @@ function toggleContenitoreNew() {
   contenitoreNewSel=!contenitoreNewSel;
   if(contenitoreNewSel){
     opSelezionati=new Set();
-    ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
+    ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>document.getElementById('chip-'+n).classList.remove('selected'));
   }
   setContenitoreNewUI();
 }
@@ -3045,13 +3055,13 @@ function openRepModal(dataInizio,dataFine,operaioAttuale) {
   document.getElementById('repDataHidden').value=dataInizio+'|'+dataFine;
   const dIn=new Date(dataInizio+'T00:00:00'), dOut=new Date(dataFine+'T00:00:00');
   document.getElementById('repModalTitolo').textContent=`Reperibile ${dIn.getDate()} ${MESI_SHORT[dIn.getMonth()]} – ${dOut.getDate()} ${MESI_SHORT[dOut.getMonth()]}`;
-  ['Matteo','Stefano','Michele','Ezio'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected'));
+  ['Matteo','Stefano','Michele','Ezio','Rajji'].forEach(n=>document.getElementById('repchip-'+n).classList.remove('selected'));
   if(operaioAttuale) document.getElementById('repchip-'+operaioAttuale)?.classList.add('selected');
   document.getElementById('modalRep').classList.add('open');
 }
 async function salvaReperibile() {
   const [dataInizio,dataFine]=document.getElementById('repDataHidden').value.split('|');
-  const operaio=['Matteo','Stefano','Michele','Ezio'].find(n=>document.getElementById('repchip-'+n).classList.contains('selected'));
+  const operaio=['Matteo','Stefano','Michele','Ezio','Rajji'].find(n=>document.getElementById('repchip-'+n).classList.contains('selected'));
   if(!operaio){toast('Seleziona un operaio','err');return;}
   try {
     const r=await apiPost('/imposta-reperibile',{dataInizio,dataFine,operaio});
