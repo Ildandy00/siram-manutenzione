@@ -63,9 +63,26 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .fc-count{background:var(--bg4);color:var(--text);padding:1px 8px;border-radius:11px;font-size:12px;font-weight:700}
 .fc-btn.active .fc-count{background:rgba(0,0,0,.22);color:inherit}
 .vista-row{display:flex;gap:8px}
-.vista-btn{flex:1;padding:12px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+.vista-btn{flex:1;min-width:0;padding:12px 6px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
 .vista-btn:active{transform:scale(.97)}
 .vista-btn.active{background:var(--bg4);color:var(--text);border-color:var(--accent)}
+.vista-count{background:var(--bg4);color:var(--text);padding:1px 7px;border-radius:10px;font-size:12px;font-weight:700}
+.vista-btn.active .vista-count{background:var(--bg3)}
+
+/* === RCEE === */
+.rcee-box{background:var(--bg2);border:1.5px solid var(--bg4);border-radius:18px;overflow:hidden;margin-bottom:14px}
+.rcee-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--bg3);cursor:pointer}
+.rcee-row:first-child{border-top:none}
+.rcee-row:active{background:var(--bg3)}
+.rcee-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rcee-nome{flex:1;min-width:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcee-cod{font-size:12px;color:var(--muted);flex-shrink:0}
+.rcee-scad{font-size:12px;font-weight:700;padding:3px 9px;border-radius:9px;flex-shrink:0;background:var(--bg3);color:var(--muted);border:1px solid var(--bg4);white-space:nowrap}
+.rcee-scad.vicina{background:rgba(200,144,96,.15);color:var(--orange);border-color:rgba(200,144,96,.35)}
+.rcee-scad.scaduta{background:rgba(200,120,120,.15);color:var(--red);border-color:rgba(200,120,120,.35)}
+.rcee-more{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-top:1px solid var(--bg3);font-size:14px;font-weight:700;color:var(--muted);cursor:pointer}
+.rcee-more:active{background:var(--bg3)}
+.rcee-tag{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--bg3);border:1px solid var(--bg4);color:var(--accent)}
 
 .main-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .main-inner{padding:16px;padding-bottom:max(90px,calc(80px + env(safe-area-inset-bottom,0px)))}
@@ -249,8 +266,8 @@ select.nif-input option{background:var(--bg2)}
         <div class="user-tile" onclick="selUser('Matteo')"  id="tile-Matteo"><div class="av" style="background:linear-gradient(135deg,#2f81f7,#1a56db)">M</div><div class="tile-name">Matteo</div><div class="tile-zona">Pesaro</div></div>
         <div class="user-tile" onclick="selUser('Stefano')" id="tile-Stefano"><div class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">S</div><div class="tile-name">Stefano</div><div class="tile-zona">Pesaro</div></div>
         <div class="user-tile" onclick="selUser('Michele')" id="tile-Michele"><div class="av" style="background:linear-gradient(135deg,#3fb950,#16a34a)">Mi</div><div class="tile-name">Michele</div><div class="tile-zona">Verucchio</div></div>
-        <div class="user-tile" onclick="selUser('Ezio')"    id="tile-Ezio"><div class="av" style="background:linear-gradient(135deg,#fb8f44,#c2410c)">E</div><div class="tile-name">Ezio</div><div class="tile-zona">Misano · Gabicce</div></div>
-        <div class="user-tile" onclick="selUser('Aziz')"    id="tile-Aziz"><div class="av" style="background:linear-gradient(135deg,#2dd4bf,#0f766e)">A</div><div class="tile-name">Aziz</div><div class="tile-zona">—</div></div>
+        <div class="user-tile" onclick="selUser('Ezio')"    id="tile-Ezio"><div class="av" style="background:linear-gradient(135deg,#fb8f44,#c2410c)">E</div><div class="tile-name">Ezio</div><div class="tile-zona">Misano &#xB7; Gabicce</div></div>
+        <div class="user-tile" onclick="selUser('Aziz')"    id="tile-Aziz"><div class="av" style="background:linear-gradient(135deg,#2dd4bf,#0f766e)">A</div><div class="tile-name">Aziz</div><div class="tile-zona">&#x2014;</div></div>
       </div>
       <div class="pin-section" id="pinSection">
         <div class="pin-label" id="pinLabel">Inserisci PIN</div>
@@ -259,7 +276,7 @@ select.nif-input option{background:var(--bg2)}
           <div class="pin-key" onclick="addPin('1')">1</div><div class="pin-key" onclick="addPin('2')">2</div><div class="pin-key" onclick="addPin('3')">3</div>
           <div class="pin-key" onclick="addPin('4')">4</div><div class="pin-key" onclick="addPin('5')">5</div><div class="pin-key" onclick="addPin('6')">6</div>
           <div class="pin-key" onclick="addPin('7')">7</div><div class="pin-key" onclick="addPin('8')">8</div><div class="pin-key" onclick="addPin('9')">9</div>
-          <div class="pin-key vuoto"></div><div class="pin-key" onclick="addPin('0')">0</div><div class="pin-key del" onclick="delPin()">⌫</div>
+          <div class="pin-key vuoto"></div><div class="pin-key" onclick="addPin('0')">0</div><div class="pin-key del" onclick="delPin()">&#x232B;</div>
         </div>
         <div class="pin-err" id="pinErr"></div>
       </div>
@@ -270,25 +287,26 @@ select.nif-input option{background:var(--bg2)}
       <div class="tb-row"><div class="user-chip"><div class="av-sm" id="mainAv"></div><div><div class="uname-top" id="mainNome"></div><div class="uzona-top" id="mainZona"></div></div></div><button class="logout-btn" onclick="logout()">Esci</button></div>
       <div class="filtri-commesse" id="filtriCommesse"></div>
       <div class="vista-row">
-        <button class="vista-btn active" id="vistaContenitore" onclick="setVista('contenitore')">📦 Contenitore</button>
-        <button class="vista-btn" id="vistaMie" onclick="setVista('mie')">👷 Le mie</button>
+        <button class="vista-btn active" id="vistaContenitore" onclick="setVista('contenitore')">&#x1F4E6; Contenitore</button>
+        <button class="vista-btn" id="vistaMie" onclick="setVista('mie')">&#x1F477; Le mie</button>
+        <button class="vista-btn" id="vistaRcee" onclick="setVista('rcee')">&#x1F4CB; RCEE</button>
       </div>
     </div>
-    <div class="main-scroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
-    <button class="fab" onclick="openNewInt()">＋</button>
-    <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">📅</button>
-    <button class="fab-imp" onclick="openImpiantiPanel()" title="I miei impianti">🏢</button>
+    <div class="main-scroll" id="mainScroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
+    <button class="fab" onclick="openNewInt()">&#xFF0B;</button>
+    <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">&#x1F4C5;</button>
+    <button class="fab-imp" onclick="openImpiantiPanel()" title="I miei impianti">&#x1F3E2;</button>
   </div>
 
   <!-- PANEL I MIEI IMPIANTI -->
   <div class="panel" id="impiantiPanel" style="overflow:hidden">
     <div class="panel-top">
-      <button class="back-btn" onclick="closeImpiantiPanel()">‹</button>
+      <button class="back-btn" onclick="closeImpiantiPanel()">&#x2039;</button>
       <div class="panel-title-wrap">
         <div class="panel-title">I miei impianti</div>
-        <div class="panel-sub" id="impiantiSub">Stagione 16/04 → 01/10/2026</div>
+        <div class="panel-sub" id="impiantiSub">Stagione 16/04 &#x2192; 01/10/2026</div>
       </div>
-      <button onclick="caricaImpianti()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">↻</button>
+      <button onclick="caricaImpianti()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">&#x21BB;</button>
     </div>
     <div id="impSummary" style="display:none;background:var(--bg2);border-bottom:1px solid var(--bg3);padding:12px 18px;display:none">
       <div style="display:flex;gap:10px;margin-bottom:10px">
@@ -298,11 +316,11 @@ select.nif-input option{background:var(--bg2)}
         </div>
         <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(63,185,80,.3)">
           <div style="font-size:26px;font-weight:700;color:var(--green)" id="impFatti">0</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">✓ Fatti</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">&#x2713; Fatti</div>
         </div>
         <div style="flex:1;background:var(--bg3);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(200,120,120,.3)">
           <div style="font-size:26px;font-weight:700;color:var(--red)" id="impDaFare">0</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">✗ Da fare</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">&#x2717; Da fare</div>
         </div>
       </div>
       <div style="height:7px;background:var(--red);border-radius:4px;overflow:hidden">
@@ -314,14 +332,14 @@ select.nif-input option{background:var(--bg2)}
       </div>
     </div>
     <div style="padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--bg3);display:flex;gap:8px">
-      <input type="search" id="impSearch" placeholder="🔍 Cerca..." oninput="renderImpiantiPanel()"
+      <input type="search" id="impSearch" placeholder="&#x1F50D; Cerca..." oninput="renderImpiantiPanel()"
         style="flex:1;padding:9px 12px;background:var(--bg3);border:1.5px solid var(--bg4);border-radius:10px;color:var(--text);font-family:'Outfit',sans-serif;font-size:14px"/>
       <button id="impBtnTutti" onclick="setImpFiltro('tutti')"
         style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg4);color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Tutti</button>
       <button id="impBtnRosso" onclick="setImpFiltro('rosso')"
-        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✗</button>
+        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">&#x2717;</button>
       <button id="impBtnVerde" onclick="setImpFiltro('verde')"
-        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">✓</button>
+        style="padding:8px 12px;border-radius:10px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer">&#x2713;</button>
     </div>
     <div class="panel-scroll" id="impLista" style="padding:8px 0">
       <div class="loading-ctr"><div class="spinner"></div>Caricamento...</div>
@@ -330,16 +348,16 @@ select.nif-input option{background:var(--bg2)}
 
   <!-- PANEL DETTAGLIO INTERVENTO -->
   <div class="panel" id="panel">
-    <div class="panel-top"><button class="back-btn" onclick="closePanel()">‹</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">⏱ Posticipa</button></div>
-    <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attività</div><div id="panelChk"></div></div>
-    <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()" style="display:none">✓ Segna come completato</button>
+    <div class="panel-top"><button class="back-btn" onclick="closePanel()">&#x2039;</button><div class="panel-title-wrap"><div class="panel-title" id="panelTitle"></div><div class="panel-sub" id="panelSub"></div></div><button id="postBtn" onclick="openPostSheet()" style="background:rgba(245,158,11,.12);border:1.5px solid rgba(245,158,11,.3);color:var(--yellow);padding:8px 14px;border-radius:12px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">&#x23F1; Posticipa</button></div>
+    <div class="panel-scroll" id="panelScroll"><div id="panelInfo" class="info-strip"></div><div id="panelNote"></div><div class="chk-sec">Attivit&#xE0;</div><div id="panelChk"></div></div>
+    <button class="panel-fab completa" id="panelFab" onclick="toggleChiudi()" style="display:none">&#x2713; Segna come completato</button>
   </div>
   <div class="new-int-overlay" id="newIntOverlay">
     <div class="new-int-top">
-      <button class="back-btn" onclick="closeNewInt()">‹</button>
+      <button class="back-btn" onclick="closeNewInt()">&#x2039;</button>
       <div class="panel-title-wrap">
         <div class="panel-title">Nuova richiesta</div>
-        <div class="panel-sub">Segnala un'attività</div>
+        <div class="panel-sub">Segnala un'attivit&#xE0;</div>
       </div>
     </div>
     <div class="new-int-scroll">
@@ -360,21 +378,21 @@ select.nif-input option{background:var(--bg2)}
     <button class="nif-fab" id="nifSubmit" onclick="inviaNewInt()">Invia richiesta</button>
   </div>
 
-  <div class="sheet-overlay" id="sheetOverlay"><div class="sheet"><div class="sheet-title">Attività extra</div><input class="sheet-inp" id="sheetInp" type="text" placeholder="Descrivi l'attività..." autocomplete="off"/><div class="sheet-btns"><button class="sheet-btn cancel" onclick="closeSheet()">Annulla</button><button class="sheet-btn ok" onclick="salvaExtra()">Aggiungi</button></div></div></div>
+  <div class="sheet-overlay" id="sheetOverlay"><div class="sheet"><div class="sheet-title">Attivit&#xE0; extra</div><input class="sheet-inp" id="sheetInp" type="text" placeholder="Descrivi l'attivit&#xE0;..." autocomplete="off"/><div class="sheet-btns"><button class="sheet-btn cancel" onclick="closeSheet()">Annulla</button><button class="sheet-btn ok" onclick="salvaExtra()">Aggiungi</button></div></div></div>
 
   <div class="sheet-overlay" id="postSheet">
     <div class="sheet">
       <div class="sheet-title">Posticipa intervento</div>
       <div class="post-option" onclick="posticipa('domani')">
-        <div class="post-icon">📅</div>
+        <div class="post-icon">&#x1F4C5;</div>
         <div><div>Domani</div><div class="post-sub" id="postDomaniData"></div></div>
       </div>
       <div class="post-option" onclick="posticipa('settimana')">
-        <div class="post-icon">📆</div>
+        <div class="post-icon">&#x1F4C6;</div>
         <div><div>Prossima settimana</div><div class="post-sub" id="postSettData"></div></div>
       </div>
       <div class="post-option" onclick="showPostDate()">
-        <div class="post-icon">🗓</div>
+        <div class="post-icon">&#x1F5D3;</div>
         <div><div>Data specifica</div><div class="post-sub">Scegli una data</div></div>
       </div>
       <div class="post-date-wrap" id="postDateWrap" style="display:none">
@@ -392,7 +410,7 @@ select.nif-input option{background:var(--bg2)}
     <div class="sheet" style="max-height:85vh;overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div class="sheet-title" style="margin:0">Prossimi 7 giorni</div>
-        <button class="sheet-btn cancel" style="width:auto;padding:8px 14px;font-size:14px" onclick="closeWeekSheet()">✕</button>
+        <button class="sheet-btn cancel" style="width:auto;padding:8px 14px;font-size:14px" onclick="closeWeekSheet()">&#x2715;</button>
       </div>
       <div id="weekContent"></div>
     </div>
@@ -402,10 +420,10 @@ select.nif-input option{background:var(--bg2)}
     <div class="modal-chiusura">
       <div class="mc-title">Chiudi ordine di lavoro</div>
       <div class="mc-sub" id="mcSub"></div>
-      <textarea class="mc-textarea" id="mcNota" placeholder="Descrivi cosa è stato fatto — es. sostituito filtro, pressione ok, anomalia risolta... (obbligatorio)"></textarea>
+      <textarea class="mc-textarea" id="mcNota" placeholder="Descrivi cosa &#xE8; stato fatto &#x2014; es. sostituito filtro, pressione ok, anomalia risolta... (obbligatorio)"></textarea>
       <div class="mc-btns">
         <button class="mc-btn annulla" onclick="closeModalChiusura()">Annulla</button>
-        <button class="mc-btn conferma" onclick="confermaChiusura()">✓ Conferma chiusura</button>
+        <button class="mc-btn conferma" onclick="confermaChiusura()">&#x2713; Conferma chiusura</button>
       </div>
     </div>
   </div>
@@ -423,7 +441,7 @@ select.nif-input option{background:var(--bg2)}
   <div class="sheet-overlay" id="riassegnaSheet">
     <div class="sheet">
       <div class="sheet-title">Riassegna a un collega</div>
-      <p style="font-size:15px;color:var(--muted);margin-bottom:18px">La richiesta passerà in carico al collega scelto:</p>
+      <p style="font-size:15px;color:var(--muted);margin-bottom:18px">La richiesta passer&#xE0; in carico al collega scelto:</p>
       <div id="riassegnaList"></div>
       <button class="sheet-btn cancel" style="width:100%;margin-top:4px" onclick="closeRiassegnaSheet()">Annulla</button>
     </div>
@@ -431,14 +449,14 @@ select.nif-input option{background:var(--bg2)}
 
   <div class="sheet-overlay" id="rdaSheet">
     <div class="sheet">
-      <div class="sheet-title">🛒 RDA / CAT</div>
+      <div class="sheet-title">&#x1F6D2; RDA / CAT</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="rdaImpNome"></div>
       <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Tipologia richiesta *</div>
       <div class="rda-tipo-grid">
-        <button class="rda-tipo-btn" id="rdaTipoSost" onclick="selRdaTipo('Sostituzione apparecchiatura')">🔧 Sostituzione<br>apparecchiatura</button>
-        <button class="rda-tipo-btn" id="rdaTipoTec"  onclick="selRdaTipo('Supporto tecnico')">👨‍🔧 Supporto<br>tecnico</button>
-        <button class="rda-tipo-btn" id="rdaTipoMat"  onclick="selRdaTipo('Materiali/Ricambi')">📦 Materiali<br>/ Ricambi</button>
-        <button class="rda-tipo-btn" id="rdaTipoAlt"  onclick="selRdaTipo('Altro')">📋 Altro</button>
+        <button class="rda-tipo-btn" id="rdaTipoSost" onclick="selRdaTipo('Sostituzione apparecchiatura')">&#x1F527; Sostituzione<br>apparecchiatura</button>
+        <button class="rda-tipo-btn" id="rdaTipoTec"  onclick="selRdaTipo('Supporto tecnico')">&#x1F468;&#x200D;&#x1F527; Supporto<br>tecnico</button>
+        <button class="rda-tipo-btn" id="rdaTipoMat"  onclick="selRdaTipo('Materiali/Ricambi')">&#x1F4E6; Materiali<br>/ Ricambi</button>
+        <button class="rda-tipo-btn" id="rdaTipoAlt"  onclick="selRdaTipo('Altro')">&#x1F4CB; Altro</button>
       </div>
       <textarea class="sheet-inp" id="rdaNota" rows="3" placeholder="Descrivi cosa serve (es. bruciatore Riello mod. X, termostato zona 2...)"></textarea>
       <div class="sheet-btns">
@@ -450,7 +468,7 @@ select.nif-input option{background:var(--bg2)}
 
   <div class="sheet-overlay" id="prevSheet">
     <div class="sheet">
-      <div class="sheet-title">💰 Richiedi preventivo</div>
+      <div class="sheet-title">&#x1F4B0; Richiedi preventivo</div>
       <div style="font-size:14px;font-weight:600;color:var(--muted);margin-bottom:14px" id="prevAttivita"></div>
       <textarea class="sheet-inp" id="prevNota" rows="4" placeholder="Descrivi il lavoro da preventivare..."></textarea>
       <div class="sheet-btns">
@@ -470,7 +488,7 @@ const PROXY_URL = 'https://siram-proxy.onrender.com';
 async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(); }
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
-const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'},Aziz:{pin:'2005',zona:'—',color:'linear-gradient(135deg,#2dd4bf,#0f766e)',initial:'A'}};
+const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano \u00B7 Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'},Aziz:{pin:'2005',zona:'\u2014',color:'linear-gradient(135deg,#2dd4bf,#0f766e)',initial:'A'}};
 
 // === COMMESSE (ricavate dal comune dell'impianto) ===
 const COMMESSE=[
@@ -494,8 +512,48 @@ function commessaDi(imp){
   }
   return COMMESSE_BY_KEY['Altri'];
 }
-// Una richiesta è "presa in carico" se ha un operaio valorizzato
+// Una richiesta \u00E8 "presa in carico" se ha un operaio valorizzato
 function isPresa(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
+
+// === RCEE ===
+// Le richieste create dal pulsante "Assegna" della scheda RCEE hanno la nota che inizia con [RCEE]
+function isRcee(i){ return /^\s*\[RCEE\]/.test((i&&i.note)||''); }
+// Estrae scadenza e alimentazione/potenza dalla nota:
+// "[RCEE] Controllo efficienza energetica \u2014 scad. 30/09/2026 \u00B7 Metano 112.2kW (imp. 107553) | ..."
+function rceeInfo(i){
+  const note=(i&&i.note)||'';
+  const out={scad:'',scadTxt:'',pot:''};
+  const m=note.match(/scad\.\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  if(m){
+    const dd=m[1].padStart(2,'0'), mm=m[2].padStart(2,'0');
+    out.scad=m[3]+'-'+mm+'-'+dd;
+    out.scadTxt=dd+'/'+mm;
+  }
+  const p=note.match(/scad\.\s*\d{1,2}\/\d{1,2}\/\d{4}\s*\u00B7\s*([^|(]+)/i);
+  if(p) out.pot=p[1].trim();
+  return out;
+}
+// Toglie dalla nota le righe ripetute "| Riaperto il ..."
+function pulisciNotaRcee(note){
+  return (note||'').replace(/\s*\|\s*[^|]*Riaperto il[^|]*/gi,'').trim();
+}
+function giorniA(iso){
+  if(!iso) return null;
+  const oggi=new Date(new Date().toISOString().slice(0,10)+'T00:00:00');
+  return Math.round((new Date(iso+'T00:00:00')-oggi)/864e5);
+}
+function rceeScadPill(info){
+  if(!info.scad) return '<span class="rcee-scad">senza scad.</span>';
+  const g=giorniA(info.scad);
+  const cls = g<0 ? 'scaduta' : (g<=15 ? 'vicina' : '');
+  const txt = g<0 ? '\u26A0 scad. '+info.scadTxt : 'scad. '+info.scadTxt;
+  return `<span class="rcee-scad ${cls}">${txt}</span>`;
+}
+// Ordina per scadenza RCEE (le senza scadenza in fondo)
+function byScad(a,b){
+  const sa=rceeInfo(a).scad||'9999-99-99', sb=rceeInfo(b).scad||'9999-99-99';
+  return sa.localeCompare(sb);
+}
 
 let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[]},currentIntId=null,extraForId=null,expandedNota={};
 let vista='contenitore', commessaSel='';
@@ -519,7 +577,7 @@ function entra(){
   if(openId){ sessionStorage.removeItem('openInterventoId'); setTimeout(()=>openPanel(openId),800); }
 }
 function logout(){currentUser=null;pinBuf=''; window.currentUser=null;
-                  S={impianti:[],interventi:[],checklist:[]};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
+                  S={impianti:[],interventi:[],checklist:[]};vista='contenitore';commessaSel='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
 
 async function caricaDati(){
   try{
@@ -534,13 +592,23 @@ async function caricaDati(){
 // === VISTE E FILTRI ===
 function setVista(v){
   vista=v;
-  document.getElementById('vistaContenitore').classList.toggle('active',v==='contenitore');
-  document.getElementById('vistaMie').classList.toggle('active',v==='mie');
   renderLista();
+  const sc=document.getElementById('mainScroll'); if(sc) sc.scrollTop=0;
 }
 function setCommessa(key){
   commessaSel = (commessaSel===key ? '' : key);
   renderLista();
+}
+
+function renderVistaBtns(){
+  document.getElementById('vistaContenitore').classList.toggle('active',vista==='contenitore');
+  document.getElementById('vistaMie').classList.toggle('active',vista==='mie');
+  document.getElementById('vistaRcee').classList.toggle('active',vista==='rcee');
+  // Badge RCEE: controlli ancora liberi (rispetta il filtro commessa)
+  let rc=S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato==='Aperto' && !isPresa(i) && isRcee(i));
+  if(commessaSel) rc=rc.filter(i=>commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)).key===commessaSel);
+  const n=rc.length;
+  document.getElementById('vistaRcee').innerHTML='\uD83D\uDCCB RCEE'+(n?`<span class="vista-count">${n}</span>`:'');
 }
 
 function renderFiltriCommesse(){
@@ -565,13 +633,15 @@ function renderFiltriCommesse(){
 
 function renderLista(){
   renderFiltriCommesse();
+  renderVistaBtns();
   const oggi=new Date().toISOString().slice(0,10);
 
   // Solo straordinarie, escluso il backlog del responsabile
   let straord=S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato!=='DaAssegnare');
 
   // Vista
-  if(vista==='mie') straord=straord.filter(i=>i.operaio===currentUser||i.secondoOperaio===currentUser);
+  if(vista==='mie')  straord=straord.filter(i=>i.operaio===currentUser||i.secondoOperaio===currentUser);
+  if(vista==='rcee') straord=straord.filter(isRcee);
 
   // Filtro commessa
   if(commessaSel) straord=straord.filter(i=>commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)).key===commessaSel);
@@ -585,30 +655,81 @@ function renderLista(){
     const ao=a.dataPrevista===oggi?0:1, bo=b.dataPrevista===oggi?0:1;
     return ao-bo || (b.dataPrevista||'').localeCompare(a.dataPrevista||'');
   };
-  libere.sort(byDate); prese.sort(byDate);
 
   let html='';
-  if(libere.length){
-    html+='<div class="sec-lbl">📦 Nel contenitore</div>';
-    html+=libere.map(i=>cardHTML(i)).join('');
-  }
-  if(prese.length){
-    html+='<div class="sec-lbl" style="margin-top:8px">👷 Prese in carico</div>';
-    html+=prese.map(i=>cardHTML(i)).join('');
+  if(vista==='rcee'){
+    // TAB RCEE: card dedicate ordinate per scadenza
+    libere.sort(byScad); prese.sort(byScad);
+    if(libere.length){
+      html+='<div class="sec-lbl">\uD83D\uDCCB Da prendere in carico</div>';
+      html+=libere.map(i=>rceeCardHTML(i)).join('');
+    }
+    if(prese.length){
+      html+='<div class="sec-lbl" style="margin-top:8px">\uD83D\uDC77 Prese in carico</div>';
+      html+=prese.map(i=>cardHTML(i)).join('');
+    }
+  } else {
+    libere.sort(byDate); prese.sort(byDate);
+    const libNorm = libere.filter(i=>!isRcee(i));
+    const libRcee = libere.filter(isRcee).sort(byScad);
+    if(libNorm.length){
+      html+='<div class="sec-lbl">\uD83D\uDCE6 Nel contenitore</div>';
+      html+=libNorm.map(i=>cardHTML(i)).join('');
+    }
+    if(libRcee.length){
+      html+=`<div class="sec-lbl" style="margin-top:${libNorm.length?8:0}px">\uD83D\uDCCB Controlli RCEE \u00B7 ${libRcee.length}</div>`;
+      html+='<div class="rcee-box">'+libRcee.map(i=>rceeRowHTML(i)).join('')
+          +`<div class="rcee-more" onclick="setVista('rcee')">Apri la tab RCEE \u203A</div></div>`;
+    }
+    if(prese.length){
+      html+='<div class="sec-lbl" style="margin-top:8px">\uD83D\uDC77 Prese in carico</div>';
+      html+=prese.map(i=>cardHTML(i)).join('');
+    }
   }
   if(chiuseOggi.length){
-    html+='<div class="sec-lbl" style="margin-top:8px">✓ Completate oggi</div>';
+    html+='<div class="sec-lbl" style="margin-top:8px">\u2713 Completate oggi</div>';
     html+=chiuseOggi.map(i=>cardHTML(i)).join('');
   }
   if(!libere.length && !prese.length && !chiuseOggi.length){
-    const msg = vista==='mie'
-      ? '<div class="empty-txt">Nessuna richiesta tua</div><div class="empty-sub">Prendine una dal contenitore</div>'
-      : (commessaSel
-          ? '<div class="empty-txt">Nessuna richiesta per '+COMMESSE_BY_KEY[commessaSel].label+'</div><div class="empty-sub">Cambia commessa o vista</div>'
-          : '<div class="empty-txt">Contenitore vuoto</div><div class="empty-sub">Nessuna richiesta straordinaria al momento</div>');
-    html='<div class="empty"><div class="empty-ico">✅</div>'+msg+'</div>';
+    let msg;
+    if(vista==='mie') msg='<div class="empty-txt">Nessuna richiesta tua</div><div class="empty-sub">Prendine una dal contenitore</div>';
+    else if(vista==='rcee') msg='<div class="empty-txt">Nessun controllo RCEE'+(commessaSel?' per '+COMMESSE_BY_KEY[commessaSel].label:'')+'</div><div class="empty-sub">Le richieste RCEE assegnate dal responsabile compaiono qui</div>';
+    else if(commessaSel) msg='<div class="empty-txt">Nessuna richiesta per '+COMMESSE_BY_KEY[commessaSel].label+'</div><div class="empty-sub">Cambia commessa o vista</div>';
+    else msg='<div class="empty-txt">Contenitore vuoto</div><div class="empty-sub">Nessuna richiesta straordinaria al momento</div>';
+    html='<div class="empty"><div class="empty-ico">\u2705</div>'+msg+'</div>';
   }
   document.getElementById('listaEl').innerHTML=html;
+}
+
+// Riga compatta RCEE nel Contenitore: solo impianto, codice e scadenza
+function rceeRowHTML(i){
+  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  const co=commessaDi(imp);
+  const info=rceeInfo(i);
+  return `<div class="rcee-row" onclick="openPanel('${i.id}')">
+    <span class="rcee-dot" style="background:${co.color}"></span>
+    <span class="rcee-nome">${imp?imp.descrizione:i.codiceImpianto}</span>
+    <span class="rcee-cod">${i.codiceImpianto}</span>
+    ${rceeScadPill(info)}
+  </div>`;
+}
+
+// Card RCEE nella tab RCEE: impianto, scadenza, alimentazione/potenza + prendi in carico
+function rceeCardHTML(i){
+  const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+  const co=commessaDi(imp);
+  const info=rceeInfo(i);
+  return `<div class="req-card libera" style="background:${co.color}22;border-color:${co.color}66">
+    <div class="req-body" onclick="openPanel('${i.id}')">
+      <div class="req-top">
+        <span class="req-commessa" style="background:${co.color}">${co.label}</span>
+        ${rceeScadPill(info)}
+      </div>
+      <div class="req-name">${imp?imp.descrizione:i.codiceImpianto}</div>
+      <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}${info.pot?' \u00B7 '+info.pot:''}</div>
+    </div>
+    <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">\u270B Prendi in carico</button>
+  </div>`;
 }
 
 function cardHTML(i){
@@ -621,32 +742,35 @@ function cardHTML(i){
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
   const isChiuso=i.stato==='Chiuso';
+  const rcee=isRcee(i);
 
   if(!preso){
-    // CARD LIBERA — piena, sfondo colore commessa
+    // CARD LIBERA \u2014 piena, sfondo colore commessa
     return `<div class="req-card libera" style="background:${co.color}22;border-color:${co.color}66">
       <div class="req-body" onclick="openPanel('${i.id}')">
         <div class="req-top">
           <span class="req-commessa" style="background:${co.color}">${co.label}</span>
-          ${isPast?'<span class="req-sosp">⚠ in attesa</span>':''}
+          ${isPast?'<span class="req-sosp">\u26A0 in attesa</span>':''}
         </div>
         <div class="req-name">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' · '+imp.comune:''}</div>
-        ${i.note?`<div class="req-note">📋 ${i.note}</div>`:''}
+        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}</div>
+        ${i.note?`<div class="req-note">\uD83D\uDCCB ${i.note}</div>`:''}
       </div>
-      <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">✋ Prendi in carico</button>
+      <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">\u270B Prendi in carico</button>
     </div>`;
   }
 
-  // CARD PRESA — più piccola, desaturata, con "in carico a X"
+  // CARD PRESA \u2014 pi\u00F9 piccola, desaturata, con "in carico a X"
+  let metaRcee='';
+  if(rcee){ const inf=rceeInfo(i); metaRcee=' \u00B7 <span class="rcee-tag">RCEE</span>'+(inf.scadTxt?' scad. '+inf.scadTxt:''); }
   return `<div class="req-card presa ${isChiuso?'chiusa':''}" style="border-left:4px solid ${co.color}">
     <div class="req-presa-row" onclick="openPanel('${i.id}')">
       <div class="req-presa-info">
         <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' · '+imp.comune:''}${isPast&&!isChiuso?' · ⚠ sospeso':''}</div>
+        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}${metaRcee}${isPast&&!isChiuso&&!rcee?' \u00B7 \u26A0 sospeso':''}</div>
       </div>
       <div class="req-presa-right">
-        <span class="req-incarico ${mio?'mio':''}">${isChiuso?'✓ ':'👷 '}${i.operaio}</span>
+        <span class="req-incarico ${mio?'mio':''}">${isChiuso?'\u2713 ':'\uD83D\uDC77 '}${i.operaio}</span>
         <span class="req-prog-sm">${done}/${chk.length}</span>
       </div>
     </div>
@@ -658,7 +782,7 @@ async function prendiInCarico(id){
   const i=S.interventi.find(x=>x.id===id); if(!i)return;
   i.operaio=currentUser;
   renderLista();
-  try{ await apiPost('/aggiorna-intervento',{id,stato:i.stato||'Aperto',operaio:currentUser}); toast('Preso in carico ✓','ok'); }
+  try{ await apiPost('/aggiorna-intervento',{id,stato:i.stato||'Aperto',operaio:currentUser}); toast('Preso in carico \u2713','ok'); }
   catch(e){ toast('Errore rete','err'); }
 }
 async function prendiInCaricoDaPanel(){
@@ -668,7 +792,7 @@ async function prendiInCaricoDaPanel(){
   catch(e){ toast('Errore rete','err'); }
   openPanel(currentIntId);
   renderLista();
-  toast('Preso in carico ✓','ok');
+  toast('Preso in carico \u2713','ok');
 }
 function openRiassegnaSheet(){
   const colleghi=Object.keys(USERS).filter(n=>n!==currentUser);
@@ -687,6 +811,19 @@ async function riassegnaA(nome){
   toast('Riassegnata a '+nome,'ok');
 }
 
+// Box informativi in cima al dettaglio (per le RCEE mostra la scadenza al posto del tipo visita)
+function panelInfoHTML(i){
+  if(isRcee(i)){
+    const info=rceeInfo(i);
+    const g=giorniA(info.scad);
+    const col = g===null ? '' : (g<0 ? 'color:var(--red)' : (g<=15 ? 'color:var(--orange)' : ''));
+    return `<div class="info-box"><div class="info-lbl">Scadenza RCEE</div><div class="info-val" style="${col}">${info.scad?fmtData(info.scad):'\u2014'}</div></div>
+      <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
+  }
+  return `<div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
+    <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
+}
+
 function openPanel(id){
   currentIntId=id;expandedNota={};
   const i=S.interventi.find(x=>x.id===id);
@@ -695,41 +832,41 @@ function openPanel(id){
   const oggi=new Date().toISOString().slice(0,10);
   const preso=isPresa(i);
   const mio=i.operaio===currentUser;
+  const rcee=isRcee(i);
 
   document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+((i.dataPrevista<oggi&&i.stato==='Aperto')?' · ⚠ Sospeso':'');
-  document.getElementById('panelInfo').innerHTML=`
-    <div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
-    <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
+  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' \u00B7 '+imp.comune:'')+((i.dataPrevista<oggi&&i.stato==='Aperto'&&!rcee)?' \u00B7 \u26A0 Sospeso':'');
+  document.getElementById('panelInfo').innerHTML=panelInfoHTML(i);
 
   let noteHtml='';
 
   // Banner stato presa in carico (solo se non chiuso)
   if(i.stato!=='Chiuso'){
     if(!preso){
-      noteHtml += `<div class="carico-banner libera"><div>📦 Nel contenitore — non ancora presa in carico</div><button class="carico-btn" onclick="prendiInCaricoDaPanel()">✋ Prendi in carico</button></div>`;
+      noteHtml += `<div class="carico-banner libera"><div>${rcee?'\uD83D\uDCCB Controllo RCEE':'\uD83D\uDCE6 Nel contenitore'} \u2014 non ancora presa in carico</div><button class="carico-btn" onclick="prendiInCaricoDaPanel()">\u270B Prendi in carico</button></div>`;
     } else if(mio){
-      noteHtml += `<div class="carico-banner mio"><div>👷 In carico a <strong>te</strong></div><button class="carico-btn ghost" onclick="openRiassegnaSheet()">↪ Riassegna a un collega</button></div>`;
+      noteHtml += `<div class="carico-banner mio"><div>\uD83D\uDC77 In carico a <strong>te</strong></div><button class="carico-btn ghost" onclick="openRiassegnaSheet()">\u21AA Riassegna a un collega</button></div>`;
     } else {
-      noteHtml += `<div class="carico-banner altri"><div>👷 In carico a <strong>${i.operaio}</strong></div><button class="carico-btn ghost" onclick="prendiInCaricoDaPanel()">↪ Passa a me</button></div>`;
+      noteHtml += `<div class="carico-banner altri"><div>\uD83D\uDC77 In carico a <strong>${i.operaio}</strong></div><button class="carico-btn ghost" onclick="prendiInCaricoDaPanel()">\u21AA Passa a me</button></div>`;
     }
   }
 
-  // Note intervento
-  if(i.note) noteHtml += `<div class="note-box">📋 ${i.note}</div>`;
+  // Note intervento (per le RCEE senza le righe ripetute "Riaperto il...")
+  const notaVis = rcee ? pulisciNotaRcee(i.note) : i.note;
+  if(notaVis) noteHtml += `<div class="note-box">\uD83D\uDCCB ${notaVis}</div>`;
 
-  // Secondo operaio + RDA: solo se la richiesta è presa in carico
+  // Secondo operaio + RDA: solo se la richiesta \u00E8 presa in carico
   if(i.stato!=='Chiuso' && preso){
     if(i.secondoOperaio){
-      noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
+      noteHtml += `<div class="secondo-banner">\uD83D\uDC65 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">\u2715</button></div>`;
     } else {
-      noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
+      noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">\uD83D\uDC65 Serve un secondo operaio</button>`;
     }
     const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
     if(rdaCorrente){
-      noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
+      noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">\uD83D\uDED2</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
     } else {
-      noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
+      noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">\uD83D\uDED2 RDA / CAT</button>`;
     }
   }
 
@@ -744,8 +881,8 @@ function renderChk(id){
   const chk=S.checklist.filter(c=>c.idIntervento===id);
   if(!chk.length){
     document.getElementById('panelChk').innerHTML=`
-      <div style="color:var(--muted);font-size:16px;padding:16px 0 8px">Nessuna attività in checklist.</div>
-      <button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
+      <div style="color:var(--muted);font-size:16px;padding:16px 0 8px">Nessuna attivit\u00E0 in checklist.</div>
+      <button class="add-extra-btn" onclick="openSheet('${id}')">\uFF0B Aggiungi attivit\u00E0 extra</button>`;
     return;
   }
   const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');
@@ -753,19 +890,19 @@ function renderChk(id){
     const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];
     return`<div class="chk-item ${isDone?'done':''}">
       <div class="chk-main" onclick="toggleChk('${c.id}','${id}')">
-        <div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div>
+        <div class="chk-box ${isDone?'done':''}"><span class="chk-icon">\u2713</span></div>
         <div class="chk-txt">${c.attivita}</div>
         ${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}
-        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button>
+        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'\u25B2':'\u25BC'}</button>
       </div>
-      ${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}
+      ${c.note?`<div class="nota-preview">\u26A0 ${c.note}</div>`:''}
       <div class="nota-area ${isExp?'open':''}">
         <textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea>
         <button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button>
       </div>
     </div>`;
   }).join('');
-  document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
+  document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">\uFF0B Aggiungi attivit\u00E0 extra</button>`;
 }
 
 function closePanel(){document.getElementById('panel').classList.remove('open');document.getElementById('panelFab').style.display='none';expandedNota={};renderLista()}
@@ -778,7 +915,7 @@ function aggFab(i){
   const preso=isPresa(i);
   const fab=document.getElementById('panelFab');
   const pb=document.getElementById('postBtn');
-  // Richiesta nel contenitore: niente completa/posticipa finché non è presa
+  // Richiesta nel contenitore: niente completa/posticipa finch\u00E9 non \u00E8 presa
   if(i.stato!=='Chiuso' && !preso){
     fab.style.display='none';
     if(pb)pb.style.display='none';
@@ -787,10 +924,10 @@ function aggFab(i){
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
   if(i.stato==='Chiuso'){
-    fab.style.display='';fab.textContent='↺ Riapri intervento';fab.className='panel-fab riapri';
+    fab.style.display='';fab.textContent='\u21BA Riapri intervento';fab.className='panel-fab riapri';
     if(pb)pb.style.display='none';
   } else {
-    fab.style.display='';fab.textContent=`✓ Completato (${done}/${chk.length})`;fab.className='panel-fab completa';
+    fab.style.display='';fab.textContent=`\u2713 Completato (${done}/${chk.length})`;fab.className='panel-fab completa';
     if(pb)pb.style.display='';
   }
 }
@@ -798,14 +935,14 @@ function openPostSheet(){const domani=addDays(new Date(),1);const sett=addDays(n
 function closePostSheet(){document.getElementById('postSheet').classList.remove('open')}
 function showPostDate(){document.getElementById('postDateWrap').style.display='block'}
 function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d}
-async function posticipa(tipo){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;let nuovaData;if(tipo==='domani')nuovaData=addDays(new Date(),1).toISOString().slice(0,10);else if(tipo==='settimana')nuovaData=addDays(new Date(),7).toISOString().slice(0,10);else if(tipo==='custom'){nuovaData=document.getElementById('postDateInp').value;if(!nuovaData){toast('Seleziona una data','err');return;}}closePostSheet();try{await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});i.dataPrevista=nuovaData;document.getElementById('panelInfo').innerHTML=`<div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div><div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(nuovaData)}</div></div>`;renderLista();toast('Posticipato a '+fmtData(nuovaData),'ok');}catch(e){toast('Errore rete','err');}}
-async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
+async function posticipa(tipo){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;let nuovaData;if(tipo==='domani')nuovaData=addDays(new Date(),1).toISOString().slice(0,10);else if(tipo==='settimana')nuovaData=addDays(new Date(),7).toISOString().slice(0,10);else if(tipo==='custom'){nuovaData=document.getElementById('postDateInp').value;if(!nuovaData){toast('Seleziona una data','err');return;}}closePostSheet();try{await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});i.dataPrevista=nuovaData;document.getElementById('panelInfo').innerHTML=panelInfoHTML(i);renderLista();toast('Posticipato a '+fmtData(nuovaData),'ok');}catch(e){toast('Errore rete','err');}}
+async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' \u00B7 '+done+'/'+chk.length+' attivit\u00E0 completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
 function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
 async function confermaChiusura(){
   const nota=document.getElementById('mcNota').value.trim();
   if(!nota){
     document.getElementById('mcNota').style.borderColor='var(--red)';
-    document.getElementById('mcNota').placeholder='⚠ Campo obbligatorio — descrivi cosa è stato fatto';
+    document.getElementById('mcNota').placeholder='\u26A0 Campo obbligatorio \u2014 descrivi cosa \u00E8 stato fatto';
     document.getElementById('mcNota').focus();
     return;
   }
@@ -822,11 +959,11 @@ async function confermaChiusura(){
     const coll=S.interventi.find(x=>x.id===i.interventoCollegato);
     if(coll){coll.stato='Chiuso';renderLista();}
   }
-  toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');
+  toast(i.interventoCollegato?'Completato \u2713 (chiuso anche il collega)':'Completato \u2713','ok');
 }
 
 let nifTipoSel = '';
-function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
+function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} \u2014 ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
 function closeNewInt(){document.getElementById('newIntOverlay').classList.remove('open')}
 function selNifTipo(tipo){nifTipoSel=tipo;document.getElementById('nifOrd').classList.toggle('sel',tipo==='Ordinaria');document.getElementById('nifStr').classList.toggle('sel',tipo==='Straordinaria');}
 function onNifImpChange(){}
@@ -837,12 +974,12 @@ async function inviaNewInt(){
   if(!data){toast('Inserisci la data','err');return;}
   const btn=document.getElementById('nifSubmit');btn.disabled=true;btn.textContent='Invio...';
   try{
-    // Straordinaria → entra nel CONTENITORE (operaio vuoto). Ordinaria → resta a chi la crea.
+    // Straordinaria \u2192 entra nel CONTENITORE (operaio vuoto). Ordinaria \u2192 resta a chi la crea.
     const operaioNew = nifTipoSel==='Straordinaria' ? '' : currentUser;
     const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:nifTipoSel,operaio:operaioNew,dataPrevista:data,note:document.getElementById('nifNote').value.trim(),attivitaExtra:[]});
     if(!r.ok){toast('Errore invio','err');btn.disabled=false;btn.textContent='Invia richiesta';return;}
     closeNewInt();
-    toast(nifTipoSel==='Straordinaria'?'Richiesta aggiunta al contenitore ✓':'Intervento creato ✓','ok');
+    toast(nifTipoSel==='Straordinaria'?'Richiesta aggiunta al contenitore \u2713':'Intervento creato \u2713','ok');
     await caricaDati();
   }catch(e){toast('Errore rete','err');btn.disabled=false;btn.textContent='Invia richiesta';}
   finally{btn.disabled=false;btn.textContent='Invia richiesta';}
@@ -850,7 +987,7 @@ async function inviaNewInt(){
 
 function openSheet(intId){extraForId=intId||currentIntId;document.getElementById('sheetInp').value='';document.getElementById('sheetOverlay').classList.add('open');setTimeout(()=>document.getElementById('sheetInp').focus(),280)}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('open')}
-async function salvaExtra(){const val=document.getElementById('sheetInp').value.trim();if(!val)return;closeSheet();try{const r=await apiPost('/aggiungi-extra',{idIntervento:extraForId,attivita:val});if(!r.ok){toast('Errore','err');return}S.checklist.push({id:r.id,idIntervento:extraForId,attivita:val,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'});if(document.getElementById('panel').classList.contains('open')&&extraForId===currentIntId){renderChk(extraForId);aggFab(S.interventi.find(i=>i.id===extraForId))}renderLista();toast('Attività aggiunta','ok')}catch(e){toast('Errore rete','err')}}
+async function salvaExtra(){const val=document.getElementById('sheetInp').value.trim();if(!val)return;closeSheet();try{const r=await apiPost('/aggiungi-extra',{idIntervento:extraForId,attivita:val});if(!r.ok){toast('Errore','err');return}S.checklist.push({id:r.id,idIntervento:extraForId,attivita:val,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'});if(document.getElementById('panel').classList.contains('open')&&extraForId===currentIntId){renderChk(extraForId);aggFab(S.interventi.find(i=>i.id===extraForId))}renderLista();toast('Attivit\u00E0 aggiunta','ok')}catch(e){toast('Errore rete','err')}}
 
 function openWeekSheet(){const oggi=new Date();const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];let html='';for(let g=0;g<7;g++){const d=new Date(oggi);d.setDate(oggi.getDate()+g);const ds=d.toISOString().slice(0,10);const isOggi=g===0;const ints=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&i.dataPrevista===ds&&i.stato!=='Chiuso');html+=`<div class="week-day ${isOggi?'oggi':''}"><div class="week-day-hdr"><span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span><span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span></div>`;if(!ints.length){html+=`<div class="week-empty">Nessun intervento</div>`;}else{ints.forEach(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const nome=imp?imp.descrizione:i.codiceImpianto;const isSecondo=i.secondoOperaio===currentUser&&i.operaio!==currentUser;const colore=isSecondo?'var(--orange)':'var(--accent)';html+=`<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')"><div class="week-dot" style="background:${colore}"></div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>${isSecondo?'<span style="font-size:11px;color:var(--orange)">+2</span>':''}</div>`;});}html+='</div>';}document.getElementById('weekContent').innerHTML=html;document.getElementById('weekSheet').classList.add('open');}
 function closeWeekSheet(){document.getElementById('weekSheet').classList.remove('open')}
@@ -873,10 +1010,10 @@ function closeSecondoSheet(){document.getElementById('secondoSheet').classList.r
 async function segnalaSecondo(nomeCollega){closeSecondoSheet();try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:nomeCollega});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio=nomeCollega;openPanel(currentIntId);toast(`Segnalato: serve ${nomeCollega}`,'ok');}catch(e){toast('Errore rete','err');}}
 async function rimuoviSecondo(){try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:''});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio='';openPanel(currentIntId);toast('Segnalazione rimossa','ok');}catch(e){toast('Errore rete','err');}}
 
-function fmtData(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
+function fmtData(s){if(!s)return'\u2014';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
 
-// ── PANEL I MIEI IMPIANTI ──
+// \u2500\u2500 PANEL I MIEI IMPIANTI \u2500\u2500
 const STAGIONE_INIZIO = '2026-04-16';
 const STAGIONE_FINE   = '2026-10-01';
 let IMP = { impianti:[], interventi:[] };
@@ -933,7 +1070,7 @@ async function caricaImpianti() {
     renderImpiantiPanel();
   } catch(e) {
     document.getElementById('impLista').innerHTML =
-      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">⚠️</div>Errore caricamento</div>';
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\u26A0\uFE0F</div>Errore caricamento</div>';
   }
 }
 
@@ -983,7 +1120,7 @@ function renderImpiantiPanel() {
   document.getElementById('impProgress').style.width= pct+'%';
   document.getElementById('impProgLeft').textContent= nVerdi+' completati';
   document.getElementById('impProgRight').textContent= pct+'%';
-  document.getElementById('impiantiSub').textContent = nVerdi+'/'+nTot+' completati · stagione 2026';
+  document.getElementById('impiantiSub').textContent = nVerdi+'/'+nTot+' completati \u00B7 stagione 2026';
 
   let lista = stati;
   if(impFiltro==='verde') lista = lista.filter(x=>x.s.stato==='verde');
@@ -997,17 +1134,17 @@ function renderImpiantiPanel() {
 
   if(!lista.length) {
     document.getElementById('impLista').innerHTML =
-      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">🏢</div>Nessun impianto trovato</div>';
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\uD83C\uDFE2</div>Nessun impianto trovato</div>';
     return;
   }
 
   let html='', ultimoComune=null;
   lista.forEach(({imp, s}) => {
     if(imp.comune !== ultimoComune) {
-      html += `<div style="padding:10px 18px 4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">📍 ${imp.comune||'—'}</div>`;
+      html += `<div style="padding:10px 18px 4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">\uD83D\uDCCD ${imp.comune||'\u2014'}</div>`;
       ultimoComune = imp.comune;
     }
-    const icon     = s.stato==='verde' ? '✓' : s.stato==='giallo' ? '→' : '✗';
+    const icon     = s.stato==='verde' ? '\u2713' : s.stato==='giallo' ? '\u2192' : '\u2717';
     const colStr   = s.stato==='verde' ? 'var(--green)' : s.stato==='giallo' ? 'var(--yellow)' : 'var(--red)';
     const colBg    = s.stato==='verde' ? 'rgba(63,185,80,.12)' : s.stato==='giallo' ? 'rgba(200,180,100,.1)' : 'rgba(200,120,120,.1)';
     const stripCol = s.stato==='verde' ? 'var(--green)' : 'var(--red)';
@@ -1026,7 +1163,7 @@ function renderImpiantiPanel() {
             <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${colBg};color:${colStr}">${dataLbl}</span>
           </div>
         </div>
-        ${s.id ? `<div style="color:var(--muted);font-size:20px">›</div>` : ''}
+        ${s.id ? `<div style="color:var(--muted);font-size:20px">\u203A</div>` : ''}
       </div>
     </div>`;
   });
