@@ -246,6 +246,13 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .backlog-note { font-size:13px; color:var(--muted); margin-top:6px; font-style:italic; }
 .backlog-actions { display:flex; gap:8px; flex-shrink:0; }
 
+/* NOTE DEL GIORNO */
+.nota-g { background:var(--bg3); border-left:3px solid var(--red); border-radius:0 8px 8px 0; padding:8px 10px; margin-bottom:6px; font-size:13px; display:flex; gap:8px; align-items:flex-start; }
+.nota-g .txt { flex:1; white-space:pre-wrap; line-height:1.4; }
+.nota-g .chi { font-size:11px; color:var(--muted); margin-top:3px; }
+.nota-g.privata { border-left-color:var(--muted); }
+.day-nota { font-size:10px; margin-left:auto; margin-right:4px; opacity:.9; }
+
 /* OPERAI CHIP */
 .op-chips { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .op-chip { padding: 10px 8px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--bg3); cursor: pointer; text-align: center; transition: all .15s; user-select: none; }
@@ -941,13 +948,40 @@ tr.int-completato td * { text-decoration: line-through; }
       <button class="modal-close" onclick="closeModal('modalGiorno')">✕</button>
     </div>
     <div class="modal-body">
+      <div id="giornoNote"></div>
       <div id="giornoInterventi" style="margin-bottom:16px"></div>
       <div id="giornoAssenze"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modalGiorno')">Chiudi</button>
+      <button class="btn btn-ghost" onclick="openModalNota(null)">📝 Nota</button>
       <button class="btn btn-ghost" onclick="openModalAssenza(currentGiornoDate)">+ Assenza</button>
       <button class="btn btn-primary" onclick="openModalIntervento(currentGiornoDate)">+ Intervento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTA DEL GIORNO -->
+<div class="overlay" id="modalNota">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <div class="modal-title" id="notaTitolo">📝 Nota</div>
+      <button class="modal-close" onclick="closeModal('modalNota')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="notaId"/>
+      <div class="fg"><label>Data</label><input class="fc" type="date" id="notaData"/></div>
+      <div class="fg"><label>Appunto</label>
+        <textarea class="fc" id="notaTesto" rows="4" placeholder="Es. chiavi della centrale in segreteria, passare prima delle 8…"></textarea></div>
+      <div class="fg"><label>Chi la vede</label>
+        <div class="op-chips" style="grid-template-columns:repeat(5,1fr)"><div class="op-chip" id="notachip-Matteo" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div></div><div class="op-chip" id="notachip-Stefano" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div></div><div class="op-chip" id="notachip-Michele" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div></div><div class="op-chip" id="notachip-Ezio" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div></div><div class="op-chip" id="notachip-Aziz" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#5fb3b3">A</div><div class="op-chip-name">Aziz</div></div></div>
+        <p style="font-size:11px;color:var(--muted);margin-top:6px">Nessuno selezionato = solo tu. Gli operai scelti la vedono in alto nell'app e ricevono una notifica.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger btn-sm" id="notaElimina" onclick="eliminaNota()" style="margin-right:auto">Elimina</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalNota')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaNota()">Salva</button>
     </div>
   </div>
 </div>
@@ -1124,7 +1158,7 @@ const RESP_PIN  = '1234';
 // ============================================================
 //  STATO
 // ============================================================
-let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], pratiche:[], offerte:[], rdacat:[], reperibilita:null };
+let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], pratiche:[], offerte:[], rdacat:[], reperibilita:null, note:[] };
 let calAnno = new Date().getFullYear();
 let calMese = new Date().getMonth();
 let currentDetId      = null;
@@ -1178,6 +1212,7 @@ async function caricaDati() {
     S.assenze    = d.assenze    || [];
     S.pratiche   = d.pratiche   || [];
     S.offerte    = d.offerte    || [];
+    try { const dn = await apiGet('/note-giorno'); S.note = dn.note || []; } catch(e) { S.note = []; }
 
     const nBacklog = S.interventi.filter(i => i.stato === 'DaAssegnare').length;
     const backlogSec = document.getElementById('backlogSection');
@@ -1467,7 +1502,9 @@ function renderCalendario() {
       const icon = ICONS_ASS2[a.tipo]||'📅';
       return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
     }).join('');
-    cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}<span class="day-add">+</span></div>${evHtml}${assHtml}</div>`;
+    const nNote=(S.note||[]).filter(n=>n.data===dateStr).length;
+    const notaTag=nNote?`<span class="day-nota" title="${nNote} nota/e">📝${nNote>1?nNote:''}</span>`:'';
+    cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}${notaTag}<span class="day-add">+</span></div>${evHtml}${assHtml}</div>`;
   }
   const totCells=startDow+nGiorni;
   const resto=totCells%7===0?0:7-(totCells%7);
@@ -1497,6 +1534,7 @@ function openGiorno(dateStr) {
         <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
       </div>`;
     }).join('');
+  renderNoteGiorno(dateStr);
   const ass=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
   document.getElementById('giornoAssenze').innerHTML=ass.length===0?''
     :`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Assenze</div>`+
@@ -1505,6 +1543,75 @@ function openGiorno(dateStr) {
       <button class="btn btn-danger btn-sm" onclick="eliminaAssenza('${a.id}')">✕</button>
     </div>`).join('');
   document.getElementById('modalGiorno').classList.add('open');
+}
+
+// ============================================================
+//  NOTE DEL GIORNO
+// ============================================================
+const NOTA_OPERAI = ['Matteo','Stefano','Michele','Ezio','Aziz'];
+function escN(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderNoteGiorno(dateStr) {
+  const note=(S.note||[]).filter(n=>n.data===dateStr);
+  const el=document.getElementById('giornoNote');
+  el.style.marginBottom = note.length ? '16px' : '0';
+  el.innerHTML = !note.length ? '' :
+    `<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Note</div>`+
+    note.map(n=>{
+      const chi = n.destinatari.length
+        ? 'Per: '+n.destinatari.map(d=>escN(d)+(n.lettoDa.indexOf(d)>=0?' ✓':'')).join(', ')
+        : '🔒 Solo per te';
+      return `<div class="nota-g ${n.destinatari.length?'':'privata'}">
+        <div style="flex:1"><div class="txt">${escN(n.testo)}</div><div class="chi">${chi}</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="openModalNota('${n.id}')">Modifica</button>
+      </div>`;
+    }).join('');
+}
+
+function openModalNota(id) {
+  const n = id ? (S.note||[]).find(x=>x.id===id) : null;
+  document.getElementById('notaId').value = n ? n.id : '';
+  document.getElementById('notaData').value = n ? n.data : (currentGiornoDate || new Date().toISOString().slice(0,10));
+  document.getElementById('notaTesto').value = n ? n.testo : '';
+  NOTA_OPERAI.forEach(o=>document.getElementById('notachip-'+o).classList.toggle('selected', !!(n && n.destinatari.indexOf(o)>=0)));
+  document.getElementById('notaTitolo').textContent = n ? '📝 Modifica nota' : '📝 Nuova nota';
+  document.getElementById('notaElimina').style.display = n ? '' : 'none';
+  document.getElementById('modalNota').classList.add('open');
+  setTimeout(()=>document.getElementById('notaTesto').focus(), 50);
+}
+
+async function salvaNota() {
+  const id = document.getElementById('notaId').value;
+  const data = document.getElementById('notaData').value;
+  const testo = document.getElementById('notaTesto').value.trim();
+  const destinatari = NOTA_OPERAI.filter(o=>document.getElementById('notachip-'+o).classList.contains('selected'));
+  if (!data || !testo) { toast('Scrivi la nota e scegli la data','err'); return; }
+  try {
+    const r = await apiPost('/salva-nota-giorno', { id, data, testo, destinatari });
+    if (!r.ok) { toast(r.errore || 'Errore','err'); return; }
+    const vecchia = (S.note||[]).find(x=>x.id===r.id);
+    const lettoDa = vecchia && vecchia.testo===testo ? vecchia.lettoDa.filter(d=>destinatari.indexOf(d)>=0) : [];
+    S.note = (S.note||[]).filter(x=>x.id!==r.id).concat([{ id:r.id, data, testo, destinatari, lettoDa }]);
+    closeModal('modalNota');
+    toast(destinatari.length ? 'Nota inviata a '+destinatari.join(', ') : 'Nota salvata (solo per te)','ok');
+    renderCalendario();
+    if (document.getElementById('modalGiorno').classList.contains('open')) {
+      if (currentGiornoDate===data) renderNoteGiorno(data); else openGiorno(data);
+    }
+  } catch(e) { toast('Errore rete','err'); }
+}
+
+async function eliminaNota() {
+  const id = document.getElementById('notaId').value;
+  if (!id || !confirm('Eliminare questa nota?')) return;
+  try {
+    await apiPost('/elimina-nota-giorno', { id });
+    S.note = (S.note||[]).filter(x=>x.id!==id);
+    closeModal('modalNota');
+    renderCalendario();
+    if (currentGiornoDate) renderNoteGiorno(currentGiornoDate);
+    toast('Nota eliminata','ok');
+  } catch(e) { toast('Errore rete','err'); }
 }
 
 // ============================================================
