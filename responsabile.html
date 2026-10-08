@@ -251,7 +251,10 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .nota-g .txt { flex:1; white-space:pre-wrap; line-height:1.4; }
 .nota-g .chi { font-size:11px; color:var(--muted); margin-top:3px; }
 .nota-g.privata { border-left-color:var(--muted); }
-.day-nota { font-size:10px; margin-left:auto; margin-right:4px; opacity:.9; }
+.ev-nota { font-size:11px; font-style:italic; padding:2px 6px; border-radius:5px; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+  color:#e8a0a0; background:repeating-linear-gradient(135deg, rgba(200,120,120,.10) 0 6px, rgba(200,120,120,.04) 6px 12px); border:1px dashed rgba(200,120,120,.6); }
+.ev-nota.privata { color:var(--muted); border-color:rgba(255,255,255,.25); background:repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 6px, transparent 6px 12px); }
+.ev-nota:hover { filter:brightness(1.15); }
 
 /* OPERAI CHIP */
 .op-chips { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
@@ -450,6 +453,10 @@ tr.int-completato td * { text-decoration: line-through; }
 }
 .ev-str:hover { opacity: .85; }
 .ev-str.completato { opacity: .4; text-decoration: line-through; }
+/* RCEE: bordo sinistro doppio + etichetta */
+.ev-str.ev-rcee { border-left-style: double; border-left-width: 4px; }
+.rcee-tag { font-size: 8px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 3px; margin-right: 4px;
+  background: #e2c97a; color: #1d1d1d; vertical-align: 1px; font-style: normal; }
 
 /* riga evento con operaio a destra */
 .ev-row { display: flex; align-items: center; gap: 4px; }
@@ -1369,7 +1376,10 @@ function getLunediSettimana(offset) {
   return lun;
 }
 
+function isRceeR(i) { return /^\s*\[RCEE\]/.test((i && i.note) || ''); }
+
 function evRowHtml(nome, isOrd, i, extra) {
+  if (!isOrd && isRceeR(i)) nome = '<span class="rcee-tag">RCEE</span>' + nome;
   let opHtml;
   if (isOrd) {
     opHtml = i.operaio ? `<span class="ev-op ord-op">${i.operaio}</span>` : '';
@@ -1423,14 +1433,14 @@ function renderSettimana() {
           onclick="openDettaglio('${i.id}')"
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,true,i,praDot)}</div>`;
       } else {
-        return `<div class="ev-str ${completo?'completato':''}"
+        return `<div class="ev-str ${completo?'completato':''} ${isRceeR(i)?'ev-rcee':''}"
           style="background:${col}28;color:${col};border-color:${col}"
           onclick="openDettaglio('${i.id}')"
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,praDot)}</div>`;
       }
     }).join('');
     const ICONS_ASS = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
-    cell.innerHTML=intsHtml+ass.map(a=>{
+    cell.innerHTML=noteCalHtml(ds)+intsHtml+ass.map(a=>{
       const icon = ICONS_ASS[a.tipo]||'📅';
       return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
     }).join('');
@@ -1490,7 +1500,7 @@ function renderCalendario() {
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,true,i,praDot)}</div>`;
       } else {
         const extra=(isMulti?' 📅':'')+praDot;
-        return `<div class="ev-str ${tuttiDone?'completato':''}"
+        return `<div class="ev-str ${tuttiDone?'completato':''} ${isRceeR(i)?'ev-rcee':''}"
           style="background:${col}28;color:${col};border-color:${col};${isMulti?'border-right:2px solid '+col+';':''}"
           onclick="event.stopPropagation();openDettaglio('${i.id}')"
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,extra)}</div>`;
@@ -1502,9 +1512,7 @@ function renderCalendario() {
       const icon = ICONS_ASS2[a.tipo]||'📅';
       return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
     }).join('');
-    const nNote=(S.note||[]).filter(n=>n.data===dateStr).length;
-    const notaTag=nNote?`<span class="day-nota" title="${nNote} nota/e">📝${nNote>1?nNote:''}</span>`:'';
-    cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}${notaTag}<span class="day-add">+</span></div>${evHtml}${assHtml}</div>`;
+    cells+=`<div class="${cls}" onclick="openGiorno('${dateStr}')"><div class="day-num">${g}<span class="day-add">+</span></div>${noteCalHtml(dateStr)}${evHtml}${assHtml}</div>`;
   }
   const totCells=startDow+nGiorni;
   const resto=totCells%7===0?0:7-(totCells%7);
@@ -1551,6 +1559,15 @@ function openGiorno(dateStr) {
 const NOTA_OPERAI = ['Matteo','Stefano','Michele','Ezio','Aziz'];
 function escN(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/** Note del giorno nel calendario: tratteggiate, in corsivo, sopra gli interventi. */
+function noteCalHtml(dateStr) {
+  return (S.note||[]).filter(n=>n.data===dateStr).map(n=>{
+    const per = n.destinatari.length ? 'Per: '+n.destinatari.join(', ') : 'Solo per te';
+    return `<div class="ev-nota ${n.destinatari.length?'':'privata'}" title="${escN(n.testo)}\n${per}"
+      onclick="event.stopPropagation();currentGiornoDate='${dateStr}';openModalNota('${n.id}')">${n.destinatari.length?'📝':'🔒'} ${escN(n.testo)}</div>`;
+  }).join('');
+}
+
 function renderNoteGiorno(dateStr) {
   const note=(S.note||[]).filter(n=>n.data===dateStr);
   const el=document.getElementById('giornoNote');
@@ -1594,7 +1611,7 @@ async function salvaNota() {
     S.note = (S.note||[]).filter(x=>x.id!==r.id).concat([{ id:r.id, data, testo, destinatari, lettoDa }]);
     closeModal('modalNota');
     toast(destinatari.length ? 'Nota inviata a '+destinatari.join(', ') : 'Nota salvata (solo per te)','ok');
-    renderCalendario();
+    (vistaCorrente==='mese'?renderCalendario():renderSettimana());
     if (document.getElementById('modalGiorno').classList.contains('open')) {
       if (currentGiornoDate===data) renderNoteGiorno(data); else openGiorno(data);
     }
@@ -1608,7 +1625,7 @@ async function eliminaNota() {
     await apiPost('/elimina-nota-giorno', { id });
     S.note = (S.note||[]).filter(x=>x.id!==id);
     closeModal('modalNota');
-    renderCalendario();
+    (vistaCorrente==='mese'?renderCalendario():renderSettimana());
     if (currentGiornoDate) renderNoteGiorno(currentGiornoDate);
     toast('Nota eliminata','ok');
   } catch(e) { toast('Errore rete','err'); }
