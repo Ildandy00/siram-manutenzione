@@ -86,6 +86,14 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 
 .main-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .main-inner{padding:16px;padding-bottom:max(90px,calc(80px + env(safe-area-inset-bottom,0px)))}
+.note-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(200,120,120,.08);border:1px solid rgba(200,120,120,.35);border-left:3px solid var(--red);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.35}
+.note-banner .nb-ico{font-size:14px;line-height:1.3}
+.note-banner .nb-body{flex:1;min-width:0}
+.note-banner .nb-data{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--red);margin-bottom:1px}
+.note-banner .nb-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.note-banner.aperta .nb-txt{white-space:pre-wrap}
+.note-banner .nb-x{background:none;border:none;color:var(--muted);font-size:15px;padding:0 2px;line-height:1;cursor:pointer}
+.note-wrap{margin-bottom:6px}
 .sec-lbl{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .sec-lbl::after{content:'';flex:1;height:1px;background:var(--bg3)}
 
@@ -555,7 +563,7 @@ function byScad(a,b){
   return sa.localeCompare(sb);
 }
 
-let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[]},currentIntId=null,extraForId=null,expandedNota={};
+let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[],note:[]},currentIntId=null,extraForId=null,expandedNota={};
 let vista='contenitore', commessaSel='';
 
 function selUser(n){currentUser=n;pinBuf='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('tile-'+n).classList.add('selected');document.getElementById('pinLabel').textContent='PIN per '+n;document.getElementById('pinSection').style.display='block';document.getElementById('pinErr').textContent='';aggDots();setTimeout(()=>document.getElementById('pinSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80)}
@@ -586,6 +594,8 @@ async function caricaDati(){
     S.preventivi = dp.preventivi || [];
     const dr = await apiGet('/rdacat').catch(() => ({ richieste: [] }));
     S.rdacat = dr.richieste || [];
+    const dn = await apiGet('/note-giorno?operaio='+encodeURIComponent(currentUser)).catch(()=>({note:[]}));
+    S.note = dn.note || [];
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
@@ -698,7 +708,31 @@ function renderLista(){
     else msg='<div class="empty-txt">Contenitore vuoto</div><div class="empty-sub">Nessuna richiesta straordinaria al momento</div>';
     html='<div class="empty"><div class="empty-ico">\u2705</div>'+msg+'</div>';
   }
-  document.getElementById('listaEl').innerHTML=html;
+  document.getElementById('listaEl').innerHTML=noteBannerHTML()+html;
+}
+
+// === NOTE DEL RESPONSABILE: banner piccoli in alto, rossi, chiudibili ===
+function noteBannerHTML(){
+  const note=(S.note||[]).filter(n=>n.lettoDa.indexOf(currentUser)<0);
+  if(!note.length) return '';
+  const oggi=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
+  const dom=new Date(Date.now()+86400000).toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return '<div class="note-wrap">'+note.map(n=>{
+    const quando=n.data===oggi?'Oggi':n.data===dom?'Domani':
+      new Date(n.data+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+    return `<div class="note-banner" id="nb-${n.id}" onclick="this.classList.toggle('aperta')">
+      <span class="nb-ico">📝</span>
+      <div class="nb-body"><div class="nb-data">${quando}</div><div class="nb-txt">${esc(n.testo)}</div></div>
+      <button class="nb-x" title="Letta, nascondi" onclick="event.stopPropagation();notaLetta('${n.id}')">✕</button>
+    </div>`;
+  }).join('')+'</div>';
+}
+async function notaLetta(id){
+  const n=(S.note||[]).find(x=>x.id===id); if(!n) return;
+  n.lettoDa.push(currentUser);
+  const el=document.getElementById('nb-'+id); if(el) el.remove();
+  apiPost('/nota-letta',{id,operaio:currentUser}).catch(()=>{});
 }
 
 // Riga compatta RCEE nel Contenitore: solo impianto, codice e scadenza
