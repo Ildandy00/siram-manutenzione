@@ -713,7 +713,7 @@ function renderLista(){
 
 // === NOTE DEL RESPONSABILE: banner piccoli in alto, rossi, chiudibili ===
 function noteBannerHTML(){
-  const note=(S.note||[]).filter(n=>n.lettoDa.indexOf(currentUser)<0);
+  const note=(S.note||[]).filter(n=>!n.completata && n.lettoDa.indexOf(currentUser)<0);
   if(!note.length) return '';
   const oggi=new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
   const dom=new Date(Date.now()+86400000).toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'});
