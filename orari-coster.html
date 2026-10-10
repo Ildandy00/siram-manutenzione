@@ -312,6 +312,12 @@
   .voce .est button { padding: 1px 8px; min-height: 22px; font-size: 11px; }
   .voce .span { grid-column: 1 / -1; }
 
+  .btn-x {
+    width: 28px; height: 28px; min-height: 28px; padding: 0; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg3); color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer;
+  }
+  .btn-x:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -1400,6 +1406,19 @@
   }
   function alertBanner(m) { $('straErr').hidden = false; $('straErr').textContent = m; }
 
+  async function archiviaStra(id, btn) {
+    btn.disabled = true;
+    try {
+      await api('/straordinari/' + id + '/archivia', { method: 'POST' });
+      S.stra = S.stra.filter((x) => x.id !== id);
+      renderStraList();
+      renderTabCounts();
+    } catch (err) {
+      const m = handleErr(err, 'archiviaStra');
+      if (m) { btn.disabled = false; alertBanner(m); }
+    }
+  }
+
   function straWindowsText(x) {
     const w = x.finestre || {};
     if (x.stato === 'in_attesa_agente') return 'Il PC lo registra appena si collega.';
@@ -1444,6 +1463,11 @@
         const b = el('button', { class: 'btn danger', style: 'min-height:30px;padding:4px 10px;font-size:12px', text: 'Annulla' });
         b.addEventListener('click', () => cancelStra(x.id, b));
         side.push(b);
+      }
+      if (['scaduto', 'rifiutato', 'da_controllare', 'ripristinato', 'annullato'].includes(x.stato)) {
+        const bx = el('button', { class: 'btn-x', text: '✕', title: 'Togli dall\'elenco' });
+        bx.addEventListener('click', () => archiviaStra(x.id, bx));
+        side.push(bx);
       }
       const d = dateFromIso(x.data);
       ul.append(el('li', { class: 'stra-item' }, [
@@ -1799,6 +1823,23 @@
       const side = [el('span', { class: 'badge ' + cls, text: lbl })];
       if (x.in_corso_ora && ['attivo', 'in_corso', 'da_controllare'].includes(x.stato)) side.push(el('span', { class: 'badge run', text: 'Spento adesso' }));
       if (x.richiesta_in_invio) side.push(el('span', { class: 'badge wait', text: 'Richiesta in invio al PC' }));
+      if (['concluso', 'annullato', 'rifiutato'].includes(x.stato)) {
+        side.push(el('button', {
+          class: 'btn-x', text: '✕', title: 'Togli dall\'elenco',
+          onclick: async (ev) => {
+            const b = ev.currentTarget;
+            b.disabled = true;
+            try {
+              await api(`/spegnimenti/${x.id}/archivia`, { method: 'POST', body: {} });
+              S.spegList = S.spegList.filter((y) => y.id !== x.id);
+              renderSpegList();
+            } catch (err) {
+              const m = handleErr(err, 'archiviaSpeg');
+              if (m) { b.disabled = false; $('spegListErr').hidden = false; $('spegListErr').textContent = m; }
+            }
+          },
+        }));
+      }
 
       const riassunto = x.stato === 'in_attesa_agente'
         ? `${x.programmi || 0} programmi · in attesa che il PC lo registri`
