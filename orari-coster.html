@@ -234,6 +234,84 @@
   @media (max-width: 560px) { .stra-item { grid-template-columns: 1fr; } .stra-item .side { align-items: flex-start; flex-direction: row; } }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
 
+  /* Schede (tab) */
+  .tabs { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab {
+    padding: 10px 16px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted);
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
+  .tab .cnt { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 8px; background: var(--bg3); font-size: 11px; color: var(--muted); }
+  #app[data-tab=prog] .t-stra, #app[data-tab=prog] .t-speg,
+  #app[data-tab=stra] .t-prog, #app[data-tab=stra] .t-speg,
+  #app[data-tab=speg] .t-prog, #app[data-tab=speg] .t-stra, #app[data-tab=speg] .t-ps { display: none !important; }
+
+  /* Spegnimento */
+  .speg-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
+  .speg-form .span-all { grid-column: 1 / -1; }
+  .speg-form .span-2 { grid-column: span 2; }
+  @media (max-width: 760px) {
+    .speg-form { grid-template-columns: 1fr 1fr; }
+    .speg-form .span-all, .speg-form .span-m { grid-column: 1 / -1; }
+    .speg-form .span-2 { grid-column: 1 / -1; }
+    .tab { padding: 10px 10px; font-size: 13px; }
+  }
+  input[type=date] {
+    width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; min-height: 38px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 16px;
+    border: 1px solid var(--border); background: var(--bg3); color: var(--muted); font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .12s;
+  }
+  .chip small { font-family: 'DM Mono', monospace; font-weight: 400; opacity: .8; }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  .chip:disabled { opacity: .4; cursor: not-allowed; }
+  .speg-sum { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0 8px; font-size: 13px; }
+  .speg-sum b { font-family: 'DM Mono', monospace; font-size: 16px; color: var(--text); margin-right: 4px; }
+  .anteprima { max-height: 460px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--bg3); }
+  .ant-imp { display: grid; grid-template-columns: 26px 1fr; gap: 6px 8px; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  .ant-imp:last-child { border-bottom: none; }
+  .ant-imp.off { opacity: .55; }
+  .ant-imp .nome { font-weight: 600; font-size: 13px; }
+  .ant-imp .nome small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .ant-imp .warn { color: var(--yellow); font-size: 12px; margin-top: 2px; }
+  .ant-progs { grid-column: 2; display: flex; flex-wrap: wrap; gap: 5px; }
+  .pchip {
+    padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--muted);
+    font-size: 12px; cursor: pointer; font-family: 'Outfit', sans-serif;
+  }
+  .pchip[aria-pressed=true] { background: rgba(122,176,216,.18); border-color: rgba(122,176,216,.5); color: var(--blue); }
+  .pchip .m { font-family: 'DM Mono', monospace; margin-right: 4px; opacity: .8; }
+  .ant-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--bg4); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .ant-head button { background: none; border: 0; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; }
+  input[type=checkbox] { accent-color: #9ac0e0; width: 16px; height: 16px; }
+  .confirm-box { margin-top: 14px; padding: 14px; border-radius: 10px; border: 1px solid rgba(200,180,100,.4); background: rgba(200,180,100,.08); }
+  .confirm-box .t { font-weight: 700; margin-bottom: 6px; color: var(--yellow); }
+  .speg-item { padding: 14px 6px; border-bottom: 1px solid var(--border); }
+  .speg-item:last-child { border-bottom: none; }
+  .speg-top { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+  .speg-top .per { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+  .speg-top .per small { display: block; font-family: 'Outfit', sans-serif; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .speg-top .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .speg-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .speg-acts input[type=date] { width: 160px; min-height: 32px; padding: 4px 8px; font-size: 13px; }
+  .speg-acts .btn { min-height: 32px; padding: 4px 12px; font-size: 12px; }
+  details.voci { margin-top: 10px; }
+  details.voci summary { cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .voce { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 8px 4px; border-bottom: 1px dashed var(--border); font-size: 12px; }
+  .voce:last-child { border-bottom: none; }
+  .voce .n { font-weight: 600; font-size: 13px; }
+  .voce .p, .voce .r { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; }
+  .voce .r.ok { color: var(--green); }
+  .voce .bad { color: #e0a0a0; }
+  .voce .est { color: var(--yellow); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 3px; }
+  .voce .est button { padding: 1px 8px; min-height: 22px; font-size: 11px; }
+  .voce .span { grid-column: 1 / -1; }
+
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -258,11 +336,17 @@
     <div class="actions"><button id="pinBtn" class="btn primary">Entra</button></div>
   </section>
 
-  <div id="app" hidden>
+  <div id="app" hidden data-tab="prog">
     <div id="agentBanner" class="banner warn" hidden></div>
 
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="prog" aria-selected="true">Programma orario</button>
+      <button class="tab" role="tab" data-tab="stra" aria-selected="false">Straordinari <span class="cnt" id="cntStra" hidden></span></button>
+      <button class="tab" role="tab" data-tab="speg" aria-selected="false">Spegnimento <span class="cnt" id="cntSpeg" hidden></span></button>
+    </nav>
+
     <!-- SELEZIONE -->
-    <section class="card">
+    <section class="card t-ps">
       <h2>Selezione impianto</h2>
       <div class="grid3">
         <div>
@@ -286,7 +370,7 @@
     </section>
 
     <!-- EDITOR -->
-    <section id="editorCard" class="card" hidden>
+    <section id="editorCard" class="card t-prog" hidden>
       <h2>Programma <small id="editorSub"></small></h2>
       <div id="editorBanner" class="banner info" hidden></div>
       <div class="tbl-wrap">
@@ -310,7 +394,7 @@
     </section>
 
     <!-- STRAORDINARI: nuovo -->
-    <section id="straCard" class="card" hidden>
+    <section id="straCard" class="card t-stra" hidden>
       <h2>Nuovo straordinario <small id="straSub"></small></h2>
       <div class="banner info" style="margin-bottom:14px">
         Le fasce <strong>sostituiscono gli orari ordinari</strong> dello schedule solo per i giorni scelti:
@@ -349,7 +433,7 @@
     </section>
 
     <!-- LAVORO -->
-    <section id="jobCard" class="card" hidden>
+    <section id="jobCard" class="card t-ps" hidden>
       <div class="jobhead">
         <div>
           <div class="t" id="jobTitle"></div>
@@ -374,7 +458,7 @@
     </section>
 
     <!-- STRAORDINARI: elenco -->
-    <section class="card" id="straListCard">
+    <section class="card t-stra" id="straListCard">
       <h2>Straordinari programmati
         <small><label class="chk"><input type="checkbox" id="straSoloQuesto"> solo lo schedule selezionato</label></small>
       </h2>
@@ -382,8 +466,76 @@
       <div class="muted" id="straEmpty">Nessuno straordinario.</div>
     </section>
 
+    <!-- SPEGNIMENTO: nuovo -->
+    <section class="card t-speg" id="spegCard">
+      <h2>Nuovo spegnimento <small>programma vacanze delle centraline</small></h2>
+      <div class="banner info" style="margin-bottom:14px">
+        Le centraline spengono i programmi scelti <strong>dal primo all'ultimo giorno compresi</strong> e
+        <strong>ripartono da sole il giorno dopo</strong>, con l'ottimizzatore: non serve ricollegarsi.
+        Il PC scrive il programma vacanze subito e lo verifica; a cavallo dell'anno usa due righe
+        (fino al 31/12 e dal 01/01). L'antigelo resta attivo solo dove c'è la sonda esterna.
+      </div>
+      <div id="spegCompat" class="banner warn" hidden></div>
+      <div class="speg-form">
+        <div>
+          <label class="f" for="spegDal">Dal giorno</label>
+          <input id="spegDal" type="date">
+        </div>
+        <div>
+          <label class="f" for="spegAl">Al giorno (compreso)</label>
+          <input id="spegAl" type="date">
+        </div>
+        <div class="span-m">
+          <label class="f" for="spegNote">Note</label>
+          <input id="spegNote" type="text" maxlength="300" placeholder="Es. vacanze di Natale">
+        </div>
+        <div class="span-all">
+          <label class="f">Gruppi</label>
+          <div class="chips" id="spegGruppi"></div>
+        </div>
+        <div class="span-all">
+          <label class="f">Funzione dei programmi</label>
+          <div class="chips" id="spegFunzioni"></div>
+        </div>
+        <div class="span-2">
+          <label class="f" for="spegCommessa">Commessa</label>
+          <select id="spegCommessa"></select>
+        </div>
+        <div class="span-m">
+          <label class="f" for="spegFiltro">Cerca impianto</label>
+          <input id="spegFiltro" type="text" placeholder="Codice o nome…">
+        </div>
+      </div>
+      <div class="speg-sum" id="spegSum"></div>
+      <div class="anteprima" id="spegAnteprima"></div>
+      <div class="hint">Spunta o togli singoli impianti e programmi. Gli impianti senza sonda esterna in anagrafica partono esclusi.</div>
+      <div id="spegErr" class="banner err" hidden style="margin-top:12px"></div>
+      <div id="spegOk" class="banner ok" hidden style="margin-top:12px"></div>
+      <div class="actions">
+        <span class="spacer"></span>
+        <button id="spegPrepara" class="btn primary" disabled>Prepara spegnimento</button>
+      </div>
+      <div class="confirm-box" id="spegConferma" hidden>
+        <div class="t">Controlla prima di inviare</div>
+        <div id="spegConfermaTesto" class="pre"></div>
+        <div class="actions">
+          <button id="spegIndietro" class="btn ghost">Indietro</button>
+          <span class="spacer"></span>
+          <button id="spegInvia" class="btn confirm">Conferma e invia al PC</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPEGNIMENTO: elenco -->
+    <section class="card t-speg" id="spegListCard">
+      <h2>Spegnimenti programmati</h2>
+      <div id="spegListErr" class="banner err" hidden></div>
+      <div id="spegList"></div>
+      <div class="muted" id="spegEmpty">Nessuno spegnimento.</div>
+    </section>
+
     <!-- STORICO -->
-    <section class="card">
+    <section class="card t-prog">
       <h2>Ultime richieste <small>(si azzerano se il server si riavvia)</small></h2>
       <ul class="hist" id="histList"></ul>
       <div class="muted" id="histEmpty">Nessuna richiesta.</div>
@@ -607,6 +759,7 @@
     S.catalogAt = data.aggiornato;
     catalogLoaded = true;
     fillCommesse();
+    if ($('app').dataset.tab === 'speg') renderSpegForm();
   }
 
   function fillSelect(sel, items, placeholder, current) {
@@ -1327,8 +1480,427 @@
       const r = await api('/straordinari');
       S.stra = r.lista || [];
       renderStraList();
+      renderTabCounts();
     } catch (err) {
       handleErr(err, 'loadStra');
+    }
+  }
+
+  // ============================================================
+  // SCHEDE
+  // ============================================================
+  const TAB_KEY = 'orari_coster_tab';
+  function setTab(t) {
+    if (!['prog', 'stra', 'speg'].includes(t)) t = 'prog';
+    $('app').dataset.tab = t;
+    document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    storageSet(TAB_KEY, t);
+    if (t === 'speg') { renderSpegForm(); loadSpeg(); }
+  }
+
+  function renderTabCounts() {
+    const attiviStra = S.stra.filter((x) => ['in_attesa_agente', 'programmato', 'applicato', 'da_controllare'].includes(x.stato)).length;
+    $('cntStra').hidden = !attiviStra;
+    $('cntStra').textContent = attiviStra;
+    const attiviSpeg = S.spegList.filter((x) => ['in_attesa_agente', 'in_corso', 'attivo', 'da_controllare'].includes(x.stato)).length;
+    $('cntSpeg').hidden = !attiviSpeg;
+    $('cntSpeg').textContent = attiviSpeg;
+  }
+
+  // ============================================================
+  // SPEGNIMENTO (programma vacanze)
+  // ============================================================
+  const GRUPPI = [
+    ['elementari_medie', 'Scuole Elementari/Medie'],
+    ['materne_nido', 'Scuole Materne/Nido'],
+    ['palestre', 'Palestre'],
+    ['uffici_altro', 'Uffici/Altro'],
+    ['da_verificare', 'Da verificare'],
+  ];
+  const GRUPPO_LABEL = Object.fromEntries(GRUPPI);
+  const FUNZIONI = [
+    ['riscaldamento', 'Riscaldamento'], ['acs', 'ACS'], ['raffrescamento', 'Raffrescamento'], ['servizio', 'Servizio'],
+  ];
+  const SPEG_STATO = {
+    in_attesa_agente: ['In attesa del PC', 'wait'],
+    in_corso: ['Scrittura in corso', 'run'],
+    attivo: ['Scritto sulle centraline', 'ok'],
+    da_controllare: ['Da controllare', 'err'],
+    concluso: ['Concluso', ''],
+    annullato: ['Annullato', ''],
+    rifiutato: ['Rifiutato', 'err'],
+  };
+  const VOCE_STATO = {
+    da_scrivere: ['Da scrivere', 'wait'], scritto: ['Scritto', 'ok'], da_togliere: ['Da togliere', 'wait'],
+    da_riscrivere: ['Da riscrivere', 'wait'], da_controllare: ['Da controllare', 'err'],
+    concluso: ['Concluso', ''], annullato: ['Annullato', ''],
+  };
+  S.spegList = [];
+  S.spegGruppi = new Set(['elementari_medie', 'materne_nido']);
+  S.spegFunzioni = new Set(['riscaldamento']);
+  S.spegSel = null;          // Set di schedule_id scelti (null = da ricalcolare)
+  S.spegFiltroKey = '';
+
+  function addDays(iso, n) {
+    const d = dateFromIso(iso);
+    if (!d) return '';
+    d.setDate(d.getDate() + n);
+    return localIso(d);
+  }
+  function fmtDataLunga(iso) {
+    const d = dateFromIso(iso);
+    return d ? `${GG[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : iso || '';
+  }
+  function giorniTra(a, b) {
+    const da = dateFromIso(a), db = dateFromIso(b);
+    return da && db ? Math.round((db - da) / 86400000) + 1 : 0;
+  }
+
+  function spegCatalogoOk() {
+    return S.catalog && S.catalog.schedules.some((s) => s.gruppo !== undefined && s.vacanze !== undefined);
+  }
+
+  /** Programmi che rispettano i filtri (gruppo, funzione, commessa, ricerca). */
+  function spegCandidati() {
+    if (!S.catalog) return [];
+    const imp = new Map(S.catalog.impianti.map((p) => [p.ref, p]));
+    const com = $('spegCommessa').value;
+    const q = $('spegFiltro').value.trim().toLowerCase();
+    return S.catalog.schedules.filter((s) => {
+      const p = imp.get(s.impianto_ref);
+      if (!p) return false;
+      if (com && p.commessa_ref !== com) return false;
+      if (q && !impiantoLabel(p).toLowerCase().includes(q)) return false;
+      const g = s.gruppo || 'da_verificare';
+      const f = s.funzione || 'riscaldamento';
+      return S.spegGruppi.has(g) && S.spegFunzioni.has(f);
+    });
+  }
+
+  function spegDefaultSel(cands) {
+    const imp = new Map(S.catalog.impianti.map((p) => [p.ref, p]));
+    return new Set(cands.filter((s) => s.vacanze !== false && (imp.get(s.impianto_ref) || {}).sonda_esterna !== false).map((s) => s.id));
+  }
+
+  function renderSpegForm() {
+    if (!S.catalog) return;
+    const compat = spegCatalogoOk();
+    $('spegCompat').hidden = compat;
+    $('spegCompat').textContent = compat ? '' : "L'anagrafica arrivata dal PC non ha ancora i gruppi: aggiorna l'agente orari alla v1.7 e lancia aggiorna_tipologie.";
+    const today = localIso(new Date());
+    $('spegDal').min = today;
+    $('spegAl').min = $('spegDal').value || today;
+
+    // commesse
+    const selC = $('spegCommessa');
+    if (!selC.options.length) {
+      selC.append(el('option', { value: '', text: 'Tutte le commesse' }));
+      for (const c of S.catalog.commesse) selC.append(el('option', { value: c.ref, text: c.nome.replace(/^\*+/, '') }));
+    }
+
+    // conteggi per gruppo (sulle funzioni scelte) e per funzione (sui gruppi scelti)
+    const all = S.catalog.schedules;
+    const box = $('spegGruppi');
+    box.innerHTML = '';
+    for (const [g, lbl] of GRUPPI) {
+      const n = all.filter((s) => (s.gruppo || 'da_verificare') === g && S.spegFunzioni.has(s.funzione || 'riscaldamento')).length;
+      if (g === 'da_verificare' && !n) continue;
+      box.append(el('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(S.spegGruppi.has(g)),
+        onclick: () => { S.spegGruppi.has(g) ? S.spegGruppi.delete(g) : S.spegGruppi.add(g); S.spegSel = null; renderSpegForm(); },
+      }, [lbl, el('small', { text: String(n) })]));
+    }
+    const fbox = $('spegFunzioni');
+    fbox.innerHTML = '';
+    for (const [f, lbl] of FUNZIONI) {
+      const n = all.filter((s) => (s.funzione || 'riscaldamento') === f && S.spegGruppi.has(s.gruppo || 'da_verificare')).length;
+      fbox.append(el('button', {
+        type: 'button', class: 'chip', 'aria-pressed': String(S.spegFunzioni.has(f)),
+        onclick: () => { S.spegFunzioni.has(f) ? S.spegFunzioni.delete(f) : S.spegFunzioni.add(f); S.spegSel = null; renderSpegForm(); },
+      }, [lbl, el('small', { text: String(n) })]));
+    }
+
+    const cands = spegCandidati();
+    const key = [...S.spegGruppi].sort() + '|' + [...S.spegFunzioni].sort() + '|' + $('spegCommessa').value + '|' + $('spegFiltro').value.trim().toLowerCase();
+    if (!S.spegSel || key !== S.spegFiltroKey) {
+      // filtri cambiati: si riparte dalla scelta predefinita, tenendo le spunte manuali ancora visibili
+      const def = spegDefaultSel(cands);
+      if (S.spegSel && key !== S.spegFiltroKey && S.spegFiltroKey.split('|').slice(0, 2).join('|') === key.split('|').slice(0, 2).join('|')) {
+        // cambiata solo commessa/ricerca: si conservano le scelte fatte
+        for (const id of def) if (!S.spegTolti || !S.spegTolti.has(id)) S.spegSel.add(id);
+      } else {
+        S.spegSel = def;
+        S.spegTolti = new Set();
+      }
+      S.spegFiltroKey = key;
+    }
+    renderSpegAnteprima(cands);
+  }
+
+  function renderSpegAnteprima(cands) {
+    const imp = new Map(S.catalog.impianti.map((p) => [p.ref, p]));
+    const per = new Map();
+    for (const s of cands) {
+      if (!per.has(s.impianto_ref)) per.set(s.impianto_ref, []);
+      per.get(s.impianto_ref).push(s);
+    }
+    const lista = [...per.entries()].map(([ref, ss]) => [imp.get(ref), ss.sort((a, b) => (a.m || 99) - (b.m || 99))])
+      .sort((a, b) => impiantoLabel(a[0]).localeCompare(impiantoLabel(b[0]), 'it', { numeric: true }));
+
+    const box = $('spegAnteprima');
+    box.innerHTML = '';
+    const head = el('div', { class: 'ant-head' }, [
+      el('span', { text: `${lista.length} ${lista.length === 1 ? 'impianto' : 'impianti'} nei filtri` }),
+      el('span', {}, [
+        el('button', { type: 'button', text: 'tutti', onclick: () => { for (const s of cands) if (s.vacanze !== false) { S.spegSel.add(s.id); S.spegTolti.delete(s.id); } renderSpegAnteprima(cands); } }),
+        ' · ',
+        el('button', { type: 'button', text: 'nessuno', onclick: () => { for (const s of cands) { S.spegSel.delete(s.id); S.spegTolti.add(s.id); } renderSpegAnteprima(cands); } }),
+      ]),
+    ]);
+    box.append(head);
+    if (!lista.length) box.append(el('div', { class: 'muted', style: 'padding:14px', text: 'Nessun programma con questi filtri.' }));
+
+    for (const [p, ss] of lista) {
+      const usabili = ss.filter((s) => s.vacanze !== false);
+      const scelti = usabili.filter((s) => S.spegSel.has(s.id));
+      const cb = el('input', { type: 'checkbox', 'aria-label': impiantoLabel(p) });
+      cb.checked = scelti.length > 0;
+      cb.indeterminate = scelti.length > 0 && scelti.length < usabili.length;
+      cb.disabled = !usabili.length;
+      cb.addEventListener('change', () => {
+        for (const s of usabili) {
+          if (cb.checked) { S.spegSel.add(s.id); S.spegTolti.delete(s.id); } else { S.spegSel.delete(s.id); S.spegTolti.add(s.id); }
+        }
+        renderSpegAnteprima(cands);
+      });
+      const com = (S.catalog.commesse.find((c) => c.ref === p.commessa_ref) || {}).nome || '';
+      const avvisi = [];
+      if (p.sonda_esterna === false) avvisi.push('⚠ Nessuna sonda esterna in anagrafica: antigelo non garantito.');
+      if (!usabili.length) avvisi.push('Centralina a termostato: programma vacanze non ancora gestito.');
+      const progs = el('div', { class: 'ant-progs' });
+      for (const s of ss) {
+        const on = S.spegSel.has(s.id);
+        progs.append(el('button', {
+          type: 'button', class: 'pchip', 'aria-pressed': String(on), disabled: s.vacanze === false,
+          title: `${s.scheduler_id} · ${GRUPPO_LABEL[s.gruppo || 'da_verificare'] || ''} · ${s.funzione || ''}`,
+          onclick: () => { if (on) { S.spegSel.delete(s.id); S.spegTolti.add(s.id); } else { S.spegSel.add(s.id); S.spegTolti.delete(s.id); } renderSpegAnteprima(cands); },
+        }, [el('span', { class: 'm', text: s.m ? 'M' + s.m : '—' }), s.nome]));
+      }
+      box.append(el('div', { class: 'ant-imp' + (scelti.length ? '' : ' off') }, [
+        cb,
+        el('div', {}, [
+          el('div', { class: 'nome' }, [impiantoLabel(p), el('small', { text: com.replace(/^\*+/, '') })]),
+          ...avvisi.map((a) => el('div', { class: 'warn', text: a })),
+        ]),
+        progs,
+      ]));
+    }
+    renderSpegSum();
+  }
+
+  /** Si manda solo quello che si vede: programmi spuntati dentro i filtri attuali. */
+  function spegScelti() {
+    if (!S.catalog || !S.spegSel) return [];
+    return spegCandidati().filter((s) => S.spegSel.has(s.id) && s.vacanze !== false);
+  }
+
+  function renderSpegSum() {
+    const sel = spegScelti();
+    const imp = new Set(sel.map((s) => s.impianto_ref));
+    const dal = $('spegDal').value, al = $('spegAl').value;
+    const gg = dal && al && al >= dal ? giorniTra(dal, al) : 0;
+    $('spegSum').innerHTML = '';
+    $('spegSum').append(
+      el('span', {}, [el('b', { text: String(sel.length) }), sel.length === 1 ? 'programma' : 'programmi']),
+      el('span', {}, [el('b', { text: String(imp.size) }), imp.size === 1 ? 'impianto' : 'impianti']),
+      el('span', {}, [el('b', { text: gg ? String(gg) : '—' }), gg === 1 ? 'giorno' : 'giorni']),
+    );
+    $('spegPrepara').disabled = !sel.length || !dal || !al || al < dal || !spegCatalogoOk();
+    $('spegConferma').hidden = true;
+  }
+
+  function spegPrepara() {
+    $('spegErr').hidden = true; $('spegOk').hidden = true;
+    const dal = $('spegDal').value, al = $('spegAl').value;
+    const today = localIso(new Date());
+    try {
+      if (!dal || !al) throw new Error('Scegli il primo e l\'ultimo giorno.');
+      if (al < dal) throw new Error('L\'ultimo giorno è prima del primo.');
+      if (al < today) throw new Error('Il periodo è già passato.');
+      if (giorniTra(dal, al) > 120) throw new Error('Al massimo 120 giorni.');
+      if (!spegScelti().length) throw new Error('Nessun programma scelto.');
+    } catch (e) { $('spegErr').hidden = false; $('spegErr').textContent = e.message; return; }
+    const sel = spegScelti();
+    const imp = new Set(sel.map((s) => s.impianto_ref));
+    const impMap = new Map(S.catalog.impianti.map((p) => [p.ref, p]));
+    const senzaSonda = [...imp].filter((r) => (impMap.get(r) || {}).sonda_esterna === false).length;
+    const perGruppo = {};
+    for (const s of sel) { const g = GRUPPO_LABEL[s.gruppo || 'da_verificare']; perGruppo[g] = (perGruppo[g] || 0) + 1; }
+    const anno = dal.slice(0, 4) !== al.slice(0, 4) ? '\nA cavallo dell\'anno: due righe per centralina (fino al 31/12 e dal 01/01).' : '';
+    $('spegConfermaTesto').textContent =
+      `Spengo ${sel.length} ${sel.length === 1 ? 'programma' : 'programmi'} su ${imp.size} ${imp.size === 1 ? 'impianto' : 'impianti'}\n` +
+      `dal ${fmtDataLunga(dal)} al ${fmtDataLunga(al)} compreso (${giorniTra(dal, al)} giorni).\n` +
+      `Ripartono da soli ${fmtDataLunga(addDays(al, 1))}, con l'ottimizzatore.\n` +
+      Object.entries(perGruppo).map(([g, n]) => `· ${g}: ${n}`).join('\n') + anno +
+      (senzaSonda ? `\n⚠ ${senzaSonda} impianti senza sonda esterna in anagrafica: l'antigelo non è garantito.` : '');
+    $('spegConferma').hidden = false;
+    $('spegConferma').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  async function spegInvia() {
+    const body = {
+      data_dal: $('spegDal').value,
+      data_al: $('spegAl').value,
+      note: $('spegNote').value.trim(),
+      gruppi: [...S.spegGruppi].map((g) => GRUPPO_LABEL[g] || g),
+      schedule_ids: spegScelti().map((s) => s.id),
+    };
+    $('spegInvia').disabled = true;
+    try {
+      await api('/spegnimenti', { method: 'POST', body });
+      $('spegConferma').hidden = true;
+      $('spegOk').hidden = false;
+      $('spegOk').textContent = 'Spegnimento inviato al PC: lo scrive sulle centraline una alla volta. Lo stato è qui sotto.';
+      $('spegNote').value = '';
+      await loadSpeg();
+    } catch (err) {
+      const m = handleErr(err, 'speg');
+      if (m) { $('spegErr').hidden = false; $('spegErr').textContent = m; }
+    } finally {
+      $('spegInvia').disabled = false;
+    }
+  }
+
+  async function spegAzione(path, body, btn, conferma) {
+    if (conferma && !window.confirm(conferma)) return;
+    if (btn) btn.disabled = true;
+    $('spegListErr').hidden = true;
+    try {
+      await api(path, { method: 'POST', body: body || {} });
+      await loadSpeg();
+    } catch (err) {
+      const m = handleErr(err, 'spegAzione');
+      if (m) { $('spegListErr').hidden = false; $('spegListErr').textContent = m; }
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function renderSpegList() {
+    const ul = $('spegList');
+    ul.innerHTML = '';
+    const order = { in_attesa_agente: 0, da_controllare: 0, in_corso: 1, attivo: 1, rifiutato: 2, concluso: 3, annullato: 3 };
+    const list = S.spegList.slice().sort((a, b) => (order[a.stato] ?? 9) - (order[b.stato] ?? 9) || (a.dal || '').localeCompare(b.dal || ''));
+    $('spegEmpty').hidden = list.length > 0;
+    const today = localIso(new Date());
+    for (const x of list) {
+      const [lbl, cls] = SPEG_STATO[x.stato] || [x.stato, ''];
+      const voci = x.voci || [];
+      const conta = x.conteggi || {};
+      const side = [el('span', { class: 'badge ' + cls, text: lbl })];
+      if (x.in_corso_ora && ['attivo', 'in_corso', 'da_controllare'].includes(x.stato)) side.push(el('span', { class: 'badge run', text: 'Spento adesso' }));
+      if (x.richiesta_in_invio) side.push(el('span', { class: 'badge wait', text: 'Richiesta in invio al PC' }));
+
+      const riassunto = x.stato === 'in_attesa_agente'
+        ? `${x.programmi || 0} programmi · in attesa che il PC lo registri`
+        : [
+          voci.length ? `${voci.length} centraline` : '',
+          conta.scritto ? `${conta.scritto} scritte` : '',
+          conta.da_scrivere ? `${conta.da_scrivere} da scrivere` : '',
+          (conta.da_riscrivere || 0) + (conta.da_togliere || 0) ? `${(conta.da_riscrivere || 0) + (conta.da_togliere || 0)} da aggiornare` : '',
+          conta.da_controllare ? `${conta.da_controllare} da controllare` : '',
+          conta.concluso ? `${conta.concluso} concluse` : '',
+        ].filter(Boolean).join(' · ');
+
+      const item = el('div', { class: 'speg-item' }, [
+        el('div', { class: 'speg-top' }, [
+          el('div', {}, [
+            el('div', { class: 'per', text: `${fmtShort(x.dal)}/${(x.dal || '').slice(0, 4)} → ${fmtShort(x.al)}/${(x.al || '').slice(0, 4)}` }, []),
+            el('small', { class: 'muted', text: `Spento dal ${fmtDataLunga(x.dal)} al ${fmtDataLunga(x.al)} compreso · riparte ${fmtDataLunga(addDays(x.al, 1))}` }),
+            (x.gruppi || []).length ? el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px', text: x.gruppi.join(', ') }) : null,
+            x.note ? el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px', text: '📝 ' + x.note }) : null,
+            el('div', { class: 'muted', style: 'font-size:12px;margin-top:4px', text: riassunto }),
+            x.stato === 'rifiutato' && x.messaggio ? el('div', { class: 'm bad', style: 'font-size:12px;color:#e0a0a0', text: x.messaggio }) : null,
+          ]),
+          el('div', { class: 'side' }, side),
+        ]),
+      ]);
+
+      // Azioni
+      const vivo = ['in_corso', 'attivo', 'da_controllare'].includes(x.stato) && x.al >= today;
+      if (x.stato === 'in_attesa_agente' || vivo) {
+        const acts = el('div', { class: 'speg-acts' });
+        if (vivo) {
+          const inp = el('input', { type: 'date', value: addDays(x.al, 1), min: today, 'aria-label': 'Riparte il' });
+          acts.append(
+            el('span', { class: 'muted', style: 'font-size:12px', text: 'Riparte il' }), inp,
+            el('button', {
+              class: 'btn', text: 'Cambia data',
+              onclick: (ev) => {
+                const r = inp.value;
+                if (!r) return;
+                if (r <= x.dal) {
+                  spegAzione(`/spegnimenti/${x.id}/annulla`, {}, ev.currentTarget, 'La data di ripartenza è prima dell\'inizio: annullo tutto lo spegnimento?');
+                  return;
+                }
+                spegAzione(`/spegnimenti/${x.id}/fine`, { data_al: addDays(r, -1) }, ev.currentTarget,
+                  `Gli impianti ripartono ${fmtDataLunga(r)} (ultimo giorno spento: ${fmtDataLunga(addDays(r, -1))}). Il PC riscrive le centraline. Confermi?`);
+              },
+            }),
+          );
+          if (conta.da_controllare) {
+            acts.append(el('button', { class: 'btn', text: 'Riprova le centraline in errore', onclick: (ev) => spegAzione(`/spegnimenti/${x.id}/riprova`, {}, ev.currentTarget) }));
+          }
+        }
+        acts.append(el('span', { class: 'spacer', style: 'flex:1' }));
+        acts.append(el('button', {
+          class: 'btn danger', text: 'Annulla',
+          onclick: (ev) => spegAzione(`/spegnimenti/${x.id}/annulla`, {}, ev.currentTarget,
+            'Annullo lo spegnimento? Il PC toglie le righe dalle centraline.'),
+        }));
+        item.append(acts);
+      }
+
+      // Dettaglio centraline
+      if (voci.length) {
+        const det = el('details', { class: 'voci' });
+        const nEst = voci.reduce((n, v) => n + (v.estranee || []).length, 0);
+        det.append(el('summary', { text: `Centraline (${voci.length})` + (nEst ? ` · ${nEst} ${nEst === 1 ? 'riga non nostra' : 'righe non nostre'} nel programma vacanze` : '') }));
+        for (const v of voci) {
+          const [vl, vc] = VOCE_STATO[v.stato] || [v.stato, ''];
+          const kids = [
+            el('div', { class: 'n', text: v.impianto || v.codice_k }),
+            el('span', { class: 'badge ' + vc, text: vl }),
+            el('div', { class: 'p span', text: (v.programmi || []).join(' · ') }),
+          ];
+          for (const r of v.righe || []) kids.push(el('div', { class: 'r ok span', text: '✓ ' + r }));
+          if (v.messaggio && v.stato !== 'scritto') kids.push(el('div', { class: 'span' + (['da_controllare'].includes(v.stato) || /non riuscit|NON/.test(v.messaggio) ? ' bad' : ' muted'), text: v.messaggio }));
+          for (const e of v.estranee || []) {
+            const b = el('button', { class: 'btn danger', text: e.da_cancellare ? 'In cancellazione' : 'Cancella', disabled: Boolean(e.da_cancellare) });
+            b.addEventListener('click', () => spegAzione(`/spegnimenti/${x.id}/estranea`, { voce: v.id, riga: e.riga }, b,
+              `Cancello dalla centralina la riga ${e.riga + 1} del programma vacanze (${e.testo})?`));
+            kids.push(el('div', { class: 'est span' }, [el('span', { text: `Riga ${e.riga + 1} non nostra: ${e.testo}` }), b]));
+          }
+          for (const r of (v.rimosse || []).slice(-3)) {
+            kids.push(el('div', { class: 'p span', text: `Tolta riga ${r.riga + 1} (${r.perche}): ${r.testo}` }));
+          }
+          det.append(el('div', { class: 'voce' }, kids));
+        }
+        item.append(det);
+      }
+      ul.append(item);
+    }
+    renderTabCounts();
+  }
+
+  async function loadSpeg() {
+    try {
+      const r = await api('/spegnimenti');
+      S.spegList = r.lista || [];
+      S.spegCompat = r.agente_compatibile;
+      renderSpegList();
+    } catch (err) {
+      const m = handleErr(err, 'loadSpeg');
+      if (m) { $('spegListErr').hidden = false; $('spegListErr').textContent = /HTTP 404/.test(m) ? 'Il server non ha ancora il modulo spegnimenti: va aggiornato orari-coster.js su Render.' : m; }
     }
   }
 
@@ -1342,10 +1914,13 @@
     await refreshStatus();
     await loadHistory();
     await loadStra();
+    await loadSpeg();
+    setTab(storageGet(TAB_KEY) || 'prog');
     if (!started) {
       started = true;
       setInterval(refreshStatus, 10000);
       setInterval(loadStra, 15000);
+      setInterval(loadSpeg, 15000);
       setInterval(() => { if (!S.jobId) loadHistory(); }, 30000);
     }
   }
@@ -1366,6 +1941,18 @@
   $('straAddFascia').addEventListener('click', () => { if (S.straFasce.length < 4) { S.straFasce.push({ start: '', end: '', temp: '' }); renderStraFasce(); } });
   $('straSubmit').addEventListener('click', submitStra);
   $('straSoloQuesto').addEventListener('change', renderStraList);
+  document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+  $('spegDal').addEventListener('change', () => {
+    $('spegAl').min = $('spegDal').value || localIso(new Date());
+    if ($('spegAl').value && $('spegAl').value < $('spegDal').value) $('spegAl').value = '';
+    renderSpegSum();
+  });
+  $('spegAl').addEventListener('change', renderSpegSum);
+  $('spegCommessa').addEventListener('change', renderSpegForm);
+  $('spegFiltro').addEventListener('input', renderSpegForm);
+  $('spegPrepara').addEventListener('click', spegPrepara);
+  $('spegIndietro').addEventListener('click', () => { $('spegConferma').hidden = true; });
+  $('spegInvia').addEventListener('click', spegInvia);
 
   S.pin = storageGet(PIN_KEY);
   if (S.pin) start(); else askPin();
