@@ -465,11 +465,12 @@
 
     <!-- STRAORDINARI: elenco -->
     <section class="card t-stra" id="straListCard">
-      <h2>Straordinari programmati
+      <h2>Straordinari dei prossimi 7 giorni
         <small><label class="chk"><input type="checkbox" id="straSoloQuesto"> solo lo schedule selezionato</label></small>
       </h2>
       <ul class="stra-list" id="straList"></ul>
-      <div class="muted" id="straEmpty">Nessuno straordinario.</div>
+      <div class="muted" id="straEmpty">Nessuno straordinario nei prossimi 7 giorni.</div>
+      <div class="row" style="margin-top:10px"><button id="straAltri" class="btn ghost" type="button" hidden></button></div>
     </section>
 
     <!-- SPEGNIMENTO: nuovo -->
@@ -1443,10 +1444,30 @@
     return '';
   }
 
+  // Elenco: i programmati più in là di 7 giorni restano nascosti (in stagione
+  // sono tanti); scritti, da controllare e chiusi si vedono sempre.
+  const STRA_GIORNI = 7;
+  let straMostraTutti = false;
+  function straLimite() {
+    const d = new Date();
+    d.setDate(d.getDate() + STRA_GIORNI);
+    return localIso(d);
+  }
+  function straLontano(x, lim) {
+    return x.stato === 'programmato' && (x.data || '') > (lim || straLimite());
+  }
+
   function renderStraList() {
     const only = $('straSoloQuesto').checked && S.schedule;
     let list = S.stra.slice();
     if (only) list = list.filter((x) => String(x.schedule_id) === String(S.schedule.id));
+    const lim = straLimite();
+    const lontani = list.filter((x) => straLontano(x, lim)).length;
+    if (!straMostraTutti) list = list.filter((x) => !straLontano(x, lim));
+    const ba = $('straAltri');
+    ba.hidden = !lontani;
+    ba.textContent = straMostraTutti ? 'Mostra solo i prossimi 7 giorni'
+      : `Mostra anche i successivi (${lontani})`;
     const order = { in_attesa_agente: 0, programmato: 1, applicato: 1, da_controllare: 0, scaduto: 2, rifiutato: 2, ripristinato: 3, annullato: 3 };
     list.sort((a, b) => (order[a.stato] ?? 9) - (order[b.stato] ?? 9) || (a.data || '').localeCompare(b.data || ''));
     const ul = $('straList');
@@ -1523,7 +1544,8 @@
   }
 
   function renderTabCounts() {
-    const attiviStra = S.stra.filter((x) => ['in_attesa_agente', 'programmato', 'applicato', 'da_controllare'].includes(x.stato)).length;
+    const lim = straLimite();
+    const attiviStra = S.stra.filter((x) => ['in_attesa_agente', 'programmato', 'applicato', 'da_controllare'].includes(x.stato) && !straLontano(x, lim)).length;
     $('cntStra').hidden = !attiviStra;
     $('cntStra').textContent = attiviStra;
     const attiviSpeg = S.spegList.filter((x) => ['in_attesa_agente', 'in_corso', 'attivo', 'da_controllare'].includes(x.stato)).length;
@@ -1982,6 +2004,7 @@
   $('straAddFascia').addEventListener('click', () => { if (S.straFasce.length < 4) { S.straFasce.push({ start: '', end: '', temp: '' }); renderStraFasce(); } });
   $('straSubmit').addEventListener('click', submitStra);
   $('straSoloQuesto').addEventListener('change', renderStraList);
+  $('straAltri').addEventListener('click', () => { straMostraTutti = !straMostraTutti; renderStraList(); });
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('spegDal').addEventListener('change', () => {
     $('spegAl').min = $('spegDal').value || localIso(new Date());
