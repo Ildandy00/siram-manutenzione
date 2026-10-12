@@ -1582,6 +1582,8 @@
     concluso: ['Concluso', ''], annullato: ['Annullato', ''],
   };
   S.spegList = [];
+  S.spegAperti = new Set();   // dettagli centraline aperti: restano aperti agli aggiornamenti
+  S.spegFirma = '';
   S.spegGruppi = new Set(['elementari_medie', 'materne_nido']);
   S.spegFunzioni = new Set(['riscaldamento']);
   S.spegSel = null;          // Set di schedule_id scelti (null = da ricalcolare)
@@ -1926,6 +1928,8 @@
       // Dettaglio centraline
       if (voci.length) {
         const det = el('details', { class: 'voci' });
+        det.open = S.spegAperti.has(x.id);
+        det.addEventListener('toggle', () => { if (det.open) S.spegAperti.add(x.id); else S.spegAperti.delete(x.id); });
         const nEst = voci.reduce((n, v) => n + (v.estranee || []).length, 0);
         det.append(el('summary', { text: `Centraline (${voci.length})` + (nEst ? ` · ${nEst} ${nEst === 1 ? 'riga non nostra' : 'righe non nostre'} nel programma vacanze` : '') }));
         for (const v of voci) {
@@ -1958,7 +1962,14 @@
   async function loadSpeg() {
     try {
       const r = await api('/spegnimenti');
-      S.spegList = r.lista || [];
+      const lista = r.lista || [];
+      const firma = JSON.stringify([lista, r.agente_compatibile]);
+      // Ogni 15 s: si ridisegna solo se qualcosa è cambiato, e non mentre si
+      // sta scrivendo una data nell'elenco (si perderebbe quello che si digita).
+      const ae = document.activeElement;
+      if (firma === S.spegFirma || (ae && ae.tagName === 'INPUT' && $('spegList').contains(ae))) return;
+      S.spegFirma = firma;
+      S.spegList = lista;
       S.spegCompat = r.agente_compatibile;
       renderSpegList();
     } catch (err) {
