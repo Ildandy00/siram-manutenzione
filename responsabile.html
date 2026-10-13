@@ -410,6 +410,15 @@ tr.int-completato td * { text-decoration: line-through; }
 .pra-stato.BdO        { background:rgba(122,176,216,.12); color:#7ab0d8; }
 .pra-stato.DDT        { background:rgba(154,132,200,.12); color:#c4b5fd; }
 .pra-stato.Chiusa     { background:rgba(143,190,122,.12); color:var(--green); }
+.pra-passo { margin-top:12px; font-size:12px; padding:7px 12px; background:var(--bg3); border-radius:8px; color:var(--text); }
+.pra-sublabel { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
+.pra-chip-on { border-color: var(--yellow) !important; color: var(--yellow) !important; background: rgba(200,180,100,.12) !important; }
+.pra-diario { font-size:12px; max-height:220px; overflow:auto; background:var(--bg3); border-radius:8px; padding:8px 12px; }
+.pra-diario div { padding:3px 0; border-bottom:1px solid var(--border); }
+.pra-diario div:last-child { border-bottom:0; }
+.pra-diario span { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); margin-right:8px; }
+.pratica-card .tl-label { font-size:9px; }
+@media (max-width:700px){ .pratica-card .tl-label { display:none; } }
 
 /* MODAL PRATICA — STEP PANEL */
 .step-panel {
@@ -681,24 +690,27 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- VIEW: PRATICHE -->
       <div class="view" id="view-pratiche">
         <div class="sec-header">
-          <div class="sec-title">Pratiche documentali</div>
+          <div class="sec-title">Pratiche — lavori in gestione</div>
           <div style="display:flex;align-items:center;gap:10px">
             <div id="praticheSummary" style="font-size:12px;color:var(--muted)"></div>
             <button class="btn btn-primary btn-sm" onclick="openModalNuovaPratica()">+ Nuova pratica</button>
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta" onclick="setPraticaFilter('Richiesta')">📝 Richiesta</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerta" onclick="setPraticaFilter('Offerta')">🏷️ Offerta</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Preventivo" onclick="setPraticaFilter('Preventivo')">💰 Preventivo</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="BdO" onclick="setPraticaFilter('BdO')">📋 BdO</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="DDT" onclick="setPraticaFilter('DDT')">🚚 DDT</button>
-          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiusa" onclick="setPraticaFilter('Chiusa')">✓ Chiuse</button>
+          <button class="btn btn-ghost btn-sm report-filter active" data-pfilter="aperte" onclick="setPraticaFilter('aperte')">In corso <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiamata" onclick="setPraticaFilter('Chiamata')">📞 Chiamata <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Richiesta offerte" onclick="setPraticaFilter('Richiesta offerte')">✉️ Rich. offerte <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerte ricevute" onclick="setPraticaFilter('Offerte ricevute')">🏷️ Offerte <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Offerta scelta" onclick="setPraticaFilter('Offerta scelta')">✔️ Scelta <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Ordinato" onclick="setPraticaFilter('Ordinato')">📋 Ordinato <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Materiale disponibile" onclick="setPraticaFilter('Materiale disponibile')">📦 Materiale <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Intervento assegnato" onclick="setPraticaFilter('Intervento assegnato')">🔨 Intervento <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiusa" onclick="setPraticaFilter('Chiusa')">✓ Chiuse <span class="pf-n"></span></button>
+          <button class="btn btn-ghost btn-sm report-filter" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte <span class="pf-n"></span></button>
           <select class="fc" id="praticaComuneFilter" onchange="renderPratiche()" style="width:160px;margin-left:4px">
             <option value="">Tutti i comuni</option>
           </select>
-          <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:140px;max-width:220px" oninput="renderPratiche()"/>
+          <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto, lavoro, fornitore, BdO..." style="flex:1;min-width:160px;max-width:300px" oninput="renderPratiche()"/>
         </div>
         <div id="tblPratiche"></div>
       </div>
@@ -872,35 +884,25 @@ tr.int-completato td * { text-decoration: line-through; }
 
 <!-- MODAL NUOVA PRATICA -->
 <div class="overlay" id="modalNuovaPratica">
-  <div class="modal" style="max-width:500px">
+  <div class="modal" style="max-width:540px">
     <div class="modal-head">
-      <div class="modal-title">📄 Nuova pratica</div>
+      <div class="modal-title">📞 Nuova pratica</div>
       <button class="modal-close" onclick="closeModal('modalNuovaPratica')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="fg">
-        <label>Impianto *</label>
-        <select class="fc" id="npImp"><option value="">Seleziona impianto...</option></select>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Di solito la crea il pannello in Gmail insieme alla sottocartella Drive. Da qui puoi aprirla a mano.</div>
+      <div class="fg"><label>Impianto *</label><select class="fc" id="npImp"><option value="">Seleziona impianto...</option></select></div>
+      <div class="fg"><label>Titolo lavoro *</label><input class="fc" id="npTitolo" placeholder="Es. Sostituzione servomotore"/></div>
+      <div class="fc-row">
+        <div class="fg"><label>Ubicazione</label><input class="fc" id="npUbicazione" placeholder="Es. Pala 3, sala stampa..."/></div>
+        <div class="fg"><label>Data chiamata</label><input class="fc" type="date" id="npData"/></div>
       </div>
-      <div class="fg">
-        <label>Tipo visita</label>
-        <select class="fc" id="npTipo">
-          <option value="">— Nessuna (pratica standalone) —</option>
-          <option>Ordinaria</option><option>Straordinaria</option>
-        </select>
+      <div class="fg"><label>Problema / descrizione</label><textarea class="fc" id="npProblema" rows="3" placeholder="Cosa è stato segnalato..."></textarea></div>
+      <div class="fc-row">
+        <div class="fg"><label>Richiesto da</label><input class="fc" id="npRichiestoDa" placeholder="Davide / superiore / committente"/></div>
+        <div class="fg"><label>Collega a intervento</label><select class="fc" id="npIntervento"><option value="">— Nessun collegamento —</option></select></div>
       </div>
-      <div class="fg">
-        <label>Collega a intervento (opzionale)</label>
-        <select class="fc" id="npIntervento"><option value="">— Nessun collegamento —</option></select>
-      </div>
-      <div class="fg">
-        <label>Note richiesta</label>
-        <textarea class="fc" id="npNote" rows="3" placeholder="Descrivi il lavoro / motivo della pratica..."></textarea>
-      </div>
-      <div class="fg">
-        <label>📁 Link Drive (cartella documentazione)</label>
-        <input class="fc" type="url" id="npLink" placeholder="Incolla URL cartella Drive..."/>
-      </div>
+      <div class="fg"><label>📁 Link sottocartella Drive (opzionale)</label><input class="fc" type="url" id="npLink" placeholder="Incolla URL cartella Drive..."/></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modalNuovaPratica')">Annulla</button>
@@ -909,9 +911,9 @@ tr.int-completato td * { text-decoration: line-through; }
   </div>
 </div>
 
-<!-- MODAL DETTAGLIO PRATICA (timeline) -->
+<!-- MODAL DETTAGLIO PRATICA -->
 <div class="overlay" id="modalPratica">
-  <div class="modal" style="max-width:620px">
+  <div class="modal" style="max-width:740px">
     <div class="modal-head">
       <div>
         <div class="modal-title" id="praticaTitle">Pratica</div>
@@ -920,9 +922,8 @@ tr.int-completato td * { text-decoration: line-through; }
       <button class="modal-close" onclick="closeModal('modalPratica')">✕</button>
     </div>
     <div class="modal-body">
-      <div id="praticaTimeline" class="timeline" style="margin-bottom:20px;padding:0 10px"></div>
-      <div id="praticaGestioneToggle" style="margin-bottom:10px"></div>
-      <div id="praticaInterventiBox" style="margin-bottom:14px"></div>
+      <div id="praticaTimeline" class="timeline" style="margin-bottom:14px;padding:0 4px"></div>
+      <div id="praticaPasso"></div>
       <div id="praticaSteps"></div>
     </div>
     <div class="modal-foot">
@@ -1187,7 +1188,7 @@ let currentPraticaId  = null;
 let nExtraItems       = [];
 let blTipoSel         = '';
 let currentBacklogId  = null;
-let praticaFilterCorrente = 'tutti';
+let praticaFilterCorrente = 'aperte';
 let reportFilterCorrente  = 'tutti';
 let mostraOrdinari        = true;
 
@@ -1241,12 +1242,7 @@ async function caricaDati() {
 
     popolaSelectImpianti();
 
-    const nPraticheAperte = S.pratiche.filter(p => p.stato !== 'Chiusa').length;
-    const bpra = document.getElementById('badgePratiche');
-    bpra.textContent = nPraticheAperte;
-    bpra.style.display = nPraticheAperte > 0 ? '' : 'none';
-    document.getElementById('praticheSummary').textContent =
-      nPraticheAperte + ' in corso · ' + S.pratiche.filter(p=>p.stato==='Chiusa').length + ' chiuse';
+    ricalcolaStatiPratiche();
 
     try {
       const dr = await apiGet('/rdacat');
@@ -1474,7 +1470,7 @@ function renderSettimana() {
       const done=chk.filter(c=>c.eseguita==='SI').length;
       const completo=i.stato==='Chiuso'||(chk.length>0&&done===chk.length);
       const col=commessaDi(imp).color;
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
+      const hasPratica=!!praticaDiIntervento(i);
       const praDot=hasPratica?'<span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle"></span>':'';
       const isOrd = i.tipoVisita === 'Ordinaria';
       if(isOrd) {
@@ -1541,7 +1537,7 @@ function renderCalendario() {
       const col=commessaDi(imp).color;
       const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
       const isMulti=i.dataFine&&i.dataFine>i.dataPrevista;
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
+      const hasPratica=!!praticaDiIntervento(i);
       const praDot=hasPratica?`<span style="width:4px;height:4px;border-radius:50%;background:var(--yellow);display:inline-block;margin-left:3px;vertical-align:middle;flex-shrink:0"></span>`:'';
       const isOrd = i.tipoVisita === 'Ordinaria';
       if(isOrd) {
@@ -1589,7 +1585,7 @@ function openGiorno(dateStr) {
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
       const done=chk.filter(c=>c.eseguita==='SI').length;
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
+      const hasPratica=!!praticaDiIntervento(i);
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
         <div><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div>
         <div style="font-size:11px;color:var(--muted)">${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}</div></div>
@@ -2082,19 +2078,121 @@ async function confermaAssegnaRcee() {
 }
 
 // ============================================================
-//  PRATICHE
+//  PRATICHE v2 — lavori in gestione
+//  Lo stato si calcola dai dati (stessa regola del server, pratiche.js)
 // ============================================================
+const PRATICA_STATI = ['Chiamata','Richiesta offerte','Offerte ricevute','Offerta scelta','Ordinato','Materiale disponibile','Intervento assegnato','Chiusa'];
 const PRATICA_STEPS = [
-  { key:'richiesta',  label:'Richiesta',  icon:'📝', fields:['dataRichiesta','noteRichiesta','linkRichiesta'] },
-  { key:'offerta',    label:'Offerte',    icon:'🏷️', fields:[] },
-  { key:'preventivo', label:'Preventivo', icon:'💰', fields:['dataPreventivo','importoPreventivo','linkPreventivo'] },
-  { key:'bdo',        label:'BdO',        icon:'📋', fields:['dataBdo','numeroBdo','linkBdo'] },
-  { key:'ddt',        label:'DDT',        icon:'🚚', fields:['dataDdt','numeroDdt','linkDdt'] },
-  { key:'chiuso',     label:'Chiusa',     icon:'✓',  fields:['dataChiusura','noteChiusura'] },
+  { stato:'Chiamata',              label:'Chiamata',   icon:'📞', data:p=>p.dataChiamata },
+  { stato:'Richiesta offerte',     label:'Rich. off.', icon:'✉️', data:p=>p.dataRichiestaOfferte },
+  { stato:'Offerte ricevute',      label:'Offerte',    icon:'🏷️', data:p=>{ const o=S.offerte.filter(x=>x.idPratica===p.id).map(x=>x.data).filter(Boolean).sort(); return o[0]||''; } },
+  { stato:'Offerta scelta',        label:'Scelta',     icon:'✔️', data:p=>p.dataOffertaScelta },
+  { stato:'Ordinato',              label:'BdO',        icon:'📋', data:p=>p.dataBdo },
+  { stato:'Materiale disponibile', label:'Materiale',  icon:'📦', data:p=>p.dataMateriale },
+  { stato:'Intervento assegnato',  label:'Intervento', icon:'🔨', data:p=>{ const i=interventiDiPratica(p)[0]; return i?i.dataPrevista:''; } },
+  { stato:'Chiusa',                label:'Chiusa',     icon:'✓',  data:p=>p.dataChiusura },
 ];
-const PRATICA_STATI = ['Richiesta','Offerta','Preventivo','BdO','DDT','Chiusa'];
+const PRA_STATO_COL = {
+  'Chiamata':'#cccccc','Richiesta offerte':'#a8a29e','Offerte ricevute':'#c8b464','Offerta scelta':'#e0b84a',
+  'Ordinato':'#7ab0d8','Materiale disponibile':'#5eead4','Intervento assegnato':'#c4b5fd','Chiusa':'#8fbe7a',
+};
+const LEGACY_STATI = { Richiesta:'Chiamata', Offerta:'Offerte ricevute', Preventivo:'Offerta scelta', BdO:'Ordinato', DDT:'Materiale disponibile', Chiusa:'Chiusa' };
+const COMUNI_COLORS = {
+  'Pesaro':'rgba(122,176,216,.15);color:#7ab0d8', 'Misano Adriatico':'rgba(154,132,200,.15);color:#c4b5fd',
+  'Gabicce Mare':'rgba(143,190,122,.15);color:#8fbe7a', 'Verucchio':'rgba(200,180,100,.15);color:var(--yellow)',
+  'Villa Verucchio':'rgba(200,180,100,.1);color:var(--yellow)', 'Rimini':'rgba(200,120,120,.15);color:#f87171',
+  'Corinaldo':'rgba(100,180,180,.15);color:#5eead4',
+};
+const OPERAI_LIST = [
+  { nome:'Matteo',  colore:'#7a9ec8', iniziale:'M'  },
+  { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
+  { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
+  { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
+  { nome:'Aziz',    colore:'#5fb3b3', iniziale:'A'  },
+];
 
-function praticaStepIdx(stato) { return PRATICA_STATI.indexOf(stato); }
+function escH(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function euro(v){ const n=parseFloat(v); return isNaN(n)?'':'€ '+n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function dataIT(d){ if(!d) return ''; const m=String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[3]}/${m[2]}/${m[1].slice(2)}`:d; }
+function oggiLocale(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'}); }
+function normKFront(v){ const m=String(v||'').match(/K\s*0*(\d{1,4})/i); return m?'K'+m[1].padStart(3,'0'):''; }
+
+function impiantoDiPratica(p){
+  let imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
+  if(!imp){ const k=normKFront(p.codiceImpianto); if(k) imp=S.impianti.find(x=>normKFront(x.codice)===k); }
+  return imp||null;
+}
+function nomeImpiantoPratica(p){
+  const imp=impiantoDiPratica(p);
+  if(imp) return imp.descrizione;
+  if(p.nomeImpianto) return p.nomeImpianto.replace(/^K\d+_?/i,'').replace(/_/g,' ');
+  return p.codiceImpianto;
+}
+function interventiDiPratica(p){
+  const tag='[PRA:'+p.id+']';
+  return S.interventi.filter(i=>(i.note||'').includes(tag)).sort((a,b)=>(a.dataPrevista||'').localeCompare(b.dataPrevista||''));
+}
+function praticaDiIntervento(i){
+  return S.pratiche.find(p=>p.idIntervento===i.id || (i.note||'').includes('[PRA:'+p.id+']'));
+}
+function calcolaStatoPratica(p){
+  if(p.dataChiusura) return 'Chiusa';
+  if(interventiDiPratica(p).length) return 'Intervento assegnato';
+  if(p.statoMateriale==='Disponibile'||p.statoMateriale==='Consegnato'||p.dataMateriale) return 'Materiale disponibile';
+  if(p.numeroBdo) return 'Ordinato';
+  const off=S.offerte.filter(o=>o.idPratica===p.id);
+  if(off.some(o=>o.selezionata)) return 'Offerta scelta';
+  if(off.length) return 'Offerte ricevute';
+  if(p.dataRichiestaOfferte) return 'Richiesta offerte';
+  const leg=LEGACY_STATI[p.stato];
+  return (leg&&PRATICA_STATI.indexOf(leg)>0)?leg:'Chiamata';
+}
+function ricalcolaStatiPratiche(){ S.pratiche.forEach(p=>{ p.stato=calcolaStatoPratica(p); }); aggiornaBadgePratiche(); }
+function praticaStepIdx(stato){ return PRATICA_STATI.indexOf(stato); }
+function praStatoBadge(stato){
+  const c=PRA_STATO_COL[stato]||'#ccc';
+  return `<span class="pra-stato" style="background:${c}22;color:${c}">${escH(stato)}</span>`;
+}
+function aggiornaBadgePratiche(){
+  const nAp=S.pratiche.filter(p=>p.stato!=='Chiusa').length;
+  const b=document.getElementById('badgePratiche');
+  if(b){ b.textContent=nAp; b.style.display=nAp>0?'':'none'; }
+  const sm=document.getElementById('praticheSummary');
+  if(sm) sm.textContent=nAp+' in corso · '+S.pratiche.filter(p=>p.stato==='Chiusa').length+' chiuse';
+}
+function linkCartellaPratica(p){
+  if(p.cartellaDriveId) return 'https://drive.google.com/drive/folders/'+p.cartellaDriveId;
+  return p.linkCartella||'';
+}
+function linkThread(t){ return 'https://mail.google.com/mail/?authuser=davide.cori@veolia.com#all/'+t; }
+
+// Prossima cosa da fare, in una riga
+function prossimoPasso(p){
+  const off=S.offerte.filter(o=>o.idPratica===p.id);
+  switch(p.stato){
+    case 'Chiamata':              return '➡️ Chiedere le offerte ai fornitori';
+    case 'Richiesta offerte':     return '⏳ In attesa delle offerte'+(p.dataRichiestaOfferte?' (richieste il '+dataIT(p.dataRichiestaOfferte)+')':'');
+    case 'Offerte ricevute':      return `➡️ Scegliere l'offerta (${off.length} ricevut${off.length===1?'a':'e'})`;
+    case 'Offerta scelta':        { const s=off.find(o=>o.selezionata); return '⏳ In attesa del buono d\'ordine'+(s?' per '+s.fornitore:''); }
+    case 'Ordinato':              return '⏳ Attesa merce'+(p.fornitoreBdo?' da '+p.fornitoreBdo:'')+(p.consegnaEntro?' · consegna entro '+dataIT(p.consegnaEntro):'');
+    case 'Materiale disponibile': return '➡️ Assegnare l\'intervento'+(p.noteMateriale?' · '+p.noteMateriale:'');
+    case 'Intervento assegnato':  { const i=interventiDiPratica(p).filter(x=>x.stato!=='Chiuso')[0]; return i?`🔨 ${i.operaio} il ${dataIT(i.dataPrevista)}`:'🔨 Intervento in corso'; }
+    default: return '';
+  }
+}
+
+function timelineHtml(p, compatta){
+  const cur=praticaStepIdx(p.stato);
+  return PRATICA_STEPS.map((s,i)=>{
+    const isDone=i<cur || p.stato==='Chiusa', isCurr=i===cur && p.stato!=='Chiusa';
+    const d=s.data(p);
+    return `<div class="tl-step ${isDone?'done':''} ${isCurr?'current':''}">
+      <div class="tl-dot">${isDone?'✓':s.icon}</div>
+      <div class="tl-label">${s.label}</div>
+      ${!compatta&&d?`<div class="tl-data">${dataIT(d)}</div>`:''}
+    </div>`;
+  }).join('');
+}
 
 function setPraticaFilter(f) {
   praticaFilterCorrente=f;
@@ -2103,418 +2201,352 @@ function setPraticaFilter(f) {
 }
 
 function renderPratiche() {
-  const search=(document.getElementById('praticaSearch')||{}).value||'';
-  const comuneSel=(document.getElementById('praticaComuneFilter')||{}).value||'';
-  const selComune = document.getElementById('praticaComuneFilter');
-  if(selComune) {
-    const comuniSet = [...new Set(
-      S.pratiche.map(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp?imp.comune:''; }).filter(Boolean).sort()
-    )];
-    const valoreAttuale = selComune.value;
-    selComune.innerHTML = '<option value="">Tutti i comuni</option>' +
-      comuniSet.map(c=>`<option value="${c}" ${c===valoreAttuale?'selected':''}>${c}</option>`).join('');
+  ricalcolaStatiPratiche();
+  const search=((document.getElementById('praticaSearch')||{}).value||'').toLowerCase();
+  const selComune=document.getElementById('praticaComuneFilter');
+  const comuneSel=selComune?selComune.value:'';
+  if(selComune){
+    const comuni=[...new Set(S.pratiche.map(p=>{ const imp=impiantoDiPratica(p); return imp?imp.comune:''; }).filter(Boolean))].sort();
+    selComune.innerHTML='<option value="">Tutti i comuni</option>'+comuni.map(c=>`<option value="${escH(c)}" ${c===comuneSel?'selected':''}>${escH(c)}</option>`).join('');
   }
-  let lista=[...S.pratiche];
-  if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
-  if(comuneSel) lista=lista.filter(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return imp && imp.comune === comuneSel; });
-  if(search) lista=lista.filter(p=>{ const imp=S.impianti.find(x=>x.codice===p.codiceImpianto); return (p.codiceImpianto+(imp?imp.descrizione+imp.comune:'')).toLowerCase().includes(search.toLowerCase()); });
-  lista.sort((a,b)=>{
-    const da=a.stato==='Chiusa'?99:praticaStepIdx(a.stato);
-    const db=b.stato==='Chiusa'?99:praticaStepIdx(b.stato);
-    return da-db||(b.creatoIl||'').localeCompare(a.creatoIl||'');
+  // conteggi sui chip
+  document.querySelectorAll('.report-filter[data-pfilter]').forEach(b=>{
+    const f=b.dataset.pfilter;
+    const n=f==='aperte'?S.pratiche.filter(p=>p.stato!=='Chiusa').length:f==='tutti'?S.pratiche.length:S.pratiche.filter(p=>p.stato===f).length;
+    const sp=b.querySelector('.pf-n'); if(sp) sp.textContent=n?n:'';
   });
+  let lista=[...S.pratiche];
+  if(praticaFilterCorrente==='aperte') lista=lista.filter(p=>p.stato!=='Chiusa');
+  else if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
+  if(comuneSel) lista=lista.filter(p=>{ const imp=impiantoDiPratica(p); return imp&&imp.comune===comuneSel; });
+  if(search) lista=lista.filter(p=>[p.codiceImpianto,nomeImpiantoPratica(p),p.titolo,p.ubicazione,p.problema,p.numeroBdo,p.fornitoreBdo,
+      ...S.offerte.filter(o=>o.idPratica===p.id).map(o=>o.fornitore)].join(' ').toLowerCase().includes(search));
+  // prima le pratiche dove tocca a me agire, poi le attese, poi le chiuse
+  const priorita={'Materiale disponibile':0,'Offerte ricevute':1,'Chiamata':2,'Offerta scelta':3,'Richiesta offerte':4,'Ordinato':5,'Intervento assegnato':6,'Chiusa':9};
+  lista.sort((a,b)=>(priorita[a.stato]-priorita[b.stato])||(b.creatoIl||'').localeCompare(a.creatoIl||''));
   const el=document.getElementById('tblPratiche');
-  if(!lista.length){el.innerHTML='<div class="empty">Nessuna pratica trovata</div>';return;}
+  if(!lista.length){ el.innerHTML='<div class="empty">Nessuna pratica trovata</div>'; return; }
   el.innerHTML=lista.map(p=>{
-    const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-    const interv=S.interventi.find(x=>x.id===p.idIntervento);
-    const stepCorrente=praticaStepIdx(p.stato);
-    const timelineHtml=PRATICA_STEPS.map((s,i)=>{
-      const isDone=i<stepCorrente;
-      const isCurr=i===stepCorrente;
-      let dataStep='';
-      if(s.key==='richiesta'&&p.dataRichiesta) dataStep=p.dataRichiesta;
-      else if(s.key==='offerta'&&p.dataOfferta) dataStep=p.dataOfferta;
-      else if(s.key==='preventivo'&&p.dataPreventivo) dataStep=p.dataPreventivo;
-      else if(s.key==='bdo'&&p.dataBdo) dataStep=p.dataBdo;
-      else if(s.key==='ddt'&&p.dataDdt) dataStep=p.dataDdt;
-      else if(s.key==='chiuso'&&p.dataChiusura) dataStep=p.dataChiusura;
-      return `<div class="tl-step ${isDone?'done':''} ${isCurr?'current':''}">
-        <div class="tl-dot">${isDone?'✓':s.icon}</div>
-        <div class="tl-label">${s.label}</div>
-        ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
-      </div>`;
-    }).join('');
-    const COMUNI_COLORS = {
-      'Pesaro':           'rgba(122,176,216,.15);color:#7ab0d8',
-      'Misano Adriatico': 'rgba(154,132,200,.15);color:#c4b5fd',
-      'Gabicce Mare':     'rgba(143,190,122,.15);color:#8fbe7a',
-      'Verucchio':        'rgba(200,180,100,.15);color:var(--yellow)',
-      'Villa Verucchio':  'rgba(200,180,100,.1);color:var(--yellow)',
-      'Rimini':           'rgba(200,120,120,.15);color:#f87171',
-      'Corinaldo':        'rgba(100,180,180,.15);color:#5eead4',
-    };
-    const comuneStyle = imp&&imp.comune ? (COMUNI_COLORS[imp.comune]||'rgba(150,150,150,.15);color:var(--muted)') : '';
-    return `<div class="pratica-card">
+    const imp=impiantoDiPratica(p);
+    const comuneStyle=imp&&imp.comune?(COMUNI_COLORS[imp.comune]||'rgba(150,150,150,.15);color:var(--muted)'):'';
+    const cartella=linkCartellaPratica(p);
+    const passo=prossimoPasso(p);
+    const offSel=S.offerte.find(o=>o.idPratica===p.id&&o.selezionata);
+    return `<div class="pratica-card" onclick="openPratica('${p.id}')" style="cursor:pointer">
       <div class="pratica-card-head">
         <div class="pratica-card-info">
-          <div class="pratica-imp">${imp?imp.descrizione:p.codiceImpianto}
-            <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${p.codiceImpianto}</span>
-          </div>
+          <div class="pratica-imp">${escH(p.titolo||'(senza titolo)')}</div>
           <div class="pratica-meta">
-            ${imp&&imp.comune?`<span style="background:${comuneStyle};padding:1px 8px;border-radius:6px;font-weight:600;font-size:11px">📍 ${imp.comune}</span>`:''}
-            ${interv?`<span>📅 Intervento ${interv.dataPrevista} · ${interv.tipoVisita}</span>`:''}
-            <span>Aperta il ${p.creatoIl}</span>
+            <span style="font-weight:600;color:var(--text)">${escH(nomeImpiantoPratica(p))}</span>
+            <span style="font-family:'DM Mono',monospace">${escH(normKFront(p.codiceImpianto)||p.codiceImpianto)}</span>
+            ${imp&&imp.comune?`<span style="background:${comuneStyle};padding:1px 8px;border-radius:6px;font-weight:600;font-size:11px">📍 ${escH(imp.comune)}</span>`:''}
+            ${p.ubicazione?`<span>🚪 ${escH(p.ubicazione)}</span>`:''}
+            ${offSel?`<span>🏷️ ${escH(offSel.fornitore)} ${offSel.importo?euro(offSel.importo):''}</span>`:''}
+            <span>Aperta il ${dataIT(p.dataChiamata||p.creatoIl)}</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-          <span class="pra-stato ${p.stato}">${p.stato}</span>
+          ${praStatoBadge(p.stato)}
           <div style="display:flex;gap:6px">
-            ${interv?`<button class="btn btn-ghost btn-sm" onclick="openDettaglio('${interv.id}')">OdL</button>`:''}
-            <button class="btn btn-primary btn-sm" onclick="openPratica('${p.id}')">Gestisci →</button>
+            ${cartella?`<a class="btn btn-ghost btn-sm" href="${escH(cartella)}" target="_blank" onclick="event.stopPropagation()">📁 Cartella</a>`:''}
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openPratica('${p.id}')">Gestisci →</button>
           </div>
         </div>
       </div>
-      <div class="timeline">${timelineHtml}</div>
-      ${p.noteRichiesta?`<div style="margin-top:10px;font-size:12px;color:var(--muted);font-style:italic;padding:8px 12px;background:var(--bg3);border-radius:8px">${p.noteRichiesta}</div>`:''}
+      <div class="timeline">${timelineHtml(p,true)}</div>
+      ${passo?`<div class="pra-passo">${escH(passo)}</div>`:''}
     </div>`;
   }).join('');
 }
 
+// ── SCHEDA PRATICA ──
 function openPratica(id) {
   currentPraticaId=id;
   const p=S.pratiche.find(x=>x.id===id);
-  const imp=S.impianti.find(x=>x.codice===p.codiceImpianto);
-  const interv=S.interventi.find(x=>x.id===p.idIntervento);
-  document.getElementById('praticaTitle').textContent=(imp?imp.descrizione:p.codiceImpianto);
-  document.getElementById('praticaSubtitle').textContent=
-    (imp&&imp.comune?imp.comune+' · ':'')+
-    (interv?'Intervento '+interv.dataPrevista+' · '+interv.tipoVisita:'Pratica standalone')+
-    ' · Aperta il '+p.creatoIl;
+  if(!p) return;
+  p.stato=calcolaStatoPratica(p);
+  const imp=impiantoDiPratica(p);
+  document.getElementById('praticaTitle').textContent=p.titolo||'(senza titolo)';
+  document.getElementById('praticaSubtitle').innerHTML=
+    `${escH(nomeImpiantoPratica(p))} · <span style="font-family:'DM Mono',monospace">${escH(normKFront(p.codiceImpianto)||p.codiceImpianto)}</span>`+
+    (imp&&imp.comune?' · '+escH(imp.comune):'')+' · Aperta il '+dataIT(p.dataChiamata||p.creatoIl)+' &nbsp;'+praStatoBadge(p.stato);
+  document.getElementById('praticaTimeline').innerHTML=timelineHtml(p,false);
+  const passo=prossimoPasso(p);
+  document.getElementById('praticaPasso').innerHTML=passo?`<div class="pra-passo" style="margin:0 0 14px">${escH(passo)}</div>`:'';
 
-  const stepCorrente=praticaStepIdx(p.stato);
-  document.getElementById('praticaTimeline').innerHTML=PRATICA_STEPS.map((s,i)=>{
-    const isDone=i<stepCorrente, isCurr=i===stepCorrente;
-    let dataStep='';
-    if(s.key==='richiesta'&&p.dataRichiesta)dataStep=p.dataRichiesta;
-    else if(s.key==='offerta'&&p.dataOfferta)dataStep=p.dataOfferta;
-    else if(s.key==='preventivo'&&p.dataPreventivo)dataStep=p.dataPreventivo;
-    else if(s.key==='bdo'&&p.dataBdo)dataStep=p.dataBdo;
-    else if(s.key==='ddt'&&p.dataDdt)dataStep=p.dataDdt;
-    else if(s.key==='chiuso'&&p.dataChiusura)dataStep=p.dataChiusura;
-    return `<div class="tl-step ${isDone?'done':''} ${isCurr?'current':''}">
-      <div class="tl-dot">${isDone?'✓':s.icon}</div>
-      <div class="tl-label">${s.label}</div>
-      ${dataStep?`<div class="tl-data">${dataStep}</div>`:''}
+  const cartella=linkCartellaPratica(p);
+  const offP=S.offerte.filter(o=>o.idPratica===p.id);
+  const intP=interventiDiPratica(p);
+  const cur=praticaStepIdx(p.stato);
+  const aperta=k=>{ // apro la sezione su cui c'è da lavorare
+    if(k==='dati') return cur===0;
+    if(k==='offerte') return cur>=1&&cur<=3;
+    if(k==='ordine') return cur===3||cur===4;
+    if(k==='materiale') return cur===4;
+    if(k==='intervento') return cur===5||cur===6;
+    return false;
+  };
+  const sezione=(k,icona,titolo,badge,corpo)=>`<div class="step-panel">
+      <div class="step-panel-head ${aperta(k)?'current':''}" onclick="toggleStepPanel(this)">
+        <span class="step-panel-icon">${icona}</span><span class="step-panel-title">${titolo}</span>
+        <span class="step-panel-badge">${badge||''}</span><span style="color:var(--muted);font-size:14px;margin-left:8px">▾</span>
+      </div>
+      <div class="step-panel-body ${aperta(k)?'open':''}">${corpo}</div>
     </div>`;
-  }).join('');
 
-  document.getElementById('praticaGestioneToggle').innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
-      background:${p.inGestione?'rgba(122,176,216,.1)':'var(--bg3)'};
-      border:1px solid ${p.inGestione?'rgba(122,176,216,.35)':'var(--border)'};
-      border-radius:10px;cursor:pointer;user-select:none"
-      onclick="toggleGestione('${p.id}')">
-      <div>
-        <div style="font-weight:700;font-size:13px;${p.inGestione?'color:#7ab0d8':''}">🔧 Lavoro in gestione</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px">
-          ${p.inGestione?'Attivo — preventivo saltato, si procede direttamente al BdO':'Attiva per bypassare il preventivo (lavoro in gestione diretta)'}
+  // 1. Dati del lavoro
+  const threads=(p.threadIds||[]);
+  const corpoDati=`
+    <div class="fg"><label>Titolo lavoro (nome sottocartella)</label><input class="fc" id="pd_titolo" value="${escH(p.titolo)}"/></div>
+    <div class="fc-row">
+      <div class="fg"><label>Ubicazione</label><input class="fc" id="pd_ubicazione" value="${escH(p.ubicazione)}" placeholder="Es. Sala stampa, Pala 3..."/></div>
+      <div class="fg"><label>Richiesto da</label><input class="fc" id="pd_richiestoDa" value="${escH(p.richiestoDa)}" placeholder="Davide / superiore / committente"/></div>
+    </div>
+    <div class="fg"><label>Problema / descrizione chiamata</label><textarea class="fc" id="pd_problema" rows="3">${escH(p.problema)}</textarea></div>
+    <div class="fc-row">
+      <div class="fg"><label>Data chiamata</label><input class="fc" type="date" id="pd_dataChiamata" value="${escH(p.dataChiamata)}"/></div>
+      <div class="fg"><label>📁 Link cartella Drive</label><input class="fc" type="url" id="pd_linkCartella" value="${escH(cartella)}" placeholder="URL sottocartella del lavoro"/></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="salvaDatiPratica()">Salva</button>
+      ${cartella?`<a class="btn btn-ghost btn-sm" href="${escH(cartella)}" target="_blank">📁 Apri cartella</a>`:''}
+      ${threads.map((t,i)=>`<a class="btn btn-ghost btn-sm" href="${linkThread(t)}" target="_blank">✉️ Mail ${i+1}</a>`).join('')}
+    </div>`;
+
+  // 2. Offerte
+  const offerteHtml=offP.length===0
+    ? `<div style="font-size:13px;color:var(--muted);padding:6px 0 10px">Nessuna offerta ancora ricevuta.</div>`
+    : offP.map(o=>`
+      <div class="offerta-card ${o.selezionata?'selezionata':''}">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:14px">${escH(o.fornitore)}${o.numeroOfferta?` <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);font-weight:500">n. ${escH(o.numeroOfferta)}</span>`:''}</div>
+            ${o.descrizione?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${escH(o.descrizione)}</div>`:''}
+            <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center">
+              ${o.importo?`<span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${o.selezionata?'var(--green)':'var(--yellow)'}">${euro(o.importo)}</span>`:''}
+              ${o.data?`<span>📅 ${dataIT(o.data)}</span>`:''}
+              ${o.note?`<span>💬 ${escH(o.note)}</span>`:''}
+              ${o.linkDrive?`<a href="${escH(o.linkDrive)}" target="_blank" style="color:#7ab0d8">📄 PDF</a>`:''}
+              ${o.threadId?`<a href="${linkThread(o.threadId)}" target="_blank" style="color:#7ab0d8">✉️ Mail</a>`:''}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            ${o.selezionata
+              ? `<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:rgba(143,190,122,.3)" onclick="selezionaOfferta('${o.id}','${p.id}')">✓ Scelta</button>`
+              : `<button class="btn btn-ghost btn-sm" onclick="selezionaOfferta('${o.id}','${p.id}')">Scegli</button>`}
+            <button class="btn btn-danger btn-sm" onclick="eliminaOfferta('${o.id}','${p.id}')">✕</button>
+          </div>
         </div>
+      </div>`).join('');
+  const offMin=offP.filter(o=>o.importo).sort((a,b)=>parseFloat(a.importo)-parseFloat(b.importo))[0];
+  const corpoOfferte=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px">
+      ${p.dataRichiestaOfferte
+        ? `<span>✉️ Offerte richieste il <strong>${dataIT(p.dataRichiestaOfferte)}</strong></span><button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="segnaRichiestaOfferte('')">Annulla</button>`
+        : `<span style="color:var(--muted)">Offerte non ancora richieste</span><button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="segnaRichiestaOfferte(oggiLocale())">Segna richieste oggi</button>`}
+    </div>
+    ${offP.length>1&&offMin?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">💡 Più bassa: <strong style="color:var(--text)">${escH(offMin.fornitore)}</strong> ${euro(offMin.importo)}</div>`:''}
+    <div style="margin-bottom:14px">${offerteHtml}</div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div class="pra-sublabel">+ Aggiungi offerta a mano</div>
+      <div class="fc-row">
+        <div class="fg"><label>Fornitore *</label><input class="fc" id="off_fornitore" placeholder="Nome fornitore..."/></div>
+        <div class="fg"><label>N. offerta</label><input class="fc" id="off_numero" placeholder="Es. 26001131"/></div>
+        <div class="fg"><label>Importo €</label><input class="fc" type="number" step="0.01" id="off_importo" placeholder="0.00"/></div>
       </div>
-      <div style="width:40px;height:22px;border-radius:11px;background:${p.inGestione?'#7ab0d8':'var(--bg4)'};position:relative;transition:background .2s;flex-shrink:0;margin-left:14px">
-        <div style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;${p.inGestione?'right:2px':'left:2px'};transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>
+      <div class="fg"><label>Descrizione</label><input class="fc" id="off_descrizione" placeholder="Oggetto dell'offerta..."/></div>
+      <div class="fc-row">
+        <div class="fg"><label>Data offerta</label><input class="fc" type="date" id="off_data" value="${oggiLocale()}"/></div>
+        <div class="fg"><label>📄 Link PDF</label><input class="fc" type="url" id="off_link" placeholder="URL documento..."/></div>
       </div>
+      <div class="fg"><label>Note</label><input class="fc" id="off_note" placeholder="Tempi di consegna, condizioni..."/></div>
+      <button class="btn btn-primary btn-sm" onclick="aggiungiOfferta('${p.id}')">+ Aggiungi offerta</button>
     </div>`;
 
-  const OPERAI_LIST = [
-    { nome:'Matteo',  colore:'#7a9ec8', iniziale:'M'  },
-    { nome:'Stefano', colore:'#9a84c8', iniziale:'S'  },
-    { nome:'Michele', colore:'#7ab87a', iniziale:'Mi' },
-    { nome:'Ezio',    colore:'#c89060', iniziale:'E'  },
-    { nome:'Aziz',   colore:'#5fb3b3', iniziale:'A'  },
-  ];
-  const intPratica = S.interventi.filter(i => (i.note||'').includes('[PRA:'+p.id+']') || i.id===p.idIntervento);
-  const intListHtml = intPratica.length===0
-    ? `<div style="font-size:12px;color:var(--muted);padding:6px 0">Nessun intervento di realizzazione pianificato.</div>`
-    : intPratica.map(i=>{
+  // 3. Buono d'ordine
+  const corpoOrdine=`
+    ${p.numeroBdo?`<div class="step-imp-amount">${p.importoBdo?euro(p.importoBdo):''}</div>`:''}
+    <div class="fc-row">
+      <div class="fg"><label>N. buono d'ordine</label><input class="fc" id="bdo_numero" value="${escH(p.numeroBdo)}" placeholder="Es. 2CN0265172520"/></div>
+      <div class="fg"><label>Data ordine</label><input class="fc" type="date" id="bdo_data" value="${escH(p.dataBdo)}"/></div>
+    </div>
+    <div class="fc-row">
+      <div class="fg"><label>Fornitore</label><input class="fc" id="bdo_fornitore" value="${escH(p.fornitoreBdo)}"/></div>
+      <div class="fg"><label>Importo € (IVA escl.)</label><input class="fc" type="number" step="0.01" id="bdo_importo" value="${escH(p.importoBdo)}"/></div>
+    </div>
+    <div class="fc-row">
+      <div class="fg"><label>Offerta citata n.</label><input class="fc" id="bdo_offerta" value="${escH(p.numeroOffertaBdo)}"/></div>
+      <div class="fg"><label>Consegna entro</label><input class="fc" type="date" id="bdo_consegna" value="${escH(p.consegnaEntro)}"/></div>
+    </div>
+    <div class="fg"><label>📄 Link PDF buono d'ordine</label><input class="fc" type="url" id="bdo_link" value="${escH(p.linkBdo)}"/>
+      ${p.linkBdo?`<a href="${escH(p.linkBdo)}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📄 Apri buono d'ordine</a>`:''}</div>
+    <button class="btn btn-primary btn-sm" onclick="salvaBdo()">Salva buono d'ordine</button>`;
+
+  // 4. Materiale
+  const sm=p.statoMateriale||'';
+  const corpoMateriale=`
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      ${['In attesa','Disponibile','Consegnato'].map(v=>`<button class="btn btn-ghost btn-sm ${sm===v?'pra-chip-on':''}" onclick="document.getElementById('mat_stato').value='${v}';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('pra-chip-on'));this.classList.add('pra-chip-on')">${v==='In attesa'?'⏳':v==='Disponibile'?'📦':'🚚'} ${v}</button>`).join('')}
+      <input type="hidden" id="mat_stato" value="${escH(sm||'Disponibile')}"/>
+    </div>
+    <div class="fc-row">
+      <div class="fg"><label>Data</label><input class="fc" type="date" id="mat_data" value="${escH(p.dataMateriale||oggiLocale())}"/></div>
+      <div class="fg"><label>Note (dove ritirarlo, cosa manca...)</label><input class="fc" id="mat_note" value="${escH(p.noteMateriale)}" placeholder="Es. disponibile in filiale a Pesaro"/></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="salvaMateriale()">Salva stato materiale</button>`;
+
+  // 5. Intervento
+  const intListHtml=intP.length===0
+    ? `<div style="font-size:12px;color:var(--muted);padding:6px 0">Nessun intervento ancora assegnato.</div>`
+    : intP.map(i=>{
         const chk=S.checklist.filter(c=>c.idIntervento===i.id);
         const done=chk.filter(c=>c.eseguita==='SI').length;
         const col=OPERAI_HEX[i.operaio]||'#888';
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;margin-bottom:6px;border-left:3px solid ${col}">
           <div>
-            <div style="font-size:13px;font-weight:600;color:${col}">${i.operaio||'— contenitore'}</div>
-            <div style="font-size:11px;color:var(--muted)">📅 ${i.dataPrevista} · ${done}/${chk.length} attività
-              <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}" style="margin-left:6px">${i.stato}</span>
-            </div>
+            <div style="font-size:13px;font-weight:600;color:${col}">${escH(i.operaio||'— contenitore')}</div>
+            <div style="font-size:11px;color:var(--muted)">📅 ${dataIT(i.dataPrevista)} · ${done}/${chk.length} attività
+              <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}" style="margin-left:6px">${escH(i.stato)}</span></div>
+            ${i.notaChiusura?`<div style="font-size:11px;color:var(--muted);margin-top:2px">💬 ${escH(i.notaChiusura)}</div>`:''}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="closeModal('modalPratica');openDettaglio('${i.id}')">Apri →</button>
         </div>`;
       }).join('');
-
-  document.getElementById('praticaInterventiBox').innerHTML=`
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🔨 Interventi di realizzazione</div>
-      ${intListHtml}
-      <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Pianifica nuovo intervento</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          ${OPERAI_LIST.map(op=>`
-            <div id="pint_chip_${p.id}_${op.nome}" onclick="togglePintChip('${p.id}','${op.nome}')"
-              style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;cursor:pointer;border:1.5px solid var(--border);background:var(--bg4);color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none">
-              <div style="width:18px;height:18px;border-radius:50%;background:var(--bg5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${op.iniziale}</div>
-              ${op.nome}
-            </div>`).join('')}
-        </div>
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <div class="fg" style="margin:0;flex:1">
-            <label>Data intervento *</label>
-            <input class="fc" type="date" id="pint_data_${p.id}" value="${new Date().toISOString().slice(0,10)}"/>
-          </div>
-          <button class="btn btn-primary btn-sm" style="margin-bottom:0;flex-shrink:0" onclick="pianificaInterventoPratica('${p.id}','${p.codiceImpianto}')">+ Pianifica</button>
-        </div>
+  const corpoIntervento=`
+    ${intListHtml}
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:8px">
+      <div class="pra-sublabel">Assegna intervento</div>
+      <div class="fg"><label>Nota per l'operaio (precompilata dalla pratica)</label>
+        <textarea class="fc" id="pint_nota_${p.id}" rows="3">${escH(notaInterventoDaPratica(p))}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        ${OPERAI_LIST.map(op=>`
+          <div id="pint_chip_${p.id}_${op.nome}" onclick="togglePintChip('${p.id}','${op.nome}')"
+            style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;cursor:pointer;border:1.5px solid var(--border);background:var(--bg4);color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;user-select:none">
+            <div style="width:18px;height:18px;border-radius:50%;background:var(--bg5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${op.iniziale}</div>
+            ${op.nome}
+          </div>`).join('')}
       </div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div class="fg" style="margin:0;flex:1"><label>Data intervento *</label>
+          <input class="fc" type="date" id="pint_data_${p.id}" value="${oggiLocale()}"/></div>
+        <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="pianificaInterventoPratica('${p.id}','${escH(impiantoDiPratica(p)?impiantoDiPratica(p).codice:p.codiceImpianto)}')">+ Assegna</button>
+      </div>
+      ${p.stato!=='Materiale disponibile'&&p.stato!=='Intervento assegnato'&&p.stato!=='Chiusa'?`<div style="font-size:11px;color:var(--muted);margin-top:8px">ℹ️ Il materiale non risulta ancora disponibile.</div>`:''}
     </div>`;
 
-  document.getElementById('praticaSteps').innerHTML=PRATICA_STEPS.map((s,i)=>{
-    const isDone=i<stepCorrente, isCurr=i===stepCorrente;
-    const cls=isDone?'done':isCurr?'current':'';
-    let bodyHtml='';
-    if(s.key==='richiesta') {
-      bodyHtml=`
-        <div class="fg"><label>Data richiesta</label><input class="fc" type="date" id="ps_dataRichiesta" value="${p.dataRichiesta||''}"/></div>
-        <div class="fg"><label>Note</label><textarea class="fc" id="ps_noteRichiesta" rows="2" placeholder="Descrizione del lavoro...">${p.noteRichiesta||''}</textarea></div>
-        <div class="fg"><label>📁 Link Drive</label><input class="fc" type="url" id="ps_linkRichiesta" value="${p.linkRichiesta||''}" placeholder="URL cartella Drive..."/>
-          ${p.linkRichiesta?`<a href="${p.linkRichiesta}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('richiesta')">Salva step</button>`;
-    } else if(s.key==='offerta') {
-      const offerteP = S.offerte.filter(o=>o.idPratica===p.id);
-      const offSelezionata = offerteP.find(o=>o.selezionata);
-      const offerteHtml = offerteP.length===0
-        ? `<div style="font-size:13px;color:var(--muted);padding:10px 0">Nessuna offerta ancora ricevuta.</div>`
-        : offerteP.map(o=>`
-          <div class="offerta-card ${o.selezionata?'selezionata':''}">
-            <div style="display:flex;align-items:flex-start;gap:10px">
-              <div style="flex:1">
-                <div style="font-weight:700;font-size:14px">${o.fornitore}</div>
-                ${o.descrizione?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${o.descrizione}</div>`:''}
-                <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
-                  ${o.importo?`<span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${o.selezionata?'var(--green)':'var(--yellow)'}">€ ${parseFloat(o.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
-                  ${o.data?`<span>📅 ${o.data}</span>`:''}
-                  ${o.note?`<span>💬 ${o.note}</span>`:''}
-                </div>
-                ${o.linkDrive?`<a href="${o.linkDrive}" target="_blank" style="font-size:11px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri documento</a>`:''}
-              </div>
-              <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
-                ${o.selezionata
-                  ? `<button class="btn btn-ghost btn-sm" style="color:var(--green);border-color:rgba(143,190,122,.3)" onclick="selezionaOfferta('${o.id}','${p.id}')">✓ Selezionata</button>`
-                  : `<button class="btn btn-ghost btn-sm" onclick="selezionaOfferta('${o.id}','${p.id}')">Seleziona</button>`
-                }
-                <button class="btn btn-danger btn-sm" onclick="eliminaOfferta('${o.id}','${p.id}')">✕</button>
-              </div>
-            </div>
-          </div>`).join('');
-      const btnProcedi = offSelezionata
-        ? `<div style="margin-bottom:14px;padding:10px 14px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.25);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:13px">✓ Offerta selezionata: <strong>${offSelezionata.fornitore}</strong>
-              ${offSelezionata.importo?` — <span style="font-family:'DM Mono',monospace;color:var(--green)">€ ${parseFloat(offSelezionata.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</span>`:''}
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="avanzaAPreventivo('${p.id}')">Procedi al preventivo →</button>
-          </div>`
-        : offerteP.length > 0
-          ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted);padding:8px 12px;background:var(--bg3);border-radius:8px">💡 Seleziona l'offerta scelta per procedere al preventivo</div>`
-          : '';
-      bodyHtml=`
-        ${btnProcedi}
-        <div id="listaOfferte_${p.id}" style="margin-bottom:14px">${offerteHtml}</div>
-        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">+ Aggiungi offerta</div>
-          <div class="fc-row">
-            <div class="fg"><label>Fornitore *</label><input class="fc" type="text" id="off_fornitore" placeholder="Nome fornitore..."/></div>
-            <div class="fg"><label>Importo €</label><input class="fc" type="number" step="0.01" id="off_importo" placeholder="0.00"/></div>
-          </div>
-          <div class="fg"><label>Descrizione</label><input class="fc" type="text" id="off_descrizione" placeholder="Oggetto dell'offerta..."/></div>
-          <div class="fc-row">
-            <div class="fg"><label>Data offerta</label><input class="fc" type="date" id="off_data" value="${new Date().toISOString().slice(0,10)}"/></div>
-            <div class="fg"><label>📁 Link Drive</label><input class="fc" type="url" id="off_link" placeholder="URL documento..."/></div>
-          </div>
-          <div class="fg"><label>Note</label><input class="fc" type="text" id="off_note" placeholder="Valutazioni, condizioni..."/></div>
-          <button class="btn btn-primary btn-sm" onclick="aggiungiOfferta('${p.id}')">+ Aggiungi offerta</button>
-        </div>`;
-    } else if(s.key==='preventivo') {
-      const offSel = S.offerte.find(o=>o.idPratica===p.id&&o.selezionata);
-      bodyHtml = p.inGestione
-        ? `<div style="text-align:center;padding:20px;color:#7ab0d8;font-size:13px">🔧 Preventivo saltato — lavoro in gestione diretta<br><span style="font-size:11px;color:var(--muted)">Procedi con il BdO</span></div>`
-        : `${offSel?`<div style="padding:8px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.2);border-radius:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">✓ Offerta selezionata: <strong style="color:var(--text)">${offSel.fornitore}</strong>${offSel.importo?` — € <strong>${parseFloat(offSel.importo).toLocaleString('it-IT',{minimumFractionDigits:2})}</strong>`:''}</div>`:''}
-           <div class="fc-row">
-             <div class="fg"><label>Data ricezione preventivo</label><input class="fc" type="date" id="ps_dataPreventivo" value="${p.dataPreventivo||''}"/></div>
-             <div class="fg"><label>Importo preventivo €</label><input class="fc" type="number" step="0.01" id="ps_importoPreventivo" value="${p.importoPreventivo||''}" placeholder="0.00"/></div>
-           </div>
-           ${p.importoPreventivo?`<div class="step-imp-amount">€ ${parseFloat(p.importoPreventivo).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
-           <div class="fg"><label>📁 Link Drive (preventivo)</label><input class="fc" type="url" id="ps_linkPreventivo" value="${p.linkPreventivo||''}" placeholder="URL file preventivo..."/>
-             ${p.linkPreventivo?`<a href="${p.linkPreventivo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-           </div>
-           <button class="btn btn-primary btn-sm" onclick="salvaStep('preventivo')">Salva step</button>`;
-    } else if(s.key==='bdo') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data BdO emesso</label><input class="fc" type="date" id="ps_dataBdo" value="${p.dataBdo||''}"/></div>
-          <div class="fg"><label>Numero BdO</label><input class="fc" type="text" id="ps_numeroBdo" value="${p.numeroBdo||''}" placeholder="Es. BDO-2026-001"/></div>
-        </div>
-        <div class="fg"><label>📁 Link Drive (BdO)</label><input class="fc" type="url" id="ps_linkBdo" value="${p.linkBdo||''}" placeholder="URL file BdO..."/>
-          ${p.linkBdo?`<a href="${p.linkBdo}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('bdo')">Salva step</button>`;
-    } else if(s.key==='ddt') {
-      bodyHtml=`
-        <div class="fc-row">
-          <div class="fg"><label>Data DDT ricevuto</label><input class="fc" type="date" id="ps_dataDdt" value="${p.dataDdt||''}"/></div>
-          <div class="fg"><label>Numero DDT</label><input class="fc" type="text" id="ps_numeroDdt" value="${p.numeroDdt||''}" placeholder="Es. DDT-2026-001"/></div>
-        </div>
-        <div class="fg"><label>📁 Link Drive (DDT)</label><input class="fc" type="url" id="ps_linkDdt" value="${p.linkDdt||''}" placeholder="URL file DDT..."/>
-          ${p.linkDdt?`<a href="${p.linkDdt}" target="_blank" style="font-size:12px;color:#7ab0d8;margin-top:4px;display:block">📁 Apri Drive</a>`:''}
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('ddt')">Salva step</button>`;
-    } else if(s.key==='chiuso') {
-      bodyHtml=`
-        <div class="fg"><label>Data chiusura pratica</label><input class="fc" type="date" id="ps_dataChiusura" value="${p.dataChiusura||new Date().toISOString().slice(0,10)}"/></div>
-        <div class="fg"><label>Note finali</label><textarea class="fc" id="ps_noteChiusura" rows="2" placeholder="Note di chiusura, eventuali pendenze...">${p.noteChiusura||''}</textarea></div>
-        <button class="btn btn-primary btn-sm" onclick="salvaStep('chiuso')" style="background:var(--green);color:#1a1a1a">✓ Chiudi pratica</button>`;
-    }
-    const bodyOpen=isCurr?'open':'';
-    return `<div class="step-panel">
-      <div class="step-panel-head ${cls}" onclick="toggleStepPanel(this)">
-        <span class="step-panel-icon">${isDone?'✅':isCurr?s.icon:'⬜'}</span>
-        <span class="step-panel-title">${s.label}</span>
-        <span class="step-panel-badge">${isDone?'Completato':isCurr?'In corso':'In attesa'}</span>
-        <span style="color:var(--muted);font-size:14px;margin-left:8px">▾</span>
-      </div>
-      <div class="step-panel-body ${bodyOpen}">${bodyHtml}</div>
-    </div>`;
-  }).join('');
+  // 6. Chiusura e diario
+  const diario=(p.diario||'').split('\n').filter(Boolean).reverse();
+  const corpoChiusura=`
+    ${p.dataChiusura
+      ? `<div style="padding:10px 12px;background:rgba(143,190,122,.08);border:1px solid rgba(143,190,122,.25);border-radius:8px;margin-bottom:10px;font-size:13px">✓ Chiusa il <strong>${dataIT(p.dataChiusura)}</strong>${p.noteChiusura?' — '+escH(p.noteChiusura):''}</div>
+         <button class="btn btn-ghost btn-sm" onclick="chiudiPratica(true)">↺ Riapri pratica</button>`
+      : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Si chiude da sola quando l'operaio chiude l'intervento. Puoi anche chiuderla a mano.</div>
+         <div class="fg"><label>Note di chiusura</label><input class="fc" id="pch_note" placeholder="Eventuali pendenze..."/></div>
+         <button class="btn btn-primary btn-sm" style="background:var(--green);color:#1a1a1a" onclick="chiudiPratica(false)">✓ Chiudi pratica</button>`}
+    ${diario.length?`<div class="pra-sublabel" style="margin-top:16px">Diario</div>
+      <div class="pra-diario">${diario.map(r=>{ const k=r.indexOf(' · '); return `<div><span>${escH(k>0?r.slice(0,k):'')}</span>${escH(k>0?r.slice(k+3):r)}</div>`; }).join('')}</div>`:''}`;
+
+  const offSel=offP.find(o=>o.selezionata);
+  document.getElementById('praticaSteps').innerHTML=
+    sezione('dati','📞','Chiamata e dati del lavoro',p.ubicazione?escH(p.ubicazione):'',corpoDati)+
+    sezione('offerte','🏷️','Offerte',offP.length?(offSel?'Scelta: '+escH(offSel.fornitore):offP.length+' ricevute'):'',corpoOfferte)+
+    sezione('ordine','📋','Buono d\'ordine',p.numeroBdo?escH(p.numeroBdo):'',corpoOrdine)+
+    sezione('materiale','📦','Materiale',escH(p.statoMateriale||''),corpoMateriale)+
+    sezione('intervento','🔨','Intervento',intP.length?intP.length+' assegnat'+(intP.length===1?'o':'i'):'',corpoIntervento)+
+    sezione('chiusura','✓','Chiusura e diario',p.dataChiusura?'Chiusa':'',corpoChiusura);
 
   document.getElementById('modalPratica').classList.add('open');
 }
 
 function toggleStepPanel(head) { head.nextElementSibling.classList.toggle('open'); }
 
-async function salvaStep(step) {
-  const p=S.pratiche.find(x=>x.id===currentPraticaId);
-  if(!p) return;
-  const dati={};
-  if(step==='richiesta') {
-    dati.dataRichiesta=document.getElementById('ps_dataRichiesta').value;
-    dati.noteRichiesta=document.getElementById('ps_noteRichiesta').value;
-    dati.linkRichiesta=document.getElementById('ps_linkRichiesta').value;
-  } else if(step==='preventivo') {
-    dati.dataPreventivo=document.getElementById('ps_dataPreventivo').value;
-    dati.importoPreventivo=document.getElementById('ps_importoPreventivo').value;
-    dati.linkPreventivo=document.getElementById('ps_linkPreventivo').value;
-  } else if(step==='bdo') {
-    dati.dataBdo=document.getElementById('ps_dataBdo').value;
-    dati.numeroBdo=document.getElementById('ps_numeroBdo').value;
-    dati.linkBdo=document.getElementById('ps_linkBdo').value;
-  } else if(step==='ddt') {
-    dati.dataDdt=document.getElementById('ps_dataDdt').value;
-    dati.numeroDdt=document.getElementById('ps_numeroDdt').value;
-    dati.linkDdt=document.getElementById('ps_linkDdt').value;
-  } else if(step==='chiuso') {
-    dati.dataChiusura=document.getElementById('ps_dataChiusura').value;
-    dati.noteChiusura=document.getElementById('ps_noteChiusura').value;
+function notaInterventoDaPratica(p){
+  const off=S.offerte.find(o=>o.idPratica===p.id&&o.selezionata);
+  const parti=[];
+  parti.push((p.titolo||'Lavoro')+(p.ubicazione?' — '+p.ubicazione:''));
+  if(p.problema) parti.push(p.problema);
+  if(off) parti.push('Fornitore: '+off.fornitore+(off.numeroOfferta?' (off. '+off.numeroOfferta+')':''));
+  if(p.statoMateriale) parti.push('Materiale: '+p.statoMateriale+(p.noteMateriale?' — '+p.noteMateriale:''));
+  return parti.join('. ');
+}
+
+// Applica la risposta del server (pratica + offerte aggiornate) allo stato locale
+function applicaRispostaPratica(r){
+  if(!r||!r.ok){ toast((r&&r.errore)||'Errore salvataggio','err'); return false; }
+  if(r.pratica){
+    const i=S.pratiche.findIndex(x=>x.id===r.pratica.id);
+    if(i>=0) S.pratiche[i]=r.pratica; else S.pratiche.push(r.pratica);
+    if(r.offerte){ S.offerte=S.offerte.filter(o=>o.idPratica!==r.pratica.id).concat(r.offerte); }
   }
+  ricalcolaStatiPratiche();
+  if(document.getElementById('view-pratiche').classList.contains('active')) renderPratiche();
+  return true;
+}
+async function azionePratica(path, body, msg){
   try {
-    const r=await apiPost('/aggiorna-pratica',{id:currentPraticaId,step,dati});
-    if(!r.ok){toast('Errore salvataggio','err');return;}
-    Object.assign(p,dati);
-    const statiMap={richiesta:'Richiesta',preventivo:'Preventivo',bdo:'BdO',ddt:'DDT',chiuso:'Chiusa'};
-    const statoNuovo=statiMap[step];
-    if(statoNuovo&&praticaStepIdx(statoNuovo)>praticaStepIdx(p.stato)) p.stato=statoNuovo;
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
-    toast('Step salvato','ok');
-    openPratica(currentPraticaId);
-  } catch(e){toast('Errore','err');}
+    const r=await apiPost(path, body);
+    if(applicaRispostaPratica(r)){ if(msg) toast(msg,'ok'); if(currentPraticaId) openPratica(currentPraticaId); }
+    return r;
+  } catch(e){ toast('Errore di rete','err'); }
 }
 
-async function aggiungiOfferta(idPratica) {
-  const fornitore = document.getElementById('off_fornitore').value.trim();
-  if(!fornitore){toast('Inserisci il nome del fornitore','err');return;}
-  const importo     = document.getElementById('off_importo').value;
-  const descrizione = document.getElementById('off_descrizione').value.trim();
-  const data        = document.getElementById('off_data').value;
-  const linkDrive   = document.getElementById('off_link').value.trim();
-  const note        = document.getElementById('off_note').value.trim();
-  try {
-    const r = await apiPost('/crea-offerta',{idPratica,fornitore,descrizione,importo,data,linkDrive,note});
-    if(!r.ok){toast('Errore creazione offerta','err');return;}
-    S.offerte.push({id:r.id,idPratica,fornitore,descrizione,importo,data,linkDrive,selezionata:false,note});
-    const p=S.pratiche.find(x=>x.id===idPratica);
-    if(p&&p.stato==='Richiesta'){p.stato='Offerta';}
-    toast('Offerta aggiunta','ok');
-    openPratica(idPratica);
-  } catch(e){toast('Errore','err');}
+function salvaDatiPratica(){
+  const v=id=>document.getElementById(id).value;
+  const link=v('pd_linkCartella').trim();
+  const mId=link.match(/folders\/([A-Za-z0-9_-]+)/);
+  azionePratica('/pratica/aggiorna',{ id:currentPraticaId, campi:{
+    titolo:v('pd_titolo').trim(), ubicazione:v('pd_ubicazione').trim(), richiestoDa:v('pd_richiestoDa').trim(),
+    problema:v('pd_problema').trim(), dataChiamata:v('pd_dataChiamata'),
+    linkCartella:link, cartellaDriveId:mId?mId[1]:'' }}, 'Dati salvati');
 }
-
-async function selezionaOfferta(idOfferta, idPratica) {
-  try {
-    const offerta = S.offerte.find(o=>o.id===idOfferta);
-    const nuovaSelezionata = offerta && offerta.selezionata ? null : idOfferta;
-    const r = await apiPost('/seleziona-offerta',{id:nuovaSelezionata, idPratica});
-    if(!r.ok){toast('Errore','err');return;}
-    S.offerte.forEach(o=>{ if(o.idPratica===idPratica) o.selezionata = (nuovaSelezionata && o.id===nuovaSelezionata); });
-    toast(nuovaSelezionata?'Offerta selezionata':'Offerta deselezionata','ok');
-    openPratica(idPratica);
-  } catch(e){toast('Errore','err');}
+function segnaRichiestaOfferte(data){
+  azionePratica('/pratica/aggiorna',{ id:currentPraticaId, campi:{ dataRichiestaOfferte:data }, diario:data?'Offerte richieste ai fornitori':'' }, data?'Segnata richiesta offerte':'Annullato');
 }
-
-async function eliminaOfferta(idOfferta, idPratica) {
-  if(!confirm('Eliminare questa offerta?'))return;
-  try {
-    await apiPost('/elimina-offerta',{id:idOfferta});
-    S.offerte=S.offerte.filter(o=>o.id!==idOfferta);
-    toast('Offerta eliminata','ok');
-    openPratica(idPratica);
-  } catch(e){toast('Errore','err');}
+function aggiungiOfferta(idPratica){
+  const v=id=>document.getElementById(id).value.trim();
+  if(!v('off_fornitore')){ toast('Inserisci il nome del fornitore','err'); return; }
+  azionePratica('/pratica/offerta',{ idPratica, fornitore:v('off_fornitore'), numeroOfferta:v('off_numero'), importo:v('off_importo'),
+    descrizione:v('off_descrizione'), data:v('off_data'), linkDrive:v('off_link'), note:v('off_note') }, 'Offerta aggiunta');
 }
-
-async function avanzaAPreventivo(idPratica) {
-  try {
-    const r = await apiPost('/aggiorna-pratica',{id:idPratica, step:'preventivo', dati:{}});
-    if(!r.ok){toast('Errore','err');return;}
-    const p = S.pratiche.find(x=>x.id===idPratica);
-    if(p && praticaStepIdx('Preventivo') > praticaStepIdx(p.stato)) p.stato='Preventivo';
-    toast('Avanzato a Preventivo','ok');
-    openPratica(idPratica);
-  } catch(e){toast('Errore','err');}
+function selezionaOfferta(idOfferta, idPratica){
+  const o=S.offerte.find(x=>x.id===idOfferta);
+  azionePratica('/pratica/seleziona-offerta',{ idPratica, idOfferta:o&&o.selezionata?null:idOfferta }, o&&o.selezionata?'Scelta annullata':'Offerta scelta');
+}
+function eliminaOfferta(idOfferta, idPratica){
+  if(!confirm('Eliminare questa offerta? Il PDF su Drive non viene toccato.')) return;
+  azionePratica('/pratica/elimina-offerta',{ id:idOfferta }, 'Offerta eliminata');
+}
+function salvaBdo(){
+  const v=id=>document.getElementById(id).value.trim();
+  if(!v('bdo_numero')){ toast('Inserisci il numero del buono d\'ordine','err'); return; }
+  azionePratica('/pratica/bdo',{ idPratica:currentPraticaId, numeroBdo:v('bdo_numero'), dataBdo:v('bdo_data'), fornitoreBdo:v('bdo_fornitore'),
+    importoBdo:v('bdo_importo'), numeroOfferta:v('bdo_offerta'), consegnaEntro:v('bdo_consegna'), linkBdo:v('bdo_link') }, 'Buono d\'ordine salvato');
+}
+function salvaMateriale(){
+  const v=id=>document.getElementById(id).value.trim();
+  azionePratica('/pratica/materiale',{ idPratica:currentPraticaId, statoMateriale:v('mat_stato')||'Disponibile', data:v('mat_data'), note:v('mat_note') }, 'Stato materiale salvato');
+}
+function chiudiPratica(riapri){
+  const note=riapri?undefined:(document.getElementById('pch_note')||{}).value;
+  azionePratica('/pratica/chiudi',{ id:currentPraticaId, riapri:!!riapri, note }, riapri?'Pratica riaperta':'Pratica chiusa');
 }
 
 const _pintChipSel = {};
-
 function togglePintChip(idPratica, nomeOperaio) {
   if(!_pintChipSel[idPratica]) _pintChipSel[idPratica] = new Set();
   const sel = _pintChipSel[idPratica];
-  const OPERAI_COL = {Matteo:'#7a9ec8',Stefano:'#9a84c8',Michele:'#7ab87a',Ezio:'#c89060',Aziz:'#5fb3b3'};
+  const op = OPERAI_LIST.find(o=>o.nome===nomeOperaio);
   const chip = document.getElementById('pint_chip_'+idPratica+'_'+nomeOperaio);
   if(!chip) return;
-  if(sel.has(nomeOperaio)) {
-    sel.delete(nomeOperaio);
-    chip.style.borderColor = 'var(--border)';
-    chip.style.background  = 'var(--bg4)';
-    chip.style.color       = 'var(--muted)';
-    chip.style.fontWeight  = '500';
-    chip.querySelector('div').style.background = 'var(--bg5)';
-    chip.querySelector('div').style.color = 'var(--muted)';
-  } else {
-    sel.add(nomeOperaio);
-    const col = OPERAI_COL[nomeOperaio]||'#888';
-    chip.style.borderColor = col;
-    chip.style.background  = col+'22';
-    chip.style.color       = col;
-    chip.style.fontWeight  = '700';
-    chip.querySelector('div').style.background = col;
-    chip.querySelector('div').style.color = '#1a1a1a';
-  }
+  const on = !sel.has(nomeOperaio);
+  if(on) sel.add(nomeOperaio); else sel.delete(nomeOperaio);
+  const col = op?op.colore:'#888';
+  chip.style.borderColor = on?col:'var(--border)';
+  chip.style.background  = on?col+'22':'var(--bg4)';
+  chip.style.color       = on?col:'var(--muted)';
+  chip.style.fontWeight  = on?'700':'500';
+  chip.querySelector('div').style.background = on?col:'var(--bg5)';
+  chip.querySelector('div').style.color = on?'#1a1a1a':'var(--muted)';
 }
 
 async function pianificaInterventoPratica(idPratica, codiceImpianto) {
@@ -2524,8 +2556,7 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
   if(!data) { toast('Seleziona una data','err'); return; }
   try {
     const operai = [...sel];
-    const p2 = S.pratiche.find(x=>x.id===idPratica);
-    const notaBase = p2 && p2.noteRichiesta ? p2.noteRichiesta.trim() : '';
+    const notaBase = (document.getElementById('pint_nota_'+idPratica)?.value||'').trim();
     const nota = (notaBase ? notaBase + ' ' : '') + '[PRA:'+idPratica+']';
     const ids = [];
     for(const operaio of operai) {
@@ -2539,91 +2570,75 @@ async function pianificaInterventoPratica(idPratica, codiceImpianto) {
         await apiPost('/imposta-collegamento',{id:ids[0],interventoCollegato:ids[k]});
       }
     }
-    const oggi = new Date().toISOString().slice(0,10);
+    const oggi = oggiLocale();
     operai.forEach((operaio,i)=>{
       S.interventi.push({ id:ids[i], codiceImpianto, dataPrevista:data, operaio, tipoVisita:'Straordinaria', stato:'Aperto', note:nota, dataChiusura:'', creatoIl:oggi, secondoOperaio:'', interventoCollegato:ids.length>1?(i===0?ids[1]:ids[0]):'', linkDrive:'', dataFine:'', operaioSecondario2:'' });
     });
     _pintChipSel[idPratica] = new Set();
-    toast(operai.length>1?`${operai.length} interventi pianificati`:'Intervento pianificato','ok');
+    // il diario della pratica registra l'assegnazione
+    apiPost('/pratica/aggiorna',{ id:idPratica, campi:{}, diario:`Intervento assegnato a ${operai.join(' + ')} per il ${dataIT(data)}` }).then(applicaRispostaPratica).catch(()=>{});
+    ricalcolaStatiPratiche();
+    toast(operai.length>1?`${operai.length} interventi assegnati`:'Intervento assegnato','ok');
     openPratica(idPratica);
     renderCalendario();
   } catch(e){ toast('Errore','err'); }
 }
 
-async function toggleGestione(idPratica) {
-  const p = S.pratiche.find(x=>x.id===idPratica);
-  if(!p) return;
-  const nuovoValore = !p.inGestione;
-  try {
-    const r = await apiPost('/imposta-gestione',{id:idPratica, valore:nuovoValore});
-    if(!r.ok){toast('Errore','err');return;}
-    p.inGestione = nuovoValore;
-    if(nuovoValore && praticaStepIdx('BdO') > praticaStepIdx(p.stato)) p.stato='BdO';
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
-    toast(nuovoValore?'Lavoro in gestione attivato':'Preventivo riattivato','ok');
-    openPratica(idPratica);
-  } catch(e){toast('Errore','err');}
-}
-
 async function eliminaPratica() {
-  if(!confirm('Eliminare questa pratica? I documenti Drive non verranno toccati.'))return;
+  if(!confirm('Eliminare questa pratica e le sue offerte? I documenti Drive non verranno toccati.')) return;
   try {
     await apiPost('/elimina-pratica',{id:currentPraticaId});
     S.pratiche=S.pratiche.filter(p=>p.id!==currentPraticaId);
+    S.offerte=S.offerte.filter(o=>o.idPratica!==currentPraticaId);
     closeModal('modalPratica');
     renderPratiche();
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
     toast('Pratica eliminata','ok');
   } catch(e){toast('Errore','err');}
 }
 
+// ── NUOVA PRATICA ──
 function openModalNuovaPratica(idIntervento) {
-  document.getElementById('npNote').value='';
-  document.getElementById('npLink').value='';
-  document.getElementById('npTipo').value='';
+  ['npTitolo','npUbicazione','npProblema','npLink','npRichiestoDa'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('npData').value=oggiLocale();
   const selImp=document.getElementById('npImp');
   selImp.innerHTML='<option value="">Seleziona impianto...</option>'+
-    S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
+    [...S.impianti].sort((a,b)=>(a.comune||'').localeCompare(b.comune||'')||(a.codice||'').localeCompare(b.codice||''))
+      .map(i=>`<option value="${escH(i.codice)}">${escH(i.codice)} — ${escH(i.descrizione)} (${escH(i.comune||'')})</option>`).join('');
   const selInt=document.getElementById('npIntervento');
-  const intsAperti=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>(b.dataPrevista||'').localeCompare(a.dataPrevista||''));
+  const ints=S.interventi.filter(i=>i.stato==='Aperto'||i.stato==='Chiuso').sort((a,b)=>(b.dataPrevista||'').localeCompare(a.dataPrevista||'')).slice(0,200);
   selInt.innerHTML='<option value="">— Nessun collegamento —</option>'+
-    intsAperti.map(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return `<option value="${i.id}" ${i.id===idIntervento?'selected':''}>${imp?imp.descrizione:i.codiceImpianto} · ${i.dataPrevista} · ${i.operaio}</option>`; }).join('');
+    ints.map(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return `<option value="${i.id}" ${i.id===idIntervento?'selected':''}>${escH(imp?imp.descrizione:i.codiceImpianto)} · ${dataIT(i.dataPrevista)} · ${escH(i.operaio)}</option>`; }).join('');
   if(idIntervento){
     const interv=S.interventi.find(x=>x.id===idIntervento);
-    if(interv){ selImp.value=interv.codiceImpianto; selInt.value=idIntervento; }
+    if(interv){ selImp.value=interv.codiceImpianto; selInt.value=idIntervento; document.getElementById('npProblema').value=(interv.note||'').replace(/\[PRA:[^\]]+\]/g,'').trim(); }
   }
   document.getElementById('modalNuovaPratica').classList.add('open');
 }
 
 async function creaPratica() {
-  const codice=document.getElementById('npImp').value;
-  const note=document.getElementById('npNote').value.trim();
-  const link=document.getElementById('npLink').value.trim();
-  const idIntervento=document.getElementById('npIntervento').value;
-  if(!codice){toast('Seleziona un impianto','err');return;}
+  const v=id=>document.getElementById(id).value.trim();
+  const codice=v('npImp');
+  if(!codice){ toast('Seleziona un impianto','err'); return; }
+  if(!v('npTitolo')){ toast('Scrivi un titolo per il lavoro','err'); return; }
+  const imp=S.impianti.find(x=>x.codice===codice);
+  const link=v('npLink'); const mId=link.match(/folders\/([A-Za-z0-9_-]+)/);
   try {
-    const r=await apiPost('/crea-pratica',{idIntervento,codiceImpianto:codice,noteRichiesta:note,linkRichiesta:link});
-    if(!r.ok){toast('Errore creazione','err');return;}
-    const oggi=new Date().toISOString().slice(0,10);
-    S.pratiche.push({id:r.id,idIntervento,codiceImpianto:codice,stato:'Richiesta',dataRichiesta:oggi,noteRichiesta:note,linkRichiesta:link,dataPreventivo:'',importoPreventivo:'',linkPreventivo:'',dataBdo:'',numeroBdo:'',linkBdo:'',dataDdt:'',numeroDdt:'',linkDdt:'',dataChiusura:'',noteChiusura:'',creatoIl:oggi});
-    const nAp=S.pratiche.filter(x=>x.stato!=='Chiusa').length;
-    const bpra=document.getElementById('badgePratiche');
-    bpra.textContent=nAp; bpra.style.display=nAp>0?'':'none';
+    const r=await apiPost('/pratica/crea',{ codiceImpianto:codice, nomeImpianto:imp?imp.descrizione:'', titolo:v('npTitolo'), ubicazione:v('npUbicazione'),
+      problema:v('npProblema'), richiestoDa:v('npRichiestoDa'), dataChiamata:v('npData'), linkCartella:link, cartellaDriveId:mId?mId[1]:'',
+      idIntervento:v('npIntervento'), origine:'gestionale' });
+    if(!applicaRispostaPratica(r)) return;
     closeModal('modalNuovaPratica');
     toast('Pratica creata','ok');
     renderPratiche();
-    setTimeout(()=>openPratica(r.id),300);
-  } catch(e){toast('Errore','err');}
+    setTimeout(()=>openPratica(r.id),250);
+  } catch(e){ toast('Errore','err'); }
 }
 
 function aproPraticaDaIntervento() {
-  const praticaEsistente=S.pratiche.find(p=>p.idIntervento===currentDetId);
-  if(praticaEsistente){ closeModal('modalDettaglio'); openPratica(praticaEsistente.id); }
-  else { closeModal('modalDettaglio'); openModalNuovaPratica(currentDetId); }
+  const i=S.interventi.find(x=>x.id===currentDetId);
+  const esistente=i?praticaDiIntervento(i):null;
+  closeModal('modalDettaglio');
+  if(esistente) openPratica(esistente.id); else openModalNuovaPratica(currentDetId);
 }
 
 // ============================================================
@@ -2783,7 +2798,7 @@ function renderInterventi() {
       const done=chk.filter(c=>c.eseguita==='SI').length;
       const pct=chk.length?Math.round(done/chk.length*100):0;
       const isChiuso=i.stato==='Chiuso';
-      const hasPratica=S.pratiche.some(p=>p.idIntervento===i.id);
+      const hasPratica=!!praticaDiIntervento(i);
       const operaioTxt = i.operaio
         ? i.operaio+(i.secondoOperaio?'+'+i.secondoOperaio:'')+(i.operaioSecondario2?'+'+i.operaioSecondario2:'')
         : '<span style="color:#4ade80;font-style:italic">— contenitore</span>';
@@ -2868,12 +2883,12 @@ function openDettaglio(id) {
          </div>`
       : '');
 
-  const praticaCollegata=S.pratiche.find(p=>p.idIntervento===i.id);
+  const praticaCollegata=praticaDiIntervento(i);
   const praBox=document.getElementById('detPraticaBox');
   if(praticaCollegata){
     praBox.style.display='block';
     praBox.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(200,180,100,.08);border:1px solid rgba(200,180,100,.25);border-radius:10px">
-      <div style="font-size:13px"><span class="pra-stato ${praticaCollegata.stato}">${praticaCollegata.stato}</span> Pratica collegata</div>
+      <div style="font-size:13px">${praStatoBadge(praticaCollegata.stato)} ${escH(praticaCollegata.titolo||'Pratica collegata')}</div>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('modalDettaglio');openPratica('${praticaCollegata.id}')">Apri pratica →</button>
     </div>`;
   } else { praBox.style.display='none'; praBox.innerHTML=''; }
