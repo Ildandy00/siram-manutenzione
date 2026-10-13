@@ -462,6 +462,11 @@ tr.int-completato td * { text-decoration: line-through; }
 .ev-str.completato { opacity: .4; text-decoration: line-through; }
 /* RCEE: bordo sinistro doppio + etichetta */
 .ev-str.ev-rcee { border-left-style: double; border-left-width: 4px; }
+/* Richiesta chiusa in un giorno diverso dall'apertura: si ripete nel giorno di chiusura,
+   barrata, con lo sfondo pieno del colore commessa */
+.ev-chiusura { text-decoration: line-through; opacity: .7; font-style: italic; }
+.ev-chiusura * { text-decoration: line-through; }
+.ev-chiusura:hover { opacity: .95; }
 .rcee-tag { font-size: 8px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 3px; margin-right: 4px;
   background: #e2c97a; color: #1d1d1d; vertical-align: 1px; font-style: normal; }
 
@@ -1386,6 +1391,44 @@ function getLunediSettimana(offset) {
 
 function isRceeR(i) { return /^\s*\[RCEE\]/.test((i && i.note) || ''); }
 
+// === CHIUSURA IN UN GIORNO DIVERSO DALL'APERTURA ===
+function dataChiusuraDi(i) { return String((i && i.dataChiusura) || '').slice(0, 10); }
+// Vero se la richiesta e' chiusa in un giorno in cui il calendario non la mostra gia'
+// (diverso dalla data prevista e fuori dall'eventuale periodo dataPrevista -> dataFine)
+function chiusaAltroGiorno(i) {
+  if (!i || i.stato !== 'Chiuso') return false;
+  const dc = dataChiusuraDi(i);
+  if (!dc || dc === i.dataPrevista) return false;
+  if (i.dataFine && i.dataFine > i.dataPrevista && dc >= i.dataPrevista && dc <= i.dataFine) return false;
+  return true;
+}
+// Richieste da ripetere nel giorno ds perche' chiuse quel giorno (una sola per coppia collegata)
+function chiusureDelGiorno(ds) {
+  const visti = new Set();
+  return S.interventi.filter(i => {
+    if (!chiusaAltroGiorno(i) || dataChiusuraDi(i) !== ds) return false;
+    if (i.tipoVisita === 'Ordinaria' && !mostraOrdinari) return false;
+    if (visti.has(i.id)) return false;
+    visti.add(i.id);
+    if (i.interventoCollegato) visti.add(i.interventoCollegato);
+    return true;
+  });
+}
+function fmtGgMm(iso) { return iso ? iso.slice(8,10)+'/'+iso.slice(5,7) : ''; }
+// Chip del giorno di chiusura: barrato, sfondo pieno colore commessa
+function evChiusuraHtml(i, stopProp) {
+  const imp = S.impianti.find(x => x.codice === i.codiceImpianto);
+  const col = commessaDi(imp).color;
+  const nome = imp ? imp.descrizione.split(' ').slice(0,3).join(' ') : i.codiceImpianto;
+  const isOrd = i.tipoVisita === 'Ordinaria';
+  const cls = isOrd ? 'ev-ord' : ('ev-str' + (isRceeR(i) ? ' ev-rcee' : ''));
+  const tit = (imp ? imp.descrizione : i.codiceImpianto) + ' \u2014 chiusa il ' + fmtGgMm(dataChiusuraDi(i)) + ' (aperta il ' + fmtGgMm(i.dataPrevista) + ')';
+  return `<div class="${cls} ev-chiusura"
+    style="background:${col}66;color:#f0f0f0;border-color:${col}"
+    onclick="${stopProp ? 'event.stopPropagation();' : ''}openDettaglio('${i.id}')"
+    title="${tit}">${evRowHtml('\u2713 ' + nome, isOrd, i, '')}</div>`;
+}
+
 function evRowHtml(nome, isOrd, i, extra) {
   if (!isOrd && isRceeR(i)) nome = '<span class="rcee-tag">RCEE</span>' + nome;
   let opHtml;
@@ -1447,8 +1490,9 @@ function renderSettimana() {
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,praDot)}</div>`;
       }
     }).join('');
+    const chiusHtml=chiusureDelGiorno(ds).filter(i=>!mostrati.has(i.id)).map(i=>evChiusuraHtml(i,false)).join('');
     const ICONS_ASS = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
-    cell.innerHTML=noteCalHtml(ds)+intsHtml+ass.map(a=>{
+    cell.innerHTML=noteCalHtml(ds)+intsHtml+chiusHtml+ass.map(a=>{
       const icon = ICONS_ASS[a.tipo]||'📅';
       return `<div class="ev ${ASSENZA_COLOR[a.tipo]||'ev-ferie'}">${icon} ${a.operaio} · ${a.tipo}</div>`;
     }).join('');
@@ -1514,6 +1558,8 @@ function renderCalendario() {
           title="${imp?imp.descrizione:i.codiceImpianto}">${evRowHtml(nome,false,i,extra)}</div>`;
       }
     }).join('');
+    const giaNelGiorno=new Set(intGiorno.map(i=>i.id));
+    evHtml+=chiusureDelGiorno(dateStr).filter(i=>!giaNelGiorno.has(i.id)).map(i=>evChiusuraHtml(i,true)).join('');
     const assGiorno=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
     const ICONS_ASS2 = {Ferie:'🏖️',Permesso:'🕐',Malattia:'🤒'};
     const assHtml=assGiorno.map(a=>{
@@ -1550,6 +1596,20 @@ function openGiorno(dateStr) {
         <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
       </div>`;
     }).join('');
+  const chiuseQui=chiusureDelGiorno(dateStr).filter(i=>!ints.some(x=>x.id===i.id));
+  if(chiuseQui.length){
+    document.getElementById('giornoInterventi').innerHTML+=
+      `<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Chiuse in questo giorno</div>`+
+      chiuseQui.map(i=>{
+        const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
+        const col=commessaDi(imp).color;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:${col}33;border-left:3px solid ${col};border-radius:8px;margin-bottom:6px;font-size:13px">
+          <div><div style="font-weight:600;text-decoration:line-through">${imp?imp.descrizione:i.codiceImpianto}</div>
+          <div style="font-size:11px;color:var(--muted)">${i.operaio||'\u2014'} \u00B7 aperta il ${fmtGgMm(i.dataPrevista)}</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
+        </div>`;
+      }).join('');
+  }
   renderNoteGiorno(dateStr);
   const ass=S.assenze.filter(a=>a.dataInizio<=dateStr&&a.dataFine>=dateStr);
   document.getElementById('giornoAssenze').innerHTML=ass.length===0?''
