@@ -387,6 +387,24 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   const PRIORITA_SEGNO = { 1: '▲', 2: '■', 3: '●', 0: '·' };
 
   // "***Pesaro - M028806" -> "Pesaro - M028806"
+  // 14/10/2026: chiave dell'impianto nel Diario e nei Contatori. Gli impianti senza
+  // codice K (Misano, Verucchio, Corinaldo...) usano impianto_ref: prima il modulo
+  // mandava un codice vuoto e il server rispondeva "Impianto mancante".
+  const chiaveDiario = (p) => (p && (p.codice_k || p.impianto_ref)) || '';
+  const impDaChiave = (k) => (S.dati.impianti || []).find((p) => k && (p.codice_k === k || p.impianto_ref === k)) || null;
+  // Storico dei calcoli: l'impianto si riconosce da impianto_ref (esporta_analisi v6 lo
+  // manda; il finding_key comincia comunque con impianto_ref). Il codice K resta solo
+  // come ripiego per fotografie vecchie, e per gli impianti senza K non basta.
+  const refStorico = (h) => (h && (h.impianto_ref || String(h.finding_key || '').split('|')[0])) || '';
+  function storicoDi(p) {
+    if (!p) return [];
+    return (S.dati.storico || []).filter((h) => {
+      const r = refStorico(h);
+      return r ? r === p.impianto_ref : !!(p.codice_k && h.codice_k === p.codice_k);
+    });
+  }
+  const impDaRef = (ref) => (S.dati.impianti || []).find((p) => p.impianto_ref === ref) || null;
+
   const nomeCommessa = (c) => (String(c || '').replace(/^\*+/, '').trim() || 'Senza commessa');
 
   const PRIORITA_PER_CODICE = {
@@ -724,9 +742,9 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   // segnalazione, seguito da uno che la ritrova. (Il periodo dei dati non basta: le finestre
   // del motore sono di 30-90 giorni e la terrebbero accesa per settimane dopo la riparazione.)
   const lc = (x) => String(x || '').trim().toLowerCase();
-  function codiceKDi(f) {
+  function codiceKDi(f) {           // chiave con cui la segnalazione sta nel Diario
     const imp = (S.dati.impianti || []).find((x) => x.impianto_ref === f.impianto_ref);
-    return (imp && imp.codice_k) || f.codice_k || '';
+    return imp ? chiaveDiario(imp) : (f.codice_k || '');
   }
   function schedaDi(f) {
     return (S.dati.schede || []).find((sc) => sc.impianto_ref === f.impianto_ref
@@ -749,12 +767,11 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   const ultimaData = (voci) => voci.map((e) => dataIt(e.data)).filter(Boolean)
     .reduce((m, d) => (!m || d > m ? d : m), null);
   function ricomparsaDopo(f, quando) {
-    const ck = codiceKDi(f) || f.codice_k;
     const runs = runOrdinati();
     const runAt = new Map();
     (S.dati.storico || []).forEach((h) => { if (!runAt.has(Number(h.run_id))) runAt.set(Number(h.run_id), dataIso(h.run_at)); });
-    const presente = new Set((S.dati.storico || []).filter((h) => (h.codice_k === ck || h.codice_k === f.codice_k)
-      && h.finding_code === f.finding_code && String(h.scope_label || '') === String(f.scope_label || ''))
+    const presente = new Set(storicoDi(impDaRef(f.impianto_ref) || { impianto_ref: f.impianto_ref, codice_k: f.codice_k }).filter((h) =>
+      h.finding_code === f.finding_code && String(h.scope_label || '') === String(f.scope_label || ''))
       .map((h) => Number(h.run_id)));
     let assente = false;
     for (const r of runs) {
@@ -783,6 +800,9 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     const codici = [w.finding_code, ...(Array.isArray(w.finding_codes) ? w.finding_codes : []),
       ...(Array.isArray(w.codici) ? w.codici : [])].filter(Boolean);
     const imp = w.impianto_ref || '', k = w.codice_k || '', amb = String(w.scope_label || '');
+    // il motore indica la segnalazione da cui nasce l'azione (source_finding = finding_key)
+    const fonte = w.source_finding ? (S.dati.findings || []).filter((f) => f.finding_key === w.source_finding) : [];
+    if (fonte.length) return fonte.every((f) => !contaFlotta(f));
     let stesse = (S.dati.findings || []).filter((f) =>
       ((imp && f.impianto_ref === imp) || (!imp && k && f.codice_k === k)) && String(f.scope_label || '') === amb);
     if (codici.length) stesse = stesse.filter((f) => codici.includes(f.finding_code));
@@ -796,7 +816,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     const visti = new Set();
     const out = [];
     righe.slice().sort((a, b) => (num(b.window_days) || 0) - (num(a.window_days) || 0)).forEach((f) => {
-      const k = f.finding_code + '|' + f.scope_label + '|' + f.codice_k;
+      const k = f.finding_code + '|' + f.scope_label + '|' + (f.impianto_ref || f.codice_k);
       if (visti.has(k)) return;
       visti.add(k);
       out.push(f);
@@ -930,7 +950,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   }
 
   // storico: elenco dei run e confronto
-  function storicoPer(codiceK) { return (S.dati.storico || []).filter((h) => h.codice_k === codiceK); }
+  function storicoPer(p) { return storicoDi(p); }
   function runOrdinati() {
     const s = new Set((S.dati.storico || []).map((h) => Number(h.run_id)));
     return [...s].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
@@ -940,12 +960,13 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     const quando = dataIt(voce.data);
     const storico = S.dati.storico || [];
     if (!quando || !storico.length) return ['senza data valida', 'p0'];
-    let h = storico.filter((x) => x.codice_k === voce.codice_k);
+    const impV = impDaChiave(voce.codice_k);
+    let h = impV ? storicoDi(impV) : storico.filter((x) => x.codice_k === voce.codice_k);
     if (voce.ambito) h = h.filter((x) => String(x.scope_label || '').trim().toLowerCase() === String(voce.ambito).trim().toLowerCase());
     if (voce.finding_code) h = h.filter((x) => x.finding_code === voce.finding_code);
     const runDopo = storico.filter((x) => { const d = dataIso(x.run_at); return d && d > quando; });
     if (!runDopo.length) return ['in attesa del prossimo calcolo del motore', 'p0'];
-    const imp = (S.dati.impianti || []).find((p) => p.codice_k === voce.codice_k);
+    const imp = impV;
     const ultimoDato = imp ? dataIso(imp.last_measurement) : null;
     if (ultimoDato && ultimoDato < new Date(quando.getTime() + 5 * 864e5)) {
       return ['troppo presto: meno di 5 giorni di dati dopo l’intervento', 'p0'];
@@ -1333,7 +1354,9 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
       cambio.append(el('p', { class: 'muted small', text: 'Lo storico parte da questo calcolo: dal prossimo run del motore qui compaiono le segnalazioni nuove e quelle chiuse.' }));
     } else {
       const cur = runs[runs.length - 1], prev = runs[runs.length - 2];
-      const chiave = (h) => `${h.codice_k}|${h.finding_code}|${h.scope_label}`;
+      // impianto riconosciuto da impianto_ref; in stampa la sigla (gli impianti senza K hanno codice vuoto)
+      const chiave = (h) => `${refStorico(h) || h.codice_k}|${h.finding_code}|${h.scope_label}`;
+      const siglaDi = (kk) => { const q = impDaRef(kk) || impDaChiave(kk); return (q && q.sigla) || kk || '?'; };
       const storicoFlotta = (S.dati.storico || []).filter((h) => !CODICI_SONDA.has(h.finding_code));
       const ora = new Set(storicoFlotta.filter((h) => Number(h.run_id) === cur).map(chiave));
       const prima = new Set(storicoFlotta.filter((h) => Number(h.run_id) === prev).map(chiave));
@@ -1346,11 +1369,11 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
       const lista = el('div', { class: 'small' });
       nuove.slice(0, 12).forEach((k) => {
         const [kk, code, scope] = k.split('|');
-        lista.append(el('div', {}, `▲ ${kk} · ${scope}: ${CODICE_LABEL[code] || code}`));
+        lista.append(el('div', {}, `▲ ${siglaDi(kk)} · ${scope}: ${CODICE_LABEL[code] || code}`));
       });
       chiuse.slice(0, 12).forEach((k) => {
         const [kk, code, scope] = k.split('|');
-        lista.append(el('div', { class: 'muted' }, `✓ ${kk} · ${scope}: ${CODICE_LABEL[code] || code} — non più rilevata`));
+        lista.append(el('div', { class: 'muted' }, `✓ ${siglaDi(kk)} · ${scope}: ${CODICE_LABEL[code] || code} — non più rilevata`));
       });
       if (!nuove.length && !chiuse.length) lista.append(el('p', { class: 'muted', text: 'Nessuna variazione tra gli ultimi due calcoli.' }));
       cambio.append(lista);
@@ -1369,12 +1392,13 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
           ['', 'Impianto', 'Ambito', 'Azione', 'Perché'],
           righe.map((w) => {
             const p = num(w.priority) || 3;
-            const imp = impianti.find((x) => x.codice_k === w.codice_k);
+            const imp = impianti.find((x) => w.impianto_ref && x.impianto_ref === w.impianto_ref)
+              || impianti.find((x) => w.codice_k && x.codice_k === w.codice_k);
             return {
               clic: imp ? () => vaiA(imp.impianto_ref, 'Interventi') : null,
               celle: [
                 chip(`${PRIORITA_SEGNO[p]} ${PRIORITA_LABEL[p]}`, 'p' + p),
-                w.codice_k || '—', w.scope_label || '', w.action || '',
+                (imp && imp.sigla) || w.codice_k || '—', w.scope_label || '', w.action || '',
                 conTip(el('span', { class: 'muted small', text: accorcia(w.reason, 150) }), `<b>Perché</b><br>${(w.reason || '').replace(/</g, '&lt;')}`),
               ],
             };
@@ -2076,7 +2100,7 @@ function disegnaSchedaTecnica(s, el, extra) {
         const date = fs.map(chiusaIl);
         return date.every(Boolean) ? date.reduce((m, d) => (d > m ? d : m)) : null;
       }
-      return ultimaData(vociDiarioScheda(sc, p.codice_k));
+      return ultimaData(vociDiarioScheda(sc, chiaveDiario(p)));
     };
     tutteS.forEach((sc) => { const d = schedaChiusaIl(sc); if (d) chiuse.push({ titolo: (sc.semplice && sc.semplice.titolo) || sc.titolo || sc.etichetta || 'Scheda', dove: sc.etichetta || sc.ambito || '', d }); });
     const copertiTutti = new Set();
@@ -2100,7 +2124,7 @@ function disegnaSchedaTecnica(s, el, extra) {
     schede.forEach((s) => (s.segnalazioni || []).forEach((x) => coperti.add(x.finding_key)));
     schede.forEach((s) => {
       const ambito = String((s.diario || {}).ambito || 'impianto').toLowerCase();
-      const voci = (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k
+      const voci = (S.dati.diario || []).filter((e) => e.codice_k === chiaveDiario(p)
         && (!e.finding_code || (s.codici || []).includes(e.finding_code))
         && (!e.ambito || String(e.ambito).toLowerCase() === ambito));
       const diarioVoci = voci.length ? el('div', { class: 'sk-diario' },
@@ -2119,7 +2143,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       card.append(el('p', { text: verdettoChiaro(f.finding_code, f.evidence, f.title) }));
 
       const nota = notaAffidabilita(f.evidence);
-      const storicoQui = storicoPer(p.codice_k).filter((h) => h.finding_code === f.finding_code && h.scope_label === f.scope_label);
+      const storicoQui = storicoPer(p).filter((h) => h.finding_code === f.finding_code && h.scope_label === f.scope_label);
       const runVisti = new Set(storicoQui.map((h) => Number(h.run_id))).size;
       const periodo = periodoTesto(f.periodo);
       card.append(el('div', { class: 'meta' },
@@ -2157,7 +2181,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       }
 
       // interventi già registrati su questa segnalazione
-      (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k
+      (S.dati.diario || []).filter((e) => e.codice_k === chiaveDiario(p)
         && (!e.ambito || String(e.ambito).toLowerCase() === String(f.scope_label || '').toLowerCase())
         && (!e.finding_code || e.finding_code === f.finding_code)).forEach((e) => {
         const [testo, classe] = verdettoIntervento(e);
@@ -2190,7 +2214,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       el('p', { class: 'muted small', text: 'Ogni intervento fatto sul campo, con la data. Il confronto tra le segnalazioni prima e dopo arriva dal calcolo successivo del motore.' }),
       formDiario(p, null, null)));
 
-    const voci = (S.dati.diario || []).filter((e) => e.codice_k === p.codice_k)
+    const voci = (S.dati.diario || []).filter((e) => e.codice_k === chiaveDiario(p))
       .slice().sort((a, b) => (dataIt(b.data) || 0) - (dataIt(a.data) || 0));
 
     if (!voci.length) {
@@ -2209,7 +2233,7 @@ function disegnaSchedaTecnica(s, el, extra) {
     }
 
     // linea del tempo
-    const storicoQui = storicoPer(p.codice_k);
+    const storicoQui = storicoPer(p);
     const perEtichetta = new Map();
     storicoQui.forEach((h) => {
       const et = `${h.scope_label} · ${CODICE_LABEL[h.finding_code] || h.finding_code}`;
@@ -2249,7 +2273,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       esito.textContent = 'Invio al PC…';
       try {
         await inviaScrittura('diario', {
-          codice_k: p.codice_k, data: isoToIt(inData.value), ambito: inAmbito.value,
+          codice_k: chiaveDiario(p), data: isoToIt(inData.value), ambito: inAmbito.value,
           finding_code: inCodice.value, intervento: inCosa.value.trim(),
           eseguito_da: inChi.value.trim(), note: inNote.value.trim(),
         }, esito);
@@ -2616,7 +2640,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       esito.textContent = 'Invio al PC…';
       try {
         await inviaScrittura('contatori', {
-          codice_k: p.codice_k, data: isoToIt(inData.value), accensioni: Number(inAcc.value),
+          codice_k: chiaveDiario(p), data: isoToIt(inData.value), accensioni: Number(inAcc.value),
           ore_funzionamento: Number(inOre.value), riferimento: isoToIt(inRif.value), note: inNote.value.trim(),
         }, esito);
         inAcc.value = ''; inOre.value = ''; inNote.value = '';
@@ -2635,7 +2659,7 @@ function disegnaSchedaTecnica(s, el, extra) {
       el('div', { class: 'actions' }, bottone),
       esito));
 
-    const letture = (S.dati.contatori || []).filter((c) => c.codice_k === p.codice_k);
+    const letture = (S.dati.contatori || []).filter((c) => c.codice_k === chiaveDiario(p));
     v.append(el('div', { class: 'card' }, el('h2', { text: 'Letture registrate' }),
       letture.length ? tabella(['Data', 'Accensioni', 'Ore', 'Riferimento', 'Note'],
         letture.slice().reverse().map((c) => ({ celle: [c.data, c.accensioni, c.ore_funzionamento, c.riferimento || '—', c.note || ''] })), [1, 2])
