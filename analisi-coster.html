@@ -390,8 +390,10 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   const nomeCommessa = (c) => (String(c || '').replace(/^\*+/, '').trim() || 'Senza commessa');
 
   const PRIORITA_PER_CODICE = {
-    // una sonda in avaria viene prima: finche' c'e', i KPI che la leggono non valgono
-    SENSOR_OUT_OF_RANGE: 1, SENSOR_STUCK: 2,
+    // 14/10/2026: sonda in errore = gravita' nulla (0). Resta nella scheda Interventi
+    // dell'impianto come informazione, ma non colora il quadro sinottico e non entra
+    // nei conteggi dello Stato flotta: confondeva la lettura della flotta.
+    SENSOR_OUT_OF_RANGE: 0, SENSOR_STUCK: 0,
     GENERATION_DEFICIT: 1, GENERATOR_UNDERPERFORMING: 1, HYDRAULIC_FLOW_ISSUE: 1,
     GENERATOR_UNDERPERFORMING_PAST: 3,
     UPSTREAM_REQUEST_CAPPED: 2, HYDRAULIC_UPSTREAM_LIMIT: 2, THERMAL_EFFICIENCY_DRIFT: 2,
@@ -704,12 +706,32 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   // la stessa urgenza. Se c'e', vince quella.
   function prioritaDi(f) {
     if (f && typeof f === 'object') {
+      if (CODICI_SONDA.has(f.finding_code)) return 0;     // sonda in errore: gravita' nulla
       const p = num((f.evidence || {}).priorita);
       if (p >= 1 && p <= 3) return p;
-      return PRIORITA_PER_CODICE[f.finding_code] || 3;
+      return PRIORITA_PER_CODICE[f.finding_code] ?? 3;
     }
-    return PRIORITA_PER_CODICE[f] || 3;
+    return PRIORITA_PER_CODICE[f] ?? 3;
   }
+
+  // ---- Sonde in errore: fuori dallo Stato flotta ----
+  const CODICI_SONDA = new Set(['SENSOR_OUT_OF_RANGE', 'SENSOR_STUCK']);
+  const isFindingSonda = (f) => !!f && CODICI_SONDA.has(f.finding_code);
+  // Una voce della worklist e' "di sonda" se il suo codice e' di sonda; se il motore
+  // non manda il codice, si guarda se sullo stesso impianto e ambito ci sono solo
+  // segnalazioni di sonda; in ultima istanza il testo dell'azione.
+  function isWorklistSonda(w) {
+    if (!w) return false;
+    const codici = [w.finding_code, ...(Array.isArray(w.finding_codes) ? w.finding_codes : []),
+      ...(Array.isArray(w.codici) ? w.codici : [])].filter(Boolean);
+    if (codici.length) return codici.every((c) => CODICI_SONDA.has(c));
+    const imp = w.impianto_ref || '', k = w.codice_k || '', amb = String(w.scope_label || '');
+    const stesse = (S.dati.findings || []).filter((f) =>
+      ((imp && f.impianto_ref === imp) || (!imp && k && f.codice_k === k)) && String(f.scope_label || '') === amb);
+    if (stesse.length) return stesse.every(isFindingSonda);
+    return /\bsond[ae]\b/i.test(String(w.action || '')) && /fuori scala|ferm|bloccat|interrott|avaria|guast/i.test(String(w.action || '') + ' ' + String(w.reason || ''));
+  }
+  const worklistFlotta = () => (S.dati.worklist || []).filter((w) => !isWorklistSonda(w));
 
   function findingsUnici(righe) {
     const visti = new Set();
@@ -720,7 +742,8 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
       visti.add(k);
       out.push(f);
     });
-    return out.sort((a, b) => prioritaDi(a) - prioritaDi(b)
+    // gravita' nulla (sonde) in fondo
+    return out.sort((a, b) => (prioritaDi(a) || 9) - (prioritaDi(b) || 9)
       || String(a.scope_label).localeCompare(String(b.scope_label)));
   }
 
@@ -730,7 +753,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     // Corinaldo) il codice K non ce l'hanno, e con la chiave vuota finivano tutti
     // nello stesso mucchio - percio' risultavano "nessuna azione" pur avendo
     // segnalazioni aperte dentro la scheda.
-    (S.dati.worklist || []).forEach((w) => {
+    worklistFlotta().forEach((w) => {
       const k = w.impianto_ref || w.codice_k || '';
       const v = m.get(k) || { n: 0, priorita: 9 };
       v.n += 1;
@@ -1153,7 +1176,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   function vistaFlotta(v) {
     const impianti = S.dati.impianti || [];
     const azioni = azioniPerImpianto();
-    const uniche = findingsUnici(S.dati.findings || []);
+    const uniche = findingsUnici((S.dati.findings || []).filter((f) => !isFindingSonda(f)));
     const interventiRecenti = (S.dati.diario || []).filter((d) => {
       const q = dataIt(d.data);
       return q && (Date.now() - q.getTime()) < 30 * 864e5;
@@ -1252,8 +1275,9 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     } else {
       const cur = runs[runs.length - 1], prev = runs[runs.length - 2];
       const chiave = (h) => `${h.codice_k}|${h.finding_code}|${h.scope_label}`;
-      const ora = new Set((S.dati.storico || []).filter((h) => Number(h.run_id) === cur).map(chiave));
-      const prima = new Set((S.dati.storico || []).filter((h) => Number(h.run_id) === prev).map(chiave));
+      const storicoFlotta = (S.dati.storico || []).filter((h) => !CODICI_SONDA.has(h.finding_code));
+      const ora = new Set(storicoFlotta.filter((h) => Number(h.run_id) === cur).map(chiave));
+      const prima = new Set(storicoFlotta.filter((h) => Number(h.run_id) === prev).map(chiave));
       const nuove = [...ora].filter((k) => !prima.has(k));
       const chiuse = [...prima].filter((k) => !ora.has(k));
       cambio.append(el('p', { class: 'small' },
@@ -1279,8 +1303,8 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
       el('div', { class: 'card' }, el('h2', { text: 'Cosa è cambiato' }), cambio)));
 
     // azioni aperte
-    if ((S.dati.worklist || []).length) {
-      const righe = (S.dati.worklist || []).slice().sort((a, b) => (num(a.priority) || 3) - (num(b.priority) || 3));
+    if (worklistFlotta().length) {
+      const righe = worklistFlotta().slice().sort((a, b) => (num(a.priority) || 3) - (num(b.priority) || 3));
       v.append(el('div', { class: 'card' }, el('h2', { text: 'Azioni aperte' }),
         el('div', { class: 'tbl-wrap' }, tabella(
           ['', 'Impianto', 'Ambito', 'Azione', 'Perché'],
@@ -1361,6 +1385,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     const perCirc = {}, perZona = {}, perPunto = {};
     (findings || []).forEach((f) => {
       const pr = prioritaDi(f);
+      if (pr === 0 && f.scope_type !== 'point') return;   // sonde: niente colore sul circuito/zona
       if (f.scope_type === 'circuit') { const x = perCirc[f.scope_id] = perCirc[f.scope_id] || { n: 0, p: 3 }; x.n++; x.p = Math.min(x.p, pr); }
       else if (f.scope_type === 'zone') { const x = perZona[f.scope_id] = perZona[f.scope_id] || { n: 0, p: 3 }; x.n++; x.p = Math.min(x.p, pr); }
       else if (f.scope_type === 'point') {
@@ -1866,10 +1891,11 @@ function svSonde(el, card, sonde) {
 function disegnaScheda(s, el, extra) {
   if (!s.semplice) return disegnaSchedaTecnica(s, el, extra);
   const x = s.semplice;
+  const sonda = s.famiglia === 'sonde';               // 14/10/2026: gravita' nulla
   const grigia = !!x.ripiego;
-  const card = el('div', { class: 'scheda nuova sv c-' + (grigia ? 'grigio' : x.colore) });
+  const card = el('div', { class: 'scheda nuova sv c-' + (grigia || sonda ? 'grigio' : x.colore) });
   const kpi = (x.numeri && x.numeri[0] && x.numeri[0][0]) || (s.famiglia === 'sonde' ? 'Stato sonde' : (s.segnalazioni && s.segnalazioni[0] && s.segnalazioni[0].etichetta) || '');
-  card.append(el('div', { class: 'sv-testa' }, el('span', { class: 'sk-sem', text: x.semaforo }),
+  card.append(el('div', { class: 'sv-testa' }, el('span', { class: 'sk-sem', text: sonda ? 'Informativa' : x.semaforo }),
     kpi ? el('span', { class: 'sv-kpi', text: kpi }) : null,
     el('span', { class: 'sv-dove', text: s.etichetta || s.ambito || '' })));
   const riga = x.conseguenza && x.conseguenza.length <= 120 ? x.conseguenza : '';
@@ -1917,9 +1943,10 @@ function disegnaScheda(s, el, extra) {
 function disegnaSchedaTecnica(s, el, extra) {
     const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
     const GS=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
-    const PRI={1:['Urgente','red'],2:['Da programmare','yellow'],3:['Da monitorare','green']};
-    const card=el('div',{class:'scheda p'+s.priorita});
-    const [pl,pc]=PRI[s.priorita]||PRI[3];
+    const PRI={0:['Informativa',''],1:['Urgente','red'],2:['Da programmare','yellow'],3:['Da monitorare','green']};
+    const prS=s.famiglia==='sonde'?0:s.priorita;      // 14/10/2026: sonde a gravita' nulla
+    const card=el('div',{class:'scheda p'+prS});
+    const [pl,pc]=PRI[prS]||PRI[3];
     card.append(el('div',{class:'sk-testa'}, el('span',{class:'sk-chip '+pc,text:pl}), el('span',{class:'sk-chip',text:s.etichetta||s.ambito}),
       ...(s.segnalazioni||[]).length>1?[el('span',{class:'sk-chip',text:`${s.segnalazioni.length} segnalazioni riunite`})]:[]));
     card.append(el('h3',{class:'sk-titolo',text:s.titolo}));
@@ -1981,7 +2008,8 @@ function disegnaSchedaTecnica(s, el, extra) {
     if (!p) return;
     const findings = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref));
     const schede = (S.dati.schede || []).filter((s) => s.impianto_ref === p.impianto_ref)
-      .sort((a, b) => (a.priorita - b.priorita) || (a.famiglia === 'generatore' ? -1 : b.famiglia === 'generatore' ? 1 : 0));
+      .sort((a, b) => ((a.famiglia === 'sonde' ? 9 : a.priorita) - (b.famiglia === 'sonde' ? 9 : b.priorita))
+        || (a.famiglia === 'generatore' ? -1 : b.famiglia === 'generatore' ? 1 : 0));
     v.append(el('div', { class: 'card' }, el('h2', {}, `Interventi — ${p.sigla}`,
       el('small', { text: p.nome_impianto }))));
 
@@ -2008,7 +2036,8 @@ function disegnaSchedaTecnica(s, el, extra) {
     findings.filter((f) => !coperti.has(f.finding_key)).forEach((f) => {
       const prio = prioritaDi(f);
       const card = el('div', { class: 'item p' + prio });
-      card.append(el('h4', {}, f.scope_label || 'impianto', chip(`${PRIORITA_SEGNO[prio]} ${PRIORITA_LABEL[prio]}`, 'p' + prio)));
+      card.append(el('h4', {}, f.scope_label || 'impianto',
+        chip(prio === 0 ? '· Informativa' : `${PRIORITA_SEGNO[prio]} ${PRIORITA_LABEL[prio]}`, 'p' + prio)));
       card.append(el('p', { text: verdettoChiaro(f.finding_code, f.evidence, f.title) }));
 
       const nota = notaAffidabilita(f.evidence);
