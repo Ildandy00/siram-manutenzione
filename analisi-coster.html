@@ -717,21 +717,80 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   // ---- Sonde in errore: fuori dallo Stato flotta ----
   const CODICI_SONDA = new Set(['SENSOR_OUT_OF_RANGE', 'SENSOR_STUCK']);
   const isFindingSonda = (f) => !!f && CODICI_SONDA.has(f.finding_code);
-  // Una voce della worklist e' "di sonda" se il suo codice e' di sonda; se il motore
-  // non manda il codice, si guarda se sullo stesso impianto e ambito ci sono solo
-  // segnalazioni di sonda; in ultima istanza il testo dell'azione.
-  function isWorklistSonda(w) {
+  // ---- Segnalazioni chiuse con un intervento (14/10/2026) ----
+  // Una segnalazione sparisce dalla flotta e dalla scheda Interventi appena nel Diario
+  // c'e' un intervento registrato su di lei. Ricompare da sola se il problema si
+  // ripresenta DOPO quella data: un calcolo del motore successivo all'intervento senza la
+  // segnalazione, seguito da uno che la ritrova. (Il periodo dei dati non basta: le finestre
+  // del motore sono di 30-90 giorni e la terrebbero accesa per settimane dopo la riparazione.)
+  const lc = (x) => String(x || '').trim().toLowerCase();
+  function codiceKDi(f) {
+    const imp = (S.dati.impianti || []).find((x) => x.impianto_ref === f.impianto_ref);
+    return (imp && imp.codice_k) || f.codice_k || '';
+  }
+  function schedaDi(f) {
+    return (S.dati.schede || []).find((sc) => sc.impianto_ref === f.impianto_ref
+      && (sc.segnalazioni || []).some((x) => x.finding_key === f.finding_key)) || null;
+  }
+  // stesse regole con cui la scheda Interventi mostra "Interventi già registrati"
+  function vociDiarioScheda(sc, ck) {
+    const ambito = lc((sc.diario || {}).ambito || 'impianto');
+    return (S.dati.diario || []).filter((e) => ck && e.codice_k === ck
+      && (!e.finding_code || (sc.codici || []).includes(e.finding_code))
+      && (!e.ambito || lc(e.ambito) === ambito));
+  }
+  function vociDiarioFinding(f) {
+    const ck = codiceKDi(f);
+    const sc = schedaDi(f);
+    if (sc) return vociDiarioScheda(sc, ck);
+    return (S.dati.diario || []).filter((e) => ck && e.codice_k === ck && e.finding_code === f.finding_code
+      && (!e.ambito || lc(e.ambito) === lc(f.scope_label) || lc(e.ambito) === 'impianto'));
+  }
+  const ultimaData = (voci) => voci.map((e) => dataIt(e.data)).filter(Boolean)
+    .reduce((m, d) => (!m || d > m ? d : m), null);
+  function ricomparsaDopo(f, quando) {
+    const ck = codiceKDi(f) || f.codice_k;
+    const runs = runOrdinati();
+    const runAt = new Map();
+    (S.dati.storico || []).forEach((h) => { if (!runAt.has(Number(h.run_id))) runAt.set(Number(h.run_id), dataIso(h.run_at)); });
+    const presente = new Set((S.dati.storico || []).filter((h) => (h.codice_k === ck || h.codice_k === f.codice_k)
+      && h.finding_code === f.finding_code && String(h.scope_label || '') === String(f.scope_label || ''))
+      .map((h) => Number(h.run_id)));
+    let assente = false;
+    for (const r of runs) {
+      const d = runAt.get(r);
+      if (!d || d <= quando) continue;
+      if (!presente.has(r)) assente = true;
+      else if (assente) return true;
+    }
+    return false;
+  }
+  /** Data dell'intervento che ha chiuso la segnalazione, oppure null se e' ancora aperta. */
+  function chiusaIl(f) {
+    if (!f) return null;
+    const quando = ultimaData(vociDiarioFinding(f));
+    if (!quando) return null;
+    return ricomparsaDopo(f, quando) ? null : quando;
+  }
+  const aperta = (f) => !chiusaIl(f);
+  const contaFlotta = (f) => !isFindingSonda(f) && aperta(f);
+
+  // Voce della worklist da togliere dalla flotta: tutte le sue segnalazioni sono di
+  // sonda o chiuse con un intervento. Se il motore non manda il codice, si guardano le
+  // segnalazioni sullo stesso impianto e ambito; in ultima istanza il testo dell'azione.
+  function isWorklistNascosta(w) {
     if (!w) return false;
     const codici = [w.finding_code, ...(Array.isArray(w.finding_codes) ? w.finding_codes : []),
       ...(Array.isArray(w.codici) ? w.codici : [])].filter(Boolean);
-    if (codici.length) return codici.every((c) => CODICI_SONDA.has(c));
     const imp = w.impianto_ref || '', k = w.codice_k || '', amb = String(w.scope_label || '');
-    const stesse = (S.dati.findings || []).filter((f) =>
+    let stesse = (S.dati.findings || []).filter((f) =>
       ((imp && f.impianto_ref === imp) || (!imp && k && f.codice_k === k)) && String(f.scope_label || '') === amb);
-    if (stesse.length) return stesse.every(isFindingSonda);
+    if (codici.length) stesse = stesse.filter((f) => codici.includes(f.finding_code));
+    if (stesse.length) return stesse.every((f) => !contaFlotta(f));
+    if (codici.length) return codici.every((c) => CODICI_SONDA.has(c));
     return /\bsond[ae]\b/i.test(String(w.action || '')) && /fuori scala|ferm|bloccat|interrott|avaria|guast/i.test(String(w.action || '') + ' ' + String(w.reason || ''));
   }
-  const worklistFlotta = () => (S.dati.worklist || []).filter((w) => !isWorklistSonda(w));
+  const worklistFlotta = () => (S.dati.worklist || []).filter((w) => !isWorklistNascosta(w));
 
   function findingsUnici(righe) {
     const visti = new Set();
@@ -1176,7 +1235,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   function vistaFlotta(v) {
     const impianti = S.dati.impianti || [];
     const azioni = azioniPerImpianto();
-    const uniche = findingsUnici((S.dati.findings || []).filter((f) => !isFindingSonda(f)));
+    const uniche = findingsUnici((S.dati.findings || []).filter(contaFlotta));
     const interventiRecenti = (S.dati.diario || []).filter((d) => {
       const q = dataIt(d.data);
       return q && (Date.now() - q.getTime()) < 30 * 864e5;
@@ -1504,7 +1563,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   function vistaImpianto(v, p) {
     if (!p) return;
     const d = dettagli(p.impianto_ref);
-    const aperte = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref)).length;
+    const aperte = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref && aperta(f))).length;
 
     v.append(el('div', { class: 'card' },
       el('h2', {}, `${p.sigla} — ${p.nome_impianto}`,
@@ -1528,7 +1587,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
         el('h2', {}, 'Schema dell’impianto',
           el('small', { text: 'come il motore lo ha ricostruito dai point Coster' })),
         disegnaSchema(d.schema,
-          (S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref),
+          (S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref && aperta(f)),
           () => vaiA(p.impianto_ref, 'Interventi'))));
     }
 
@@ -2006,15 +2065,34 @@ function disegnaSchedaTecnica(s, el, extra) {
 
   function vistaInterventi(v, p) {
     if (!p) return;
-    const findings = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref));
-    const schede = (S.dati.schede || []).filter((s) => s.impianto_ref === p.impianto_ref)
+    const tutteF = findingsUnici((S.dati.findings || []).filter((f) => f.impianto_ref === p.impianto_ref));
+    const tutteS = (S.dati.schede || []).filter((s) => s.impianto_ref === p.impianto_ref);
+    // schede e segnalazioni chiuse con un intervento: escono dall'elenco, restano in fondo come promemoria
+    const chiuse = [];
+    const fPerKey = new Map(tutteF.map((f) => [f.finding_key, f]));
+    const schedaChiusaIl = (sc) => {
+      const fs = (sc.segnalazioni || []).map((x) => fPerKey.get(x.finding_key)).filter(Boolean);
+      if (fs.length) {
+        const date = fs.map(chiusaIl);
+        return date.every(Boolean) ? date.reduce((m, d) => (d > m ? d : m)) : null;
+      }
+      return ultimaData(vociDiarioScheda(sc, p.codice_k));
+    };
+    tutteS.forEach((sc) => { const d = schedaChiusaIl(sc); if (d) chiuse.push({ titolo: (sc.semplice && sc.semplice.titolo) || sc.titolo || sc.etichetta || 'Scheda', dove: sc.etichetta || sc.ambito || '', d }); });
+    const copertiTutti = new Set();
+    tutteS.forEach((sc) => (sc.segnalazioni || []).forEach((x) => copertiTutti.add(x.finding_key)));
+    tutteF.forEach((f) => { if (!copertiTutti.has(f.finding_key)) { const d = chiusaIl(f); if (d) chiuse.push({ titolo: CODICE_LABEL[f.finding_code] || f.finding_code, dove: f.scope_label || '', d }); } });
+    const findings = tutteF.filter(aperta);
+    const schede = tutteS.filter((sc) => !schedaChiusaIl(sc))
       .sort((a, b) => ((a.famiglia === 'sonde' ? 9 : a.priorita) - (b.famiglia === 'sonde' ? 9 : b.priorita))
         || (a.famiglia === 'generatore' ? -1 : b.famiglia === 'generatore' ? 1 : 0));
     v.append(el('div', { class: 'card' }, el('h2', {}, `Interventi — ${p.sigla}`,
       el('small', { text: p.nome_impianto }))));
 
     if (!findings.length && !schede.length) {
-      v.append(el('div', { class: 'banner ok', text: 'Nessuna segnalazione aperta su questo impianto nella finestra analizzata.' }));
+      v.append(el('div', { class: 'banner ok', text: chiuse.length
+        ? 'Nessuna segnalazione aperta: quelle trovate sono state chiuse con un intervento (elenco in fondo).'
+        : 'Nessuna segnalazione aperta su questo impianto nella finestra analizzata.' }));
     }
 
     // v4: prima le schede leggibili; le segnalazioni già riunite in una scheda non si ripetono sotto
@@ -2094,6 +2172,13 @@ function disegnaSchedaTecnica(s, el, extra) {
       card.append(dett);
       v.append(card);
     });
+    if (chiuse.length) {
+      v.append(el('div', { class: 'card' },
+        el('h2', {}, 'Chiuse con un intervento',
+          el('small', { text: 'tolte dalla flotta; ricompaiono da sole se il problema si ripresenta dopo l’intervento' })),
+        ...chiuse.sort((a, b) => b.d - a.d).map((c) => el('div', { class: 'small muted', style: 'margin-top:6px' },
+          `✓ ${mostraData(c.d)} — ${c.titolo}${c.dove ? ' · ' + c.dove : ''}`))));
+    }
     if (schede.length || findings.length) v.append(el('div', { class: 'card' }, disegnaGlossario(el)));
   }
 
