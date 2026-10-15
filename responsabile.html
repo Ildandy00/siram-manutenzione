@@ -410,6 +410,8 @@ tr.int-completato td * { text-decoration: line-through; }
 .pra-stato.BdO        { background:rgba(122,176,216,.12); color:#7ab0d8; }
 .pra-stato.DDT        { background:rgba(154,132,200,.12); color:#c4b5fd; }
 .pra-stato.Chiusa     { background:rgba(143,190,122,.12); color:var(--green); }
+.pra-tipo { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.6px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; background:rgba(122,176,216,.15); color:#7ab0d8; }
+.pra-tipo.extra { background:rgba(196,181,253,.15); color:#c4b5fd; }
 .pra-passo { margin-top:12px; font-size:12px; padding:7px 12px; background:var(--bg3); border-radius:8px; color:var(--text); }
 .pra-sublabel { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; }
 .pra-chip-on { border-color: var(--yellow) !important; color: var(--yellow) !important; background: rgba(200,180,100,.12) !important; }
@@ -690,9 +692,10 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- VIEW: PRATICHE -->
       <div class="view" id="view-pratiche">
         <div class="sec-header">
-          <div class="sec-title">Pratiche — lavori in gestione</div>
+          <div class="sec-title">Pratiche — lavori in gestione ed Extra</div>
           <div style="display:flex;align-items:center;gap:10px">
             <div id="praticheSummary" style="font-size:12px;color:var(--muted)"></div>
+            <button class="btn btn-ghost btn-sm" onclick="apriImportaCartella()" title="Crea una pratica da una cartella Drive già esistente">📥 Importa da cartella</button>
             <button class="btn btn-primary btn-sm" onclick="openModalNuovaPratica()">+ Nuova pratica</button>
           </div>
         </div>
@@ -707,7 +710,10 @@ tr.int-completato td * { text-decoration: line-through; }
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Intervento assegnato" onclick="setPraticaFilter('Intervento assegnato')">🔨 Intervento <span class="pf-n"></span></button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="Chiusa" onclick="setPraticaFilter('Chiusa')">✓ Chiuse <span class="pf-n"></span></button>
           <button class="btn btn-ghost btn-sm report-filter" data-pfilter="tutti" onclick="setPraticaFilter('tutti')">Tutte <span class="pf-n"></span></button>
-          <select class="fc" id="praticaComuneFilter" onchange="renderPratiche()" style="width:160px;margin-left:4px">
+          <select class="fc" id="praticaTipoFilter" onchange="renderPratiche()" style="width:150px;margin-left:4px">
+            <option value="">Gestione + Extra</option><option value="Gestione">Solo in gestione</option><option value="Extra">Solo Extra</option>
+          </select>
+          <select class="fc" id="praticaComuneFilter" onchange="renderPratiche()" style="width:160px">
             <option value="">Tutti i comuni</option>
           </select>
           <input class="fc" id="praticaSearch" type="search" placeholder="Cerca impianto, lavoro, fornitore, BdO..." style="flex:1;min-width:160px;max-width:300px" oninput="renderPratiche()"/>
@@ -891,7 +897,10 @@ tr.int-completato td * { text-decoration: line-through; }
     </div>
     <div class="modal-body">
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Di solito la crea il pannello in Gmail insieme alla sottocartella Drive. Da qui puoi aprirla a mano.</div>
-      <div class="fg"><label>Impianto *</label><select class="fc" id="npImp"><option value="">Seleziona impianto...</option></select></div>
+      <div class="fc-row">
+        <div class="fg"><label>Impianto *</label><select class="fc" id="npImp"><option value="">Seleziona impianto...</option></select></div>
+        <div class="fg" style="max-width:180px"><label>Tipo lavoro</label><select class="fc" id="npTipoLavoro"><option value="Gestione">In gestione (P2)</option><option value="Extra">Extra canone</option></select></div>
+      </div>
       <div class="fg"><label>Titolo lavoro *</label><input class="fc" id="npTitolo" placeholder="Es. Sostituzione servomotore"/></div>
       <div class="fc-row">
         <div class="fg"><label>Ubicazione</label><input class="fc" id="npUbicazione" placeholder="Es. Pala 3, sala stampa..."/></div>
@@ -2219,6 +2228,8 @@ function renderPratiche() {
   if(praticaFilterCorrente==='aperte') lista=lista.filter(p=>p.stato!=='Chiusa');
   else if(praticaFilterCorrente!=='tutti') lista=lista.filter(p=>p.stato===praticaFilterCorrente);
   if(comuneSel) lista=lista.filter(p=>{ const imp=impiantoDiPratica(p); return imp&&imp.comune===comuneSel; });
+  const tipoSel=(document.getElementById('praticaTipoFilter')||{}).value||'';
+  if(tipoSel) lista=lista.filter(p=>(p.tipoLavoro||'Gestione')===tipoSel);
   if(search) lista=lista.filter(p=>[p.codiceImpianto,nomeImpiantoPratica(p),p.titolo,p.ubicazione,p.problema,p.numeroBdo,p.fornitoreBdo,
       ...S.offerte.filter(o=>o.idPratica===p.id).map(o=>o.fornitore)].join(' ').toLowerCase().includes(search));
   // prima le pratiche dove tocca a me agire, poi le attese, poi le chiuse
@@ -2235,7 +2246,7 @@ function renderPratiche() {
     return `<div class="pratica-card" onclick="openPratica('${p.id}')" style="cursor:pointer">
       <div class="pratica-card-head">
         <div class="pratica-card-info">
-          <div class="pratica-imp">${escH(p.titolo||'(senza titolo)')}</div>
+          <div class="pratica-imp">${p.tipoLavoro==='Extra'?'<span class="pra-tipo extra">EXTRA</span>':'<span class="pra-tipo">P2</span>'}${escH(p.titolo||'(senza titolo)')}</div>
           <div class="pratica-meta">
             <span style="font-weight:600;color:var(--text)">${escH(nomeImpiantoPratica(p))}</span>
             <span style="font-family:'DM Mono',monospace">${escH(normKFront(p.codiceImpianto)||p.codiceImpianto)}</span>
@@ -2269,7 +2280,8 @@ function openPratica(id) {
   document.getElementById('praticaTitle').textContent=p.titolo||'(senza titolo)';
   document.getElementById('praticaSubtitle').innerHTML=
     `${escH(nomeImpiantoPratica(p))} · <span style="font-family:'DM Mono',monospace">${escH(normKFront(p.codiceImpianto)||p.codiceImpianto)}</span>`+
-    (imp&&imp.comune?' · '+escH(imp.comune):'')+' · Aperta il '+dataIT(p.dataChiamata||p.creatoIl)+' &nbsp;'+praStatoBadge(p.stato);
+    (imp&&imp.comune?' · '+escH(imp.comune):'')+' · Aperta il '+dataIT(p.dataChiamata||p.creatoIl)+
+    (p.numFoto?' · 📷 '+escH(p.numFoto)+' foto':'')+' &nbsp;'+(p.tipoLavoro==='Extra'?'<span class="pra-tipo extra">EXTRA</span>':'<span class="pra-tipo">P2</span>')+praStatoBadge(p.stato);
   document.getElementById('praticaTimeline').innerHTML=timelineHtml(p,false);
   const passo=prossimoPasso(p);
   document.getElementById('praticaPasso').innerHTML=passo?`<div class="pra-passo" style="margin:0 0 14px">${escH(passo)}</div>`:'';
@@ -2299,6 +2311,7 @@ function openPratica(id) {
   const corpoDati=`
     <div class="fg"><label>Titolo lavoro (nome sottocartella)</label><input class="fc" id="pd_titolo" value="${escH(p.titolo)}"/></div>
     <div class="fc-row">
+      <div class="fg"><label>Tipo lavoro</label><select class="fc" id="pd_tipoLavoro"><option value="Gestione" ${p.tipoLavoro!=='Extra'?'selected':''}>In gestione (P2)</option><option value="Extra" ${p.tipoLavoro==='Extra'?'selected':''}>Extra canone</option></select></div>
       <div class="fg"><label>Ubicazione</label><input class="fc" id="pd_ubicazione" value="${escH(p.ubicazione)}" placeholder="Es. Sala stampa, Pala 3..."/></div>
       <div class="fg"><label>Richiesto da</label><input class="fc" id="pd_richiestoDa" value="${escH(p.richiestoDa)}" placeholder="Davide / superiore / committente"/></div>
     </div>
@@ -2310,6 +2323,7 @@ function openPratica(id) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary btn-sm" onclick="salvaDatiPratica()">Salva</button>
       ${cartella?`<a class="btn btn-ghost btn-sm" href="${escH(cartella)}" target="_blank">📁 Apri cartella</a>`:''}
+      ${p.cartellaDriveId?`<button class="btn btn-ghost btn-sm" onclick="apriImportaCartella('${escH(p.cartellaDriveId)}','${p.id}')" title="Legge offerte, BdO e DDT dalla cartella e completa i dati mancanti">📥 Completa dai documenti</button>`:''}
       ${threads.map((t,i)=>`<a class="btn btn-ghost btn-sm" href="${linkThread(t)}" target="_blank">✉️ Mail ${i+1}</a>`).join('')}
     </div>`;
 
@@ -2391,8 +2405,12 @@ function openPratica(id) {
     </div>
     <div class="fc-row">
       <div class="fg"><label>Data</label><input class="fc" type="date" id="mat_data" value="${escH(p.dataMateriale||oggiLocale())}"/></div>
+      <div class="fg"><label>N. DDT</label><input class="fc" id="mat_ddt" value="${escH(p.numeroDdt)}" placeholder="se consegnato"/></div>
+    </div>
+    <div class="fc-row">
       <div class="fg"><label>Note (dove ritirarlo, cosa manca...)</label><input class="fc" id="mat_note" value="${escH(p.noteMateriale)}" placeholder="Es. disponibile in filiale a Pesaro"/></div>
     </div>
+    ${p.linkDdt?`<a href="${escH(p.linkDdt)}" target="_blank" style="font-size:12px;color:#7ab0d8;display:block;margin-bottom:8px">📄 Apri DDT</a>`:''}
     <button class="btn btn-primary btn-sm" onclick="salvaMateriale()">Salva stato materiale</button>`;
 
   // 5. Intervento
@@ -2495,7 +2513,7 @@ function salvaDatiPratica(){
   const link=v('pd_linkCartella').trim();
   const mId=link.match(/folders\/([A-Za-z0-9_-]+)/);
   azionePratica('/pratica/aggiorna',{ id:currentPraticaId, campi:{
-    titolo:v('pd_titolo').trim(), ubicazione:v('pd_ubicazione').trim(), richiestoDa:v('pd_richiestoDa').trim(),
+    titolo:v('pd_titolo').trim(), ubicazione:v('pd_ubicazione').trim(), tipoLavoro:v('pd_tipoLavoro'), richiestoDa:v('pd_richiestoDa').trim(),
     problema:v('pd_problema').trim(), dataChiamata:v('pd_dataChiamata'),
     linkCartella:link, cartellaDriveId:mId?mId[1]:'' }}, 'Dati salvati');
 }
@@ -2524,7 +2542,7 @@ function salvaBdo(){
 }
 function salvaMateriale(){
   const v=id=>document.getElementById(id).value.trim();
-  azionePratica('/pratica/materiale',{ idPratica:currentPraticaId, statoMateriale:v('mat_stato')||'Disponibile', data:v('mat_data'), note:v('mat_note') }, 'Stato materiale salvato');
+  azionePratica('/pratica/materiale',{ idPratica:currentPraticaId, statoMateriale:v('mat_stato')||'Disponibile', data:v('mat_data'), note:v('mat_note'), numeroDdt:v('mat_ddt') }, 'Stato materiale salvato');
 }
 function chiudiPratica(riapri){
   const note=riapri?undefined:(document.getElementById('pch_note')||{}).value;
@@ -2625,13 +2643,29 @@ async function creaPratica() {
   try {
     const r=await apiPost('/pratica/crea',{ codiceImpianto:codice, nomeImpianto:imp?imp.descrizione:'', titolo:v('npTitolo'), ubicazione:v('npUbicazione'),
       problema:v('npProblema'), richiestoDa:v('npRichiestoDa'), dataChiamata:v('npData'), linkCartella:link, cartellaDriveId:mId?mId[1]:'',
-      idIntervento:v('npIntervento'), origine:'gestionale' });
+      idIntervento:v('npIntervento'), tipoLavoro:v('npTipoLavoro'), origine:'gestionale' });
     if(!applicaRispostaPratica(r)) return;
     closeModal('modalNuovaPratica');
     toast('Pratica creata','ok');
     renderPratiche();
     setTimeout(()=>openPratica(r.id),250);
   } catch(e){ toast('Errore','err'); }
+}
+
+// Pagina "Importa cartella" (Apps Script sull'account Veolia): l'indirizzo si incolla una volta sola
+function urlImportaCartella(){
+  let u=''; try{ u=localStorage.getItem('praticheImportUrl')||''; }catch(e){}
+  if(!u){
+    u=(prompt("Incolla l'indirizzo della pagina \"Importa cartella\" (Apps Script → Esegui il deployment → Gestisci deployment → App web → URL).\nLo chiedo solo questa volta.")||'').trim();
+    if(!/^https:\/\/script\.google\.com\//.test(u)){ if(u) toast('Indirizzo non valido','err'); return ''; }
+    try{ localStorage.setItem('praticheImportUrl',u); }catch(e){}
+  }
+  return u;
+}
+function apriImportaCartella(idCartella, idPratica){
+  const u=urlImportaCartella(); if(!u) return;
+  const q=idCartella?`?cartella=${encodeURIComponent(idCartella)}${idPratica?'&pratica='+encodeURIComponent(idPratica):''}`:'';
+  window.open(u+q,'_blank');
 }
 
 function aproPraticaDaIntervento() {
