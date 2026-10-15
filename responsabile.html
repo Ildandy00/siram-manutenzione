@@ -476,6 +476,13 @@ tr.int-completato td * { text-decoration: line-through; }
 /* Richiesta chiusa in un giorno diverso dall'apertura: si ripete nel giorno di chiusura,
    barrata, con lo sfondo pieno del colore commessa */
 .ev-chiusura { text-decoration: line-through; opacity: .7; font-style: italic; }
+/* 15/10/2026: attivita' registrate dal responsabile (lavoro dei tecnici non legato a richieste) */
+.ev-att { font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 0 5px 5px 0; margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+  border-left: 3px dotted; background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 4px, transparent 4px 8px); }
+.ev-att:hover { opacity: .85; }
+.ev-att .att-ico { margin-right: 4px; font-style: normal; }
+.badge-att { background: rgba(160,160,220,.14); color: #c4c4f0; }
 .ev-chiusura * { text-decoration: line-through; }
 .ev-chiusura:hover { opacity: .95; }
 .rcee-tag { font-size: 8px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 3px; margin-right: 4px;
@@ -984,6 +991,7 @@ tr.int-completato td * { text-decoration: line-through; }
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modalGiorno')">Chiudi</button>
       <button class="btn btn-ghost" onclick="openModalNota(null)">📝 Nota</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalGiorno');openModalAttivita(null, currentGiornoDate)">✍ Attività</button>
       <button class="btn btn-ghost" onclick="openModalAssenza(currentGiornoDate)">+ Assenza</button>
       <button class="btn btn-primary" onclick="openModalIntervento(currentGiornoDate)">+ Intervento</button>
     </div>
@@ -1012,6 +1020,41 @@ tr.int-completato td * { text-decoration: line-through; }
       <button class="btn btn-ghost btn-sm btn-fatta" id="notaFatta" onclick="toggleNotaFatta(document.getElementById('notaId').value)" style="margin-right:auto">✓ Completata</button>
       <button class="btn btn-ghost" onclick="closeModal('modalNota')">Annulla</button>
       <button class="btn btn-primary" onclick="salvaNota()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ATTIVITA' (15/10/2026): annotazioni del responsabile sul lavoro dei tecnici -->
+<div class="overlay" id="modalAttivita">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title" id="attTitolo">✍ Attività svolta</div>
+      <button class="modal-close" onclick="closeModal('modalAttivita')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="attId"/>
+      <div class="fc-row">
+        <div class="fg"><label>Data *</label><input class="fc" type="date" id="attData"/></div>
+        <div class="fg"><label>Impianto *</label>
+          <select class="fc" id="attImp"><option value="">Seleziona...</option></select></div>
+      </div>
+      <div class="fg"><label>Operai *</label>
+        <div class="op-chips" style="grid-template-columns:repeat(5,1fr)">
+          <div class="op-chip" id="attchip-Matteo" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#7a9ec8">M</div><div class="op-chip-name">Matteo</div></div>
+          <div class="op-chip" id="attchip-Stefano" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#9a84c8">S</div><div class="op-chip-name">Stefano</div></div>
+          <div class="op-chip" id="attchip-Michele" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#7ab87a">Mi</div><div class="op-chip-name">Michele</div></div>
+          <div class="op-chip" id="attchip-Ezio" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#c89060">E</div><div class="op-chip-name">Ezio</div></div>
+          <div class="op-chip" id="attchip-Aziz" onclick="this.classList.toggle('selected')"><div class="op-chip-av" style="background:#5fb3b3">A</div><div class="op-chip-name">Aziz</div></div>
+        </div>
+      </div>
+      <div class="fg"><label>Cosa hanno fatto *</label>
+        <textarea class="fc" id="attTesto" rows="4" placeholder="Es. con il tecnico Viessmann per la manutenzione caldaia; sopralluogo con l'ufficio tecnico del Comune…"></textarea></div>
+      <p style="font-size:11px;color:var(--muted)">Resta solo nel gestionale del responsabile: agli operai non arriva nulla. Compare nel calendario, negli Interventi e nello storico dell'impianto.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger btn-sm" id="attElimina" onclick="eliminaAttivita()" style="margin-right:auto">Elimina</button>
+      <button class="btn btn-ghost" onclick="closeModal('modalAttivita')">Annulla</button>
+      <button class="btn btn-primary" id="attSalva" onclick="salvaAttivita()">Salva</button>
     </div>
   </div>
 </div>
@@ -1401,7 +1444,7 @@ function dataChiusuraDi(i) { return String((i && i.dataChiusura) || '').slice(0,
 // Vero se la richiesta e' chiusa in un giorno in cui il calendario non la mostra gia'
 // (diverso dalla data prevista e fuori dall'eventuale periodo dataPrevista -> dataFine)
 function chiusaAltroGiorno(i) {
-  if (!i || i.stato !== 'Chiuso') return false;
+  if (!i || i.stato !== 'Chiuso' || isAttivita(i)) return false;
   const dc = dataChiusuraDi(i);
   if (!dc || dc === i.dataPrevista) return false;
   if (i.dataFine && i.dataFine > i.dataPrevista && dc >= i.dataPrevista && dc <= i.dataFine) return false;
@@ -1432,6 +1475,27 @@ function evChiusuraHtml(i, stopProp) {
     style="background:${col}66;color:#f0f0f0;border-color:${col}"
     onclick="${stopProp ? 'event.stopPropagation();' : ''}openDettaglio('${i.id}')"
     title="${tit}">${evRowHtml('\u2713 ' + nome, isOrd, i, '')}</div>`;
+}
+
+// ===== ATTIVITA' DEL RESPONSABILE (15/10/2026) =====
+// Riga del foglio Interventi con tipoVisita "Attività", stato Chiuso fin da subito:
+// non ha checklist, non manda notifiche e l'app degli operai non la mostra.
+const TIPO_ATTIVITA = 'Attività';
+const OPERAI_ATT = ['Matteo','Stefano','Michele','Ezio','Aziz'];
+function isAttivita(i) { return !!i && i.tipoVisita === TIPO_ATTIVITA; }
+function operaiDi(i) {
+  return [i.operaio, i.secondoOperaio, ...String(i.operaioSecondario2 || '').split(',')]
+    .map(x => String(x || '').trim()).filter(Boolean);
+}
+function evAttivitaHtml(i, stopProp) {
+  const imp = S.impianti.find(x => x.codice === i.codiceImpianto);
+  const col = commessaDi(imp).color;
+  const nome = imp ? imp.descrizione.split(' ').slice(0,3).join(' ') : i.codiceImpianto;
+  const chi = operaiDi(i).join('+');
+  const tit = (imp ? imp.descrizione : i.codiceImpianto) + ' \u2014 ' + chi + (i.note ? '\n' + i.note : '');
+  return `<div class="ev-att" style="background-color:${col}14;color:${col};border-color:${col}"
+    onclick="${stopProp ? 'event.stopPropagation();' : ''}openModalAttivita('${i.id}')" title="${escN(tit)}">
+    <div class="ev-row"><span class="ev-name"><span class="att-ico">✍</span>${nome}</span><span class="ev-op" style="color:var(--muted)">${chi}</span></div></div>`;
 }
 
 function evRowHtml(nome, isOrd, i, extra) {
@@ -1473,6 +1537,7 @@ function renderSettimana() {
       if(mostrati.has(i.id))return '';
       mostrati.add(i.id);
       if(i.interventoCollegato)mostrati.add(i.interventoCollegato);
+      if(isAttivita(i)) return evAttivitaHtml(i,false);
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
       const nome=imp?imp.descrizione.split(' ').slice(0,3).join(' '):i.codiceImpianto;
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
@@ -1538,6 +1603,7 @@ function renderCalendario() {
       return chips;
     });
     let evHtml=intConSecondario.map(i=>{
+      if(isAttivita(i)) return evAttivitaHtml(i,true);
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
       const done=chk.filter(c=>c.eseguita==='SI').length;
@@ -1597,8 +1663,8 @@ function openGiorno(dateStr) {
       const hasPratica=!!praticaDiIntervento(i);
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
         <div><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
+        <div style="font-size:11px;color:var(--muted)">${isAttivita(i) ? '✍ '+operaiDi(i).join(', ')+' · '+escN(String(i.note||'').slice(0,80)) : `${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}`}</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');${isAttivita(i)?`openModalAttivita('${i.id}')`:`openDettaglio('${i.id}')`}">Apri</button>
       </div>`;
     }).join('');
   const chiuseQui=chiusureDelGiorno(dateStr).filter(i=>!ints.some(x=>x.id===i.id));
@@ -2769,7 +2835,7 @@ function renderBacklog() {
     return `<div class="backlog-card">
       <div class="backlog-info">
         <div class="backlog-imp">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="backlog-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span>${imp.comune}</span>`:''}<span style="color:var(--muted)">creato il ${i.creatoIl}</span></div>
+        <div class="backlog-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span>${imp.comune}</span>`:''}<span style="color:var(--muted)">creato il ${i.creatoIl}</span></div>
         ${i.note?`<div class="backlog-note">"${i.note}"</div>`:''}
       </div>
       <div class="backlog-actions"><button class="btn btn-primary btn-sm" onclick="openAssegna('${i.id}')">Assegna →</button></div>
@@ -2782,7 +2848,7 @@ function openAssegna(id) {
   const i=S.interventi.find(x=>x.id===id);
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   document.getElementById('assegnaTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('assegnaInfo').innerHTML=`<span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>${i.note?`<span style="margin-left:10px;font-style:italic">${i.note}</span>`:''}`;
+  document.getElementById('assegnaInfo').innerHTML=`<span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span>${i.note?`<span style="margin-left:10px;font-style:italic">${i.note}</span>`:''}`;
   ['Matteo','Stefano','Michele','Ezio','Aziz'].forEach(n=>document.getElementById('achip-'+n).classList.remove('selected'));
   document.getElementById('assegnaData').value=toLocaleDateStr(new Date());
   document.getElementById('modalAssegna').classList.add('open');
@@ -2839,7 +2905,7 @@ function renderInterventi() {
       return `<tr class="${isChiuso?'int-completato':''}" style="cursor:pointer" onclick="openDettaglio('${i.id}')">
         <td><span class="badge ${isChiuso?'badge-chiuso':'badge-aperto'}">${i.stato}</span></td>
         <td style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</td>
-        <td><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span></td>
+        <td><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span></td>
         <td>${operaioTxt}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}${i.dataFine&&i.dataFine>i.dataPrevista?' → '+i.dataFine:''}</td>
         <td>
@@ -2875,6 +2941,8 @@ function toggleChiusuraBox() {
 }
 
 function openDettaglio(id) {
+  const iAtt=S.interventi.find(x=>x.id===id);
+  if(isAttivita(iAtt)) return openModalAttivita(id);   // le attivita' hanno la loro finestra
   currentDetId=id;
   const i=S.interventi.find(x=>x.id===id);
   if(!i) return;
@@ -3040,7 +3108,7 @@ async function salvaLinkDrive() {
 function popolaSelectImpianti() {
   const opts='<option value="">Seleziona...</option>'+
     S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione} (${i.comune||''})</option>`).join('');
-  ['nImp','blImp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+  ['nImp','blImp','attImp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
   const optsAll='<option value="">Tutti gli impianti</option>'+
     S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');
   ['catFiltImp','catNewImp'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsAll.replace('Tutti gli impianti','Seleziona impianto...'); });
@@ -3160,6 +3228,61 @@ async function salvaIntervento() {
     toast(operai.length>1?`${operai.length} interventi creati`:'Intervento creato','ok');
     await caricaDati();
   } catch(e){toast('Errore','err');}
+}
+
+// ============================================================
+//  ATTIVITA' DEL RESPONSABILE (15/10/2026)
+// ============================================================
+function openModalAttivita(id, dataPreimpostata) {
+  popolaSelectImpianti();
+  const i = id ? S.interventi.find(x => x.id === id) : null;
+  document.getElementById('attId').value = i ? i.id : '';
+  document.getElementById('attTitolo').textContent = i ? '✍ Attività svolta' : '✍ Nuova attività';
+  document.getElementById('attData').value = i ? i.dataPrevista : (dataPreimpostata || toLocaleDateStr(new Date()));
+  document.getElementById('attImp').value = i ? i.codiceImpianto : '';
+  document.getElementById('attTesto').value = i ? (i.note || '') : '';
+  const scelti = new Set(i ? operaiDi(i) : []);
+  OPERAI_ATT.forEach(n => document.getElementById('attchip-' + n).classList.toggle('selected', scelti.has(n)));
+  document.getElementById('attElimina').style.display = i ? '' : 'none';
+  document.getElementById('modalAttivita').classList.add('open');
+}
+
+async function salvaAttivita() {
+  const id = document.getElementById('attId').value;
+  const data = document.getElementById('attData').value;
+  const codice = document.getElementById('attImp').value;
+  const testo = document.getElementById('attTesto').value.trim();
+  const operai = OPERAI_ATT.filter(n => document.getElementById('attchip-' + n).classList.contains('selected'));
+  if (!data || !codice) { toast('Scegli data e impianto', 'err'); return; }
+  if (!operai.length) { toast('Scegli almeno un operaio', 'err'); return; }
+  if (!testo) { toast('Scrivi cosa hanno fatto', 'err'); return; }
+  const btn = document.getElementById('attSalva'); btn.disabled = true;
+  try {
+    // una sola riga: 1° operaio, 2° operaio, eventuali altri insieme nella terza colonna
+    const r = await apiPost('/crea-intervento', {
+      codiceImpianto: codice, tipoVisita: TIPO_ATTIVITA, dataPrevista: data,
+      operaio: operai[0], secondoOperaio: operai[1] || '', operaioSecondario2: operai.slice(2).join(', '),
+      note: testo, attivitaExtra: [], statoOverride: 'Chiuso', nessunaNotifica: true,
+    });
+    if (!r.ok) { toast('Errore salvataggio', 'err'); return; }
+    // modifica = nuova riga al posto della vecchia
+    if (id) { try { await apiPost('/elimina-intervento', { id }); } catch (e) {} }
+    closeModal('modalAttivita');
+    toast(id ? 'Attività aggiornata' : 'Attività registrata', 'ok');
+    await caricaDati();
+  } catch (e) { toast('Errore', 'err'); }
+  finally { btn.disabled = false; }
+}
+
+async function eliminaAttivita() {
+  const id = document.getElementById('attId').value;
+  if (!id || !confirm('Eliminare questa attività?')) return;
+  try {
+    await apiPost('/elimina-intervento', { id });
+    closeModal('modalAttivita');
+    toast('Attività eliminata', 'ok');
+    await caricaDati();
+  } catch (e) { toast('Errore', 'err'); }
 }
 
 // ============================================================
@@ -3287,7 +3410,7 @@ function openStorico(codiceImpianto) {
     return `<div class="stor-entry ${isChiuso?'chiuso':'aperto'}">
       <div class="stor-head">
         <span class="badge ${isChiuso?'badge-chiuso':'badge-aperto'}">${i.stato}</span>
-        <span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':'badge-str'}">${i.tipoVisita}</span>
+        <span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span>
         <span style="font-weight:600">${i.operaio||'— contenitore'}</span>
         <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-left:auto">${i.dataPrevista}${i.dataChiusura?' → '+i.dataChiusura:''}</span>
       </div>
