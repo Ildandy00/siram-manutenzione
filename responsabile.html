@@ -2389,7 +2389,7 @@ function openPratica(id) {
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-primary btn-sm" onclick="salvaDatiPratica()">Salva</button>
       ${cartella?`<a class="btn btn-ghost btn-sm" href="${escH(cartella)}" target="_blank">📁 Apri cartella</a>`:''}
-      ${p.cartellaDriveId?`<button class="btn btn-ghost btn-sm" onclick="apriImportaCartella('${escH(p.cartellaDriveId)}','${p.id}')" title="Legge offerte, BdO e DDT dalla cartella e completa i dati mancanti">📥 Completa dai documenti</button>`:''}
+      ${p.cartellaDriveId?`<button class="btn btn-ghost btn-sm" onclick="apriImportaCartella('${escH(p.cartellaDriveId)}')" title="Legge offerte, BdO e DDT dalla cartella e completa i dati mancanti">📥 Completa dai documenti</button>`:''}
       ${threads.map((t,i)=>`<a class="btn btn-ghost btn-sm" href="${linkThread(t)}" target="_blank">✉️ Mail ${i+1}</a>`).join('')}
     </div>`;
 
@@ -2718,20 +2718,18 @@ async function creaPratica() {
   } catch(e){ toast('Errore','err'); }
 }
 
-// Pagina "Importa cartella" (Apps Script sull'account Veolia): l'indirizzo si incolla una volta sola
-function urlImportaCartella(){
-  let u=''; try{ u=localStorage.getItem('praticheImportUrl')||''; }catch(e){}
-  if(!u){
-    u=(prompt("Incolla l'indirizzo della pagina \"Importa cartella\" (Apps Script → Esegui il deployment → Gestisci deployment → App web → URL).\nLo chiedo solo questa volta.")||'').trim();
-    if(!/^https:\/\/script\.google\.com\//.test(u)){ if(u) toast('Indirizzo non valido','err'); return ''; }
-    try{ localStorage.setItem('praticheImportUrl',u); }catch(e){}
+// Le cartelle esistenti si importano dal pannello "Pratiche Siram" dentro Google Drive (selezioni la cartella → Crea pratica)
+const DRIVE_GESTIONE = 'https://drive.google.com/drive/folders/1WLRoEu8ZsjhVzwtZ1rItYy6L0Woi4Vve';
+const DRIVE_EXTRA    = 'https://drive.google.com/drive/folders/1vRvjlIMGNsL75596iUenKjCsAeRTF034';
+function apriImportaCartella(idCartella){
+  if(idCartella){
+    // copio il link: nel pannello Drive basta incollarlo in "Oppure incolla il link della cartella"
+    const link='https://drive.google.com/drive/folders/'+idCartella;
+    try{ navigator.clipboard.writeText(link); toast('Link copiato: incollalo nel pannello Pratiche Siram in Drive','ok'); }catch(e){}
+    window.open(link,'_blank'); return;
   }
-  return u;
-}
-function apriImportaCartella(idCartella, idPratica){
-  const u=urlImportaCartella(); if(!u) return;
-  const q=idCartella?`?cartella=${encodeURIComponent(idCartella)}${idPratica?'&pratica='+encodeURIComponent(idPratica):''}`:'';
-  window.open(u+q,'_blank');
+  const extra=confirm("Aprire i lavori EXTRA (Lavori IN CORSO)?\n\nOK = Extra · Annulla = lavori in gestione (LAVORI in P2)\n\nIn Drive seleziona la cartella del lavoro e usa il pannello \"Pratiche Siram\" a destra.");
+  window.open(extra?DRIVE_EXTRA:DRIVE_GESTIONE,'_blank');
 }
 
 function aproPraticaDaIntervento() {
