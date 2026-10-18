@@ -1,13 +1,11 @@
 /* ===========================================================================
- * letture.js \u2014 Presa letture contatori (vista operaio)
+ * letture.js — Presa letture contatori (vista operaio)
  * ---------------------------------------------------------------------------
  * Modulo autonomo, sul modello di gps-native.js: si aggancia a index.html
- * iniettando da solo CSS, FAB e panel. L'unica riga da aggiungere in
- * index.html e':
+ * iniettando da solo CSS, fascia LETTURE e panel. In index.html servono:
  *
- *     <script src="letture.js"></script>
- *
- * subito accanto a <script src="gps-native.js"></script>.
+ *     <div id="lettureSlot"></div>        (sotto la testata: ospita la fascia)
+ *     <script src="letture.js"></script>  (accanto a gps-native.js)
  *
  * Dipendenze da index.html (gia' presenti):
  *   PROXY_URL, currentUser / window.currentUser, S.impianti, toast()
@@ -72,11 +70,16 @@
   };
 
   // -- CSS ------------------------------------------------------------------
+  // Fascia LETTURE: banner giallo pieno sotto la testata (slot #lettureSlot di
+  // index.html). Compare solo nei giorni in cui la finestra letture e' aperta;
+  // a finestra chiusa resta nascosta.
   const CSS = `
-.fab-let{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:146px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.fab-let:active{transform:scale(.90);background:var(--bg3)}
-.fab-let.chiuso{opacity:.4}
-.fab-let.aperto{border-color:var(--yellow);color:var(--yellow);background:rgba(200,180,100,.12)}
+.let-fascia{display:none;width:100%;background:var(--yellow);color:#1a1a1a;border:none;border-radius:16px;padding:14px 18px;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font-family:'Outfit',sans-serif;text-align:left}
+.let-fascia.aperto{display:flex}
+.let-fascia:active{filter:brightness(.94);transform:scale(.99)}
+.let-fascia-t{font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700}
+.let-fascia-s{font-size:14px;font-weight:600;opacity:.8;margin-top:2px}
+.let-fascia-arr{font-size:26px;line-height:1;font-weight:700;flex-shrink:0}
 .let-banner{padding:12px 16px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bg3)}
 .let-banner.aperto{background:rgba(143,190,122,.1);color:var(--green)}
 .let-banner.chiuso{background:rgba(200,180,100,.1);color:var(--yellow)}
@@ -131,35 +134,35 @@
   const HTML = `
 <div class="panel" id="lettPanel">
   <div class="panel-top">
-    <button class="back-btn" id="lettBack">\u2039</button>
+    <button class="back-btn" id="lettBack">‹</button>
     <div class="panel-title-wrap">
       <div class="panel-title">Letture contatori</div>
-      <div class="panel-sub" id="lettSub">\u2014</div>
+      <div class="panel-sub" id="lettSub">—</div>
     </div>
-    <button id="lettReload" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">\u21BB</button>
+    <button id="lettReload" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:8px">↻</button>
   </div>
   <div class="let-banner" id="lettBanner"></div>
   <div class="filtri-commesse" id="lettCommesse" style="padding:10px 16px 6px;margin:0;background:var(--bg2);border-bottom:1px solid var(--bg3)"></div>
   <div class="let-sum" id="lettSum">
     <div class="let-sum-row">
       <div class="let-sum-box"><div class="let-sum-n" id="lettTot">0</div><div class="let-sum-l">Impianti</div></div>
-      <div class="let-sum-box" style="border-color:rgba(63,185,80,.3)"><div class="let-sum-n" style="color:var(--green)" id="lettFatti">0</div><div class="let-sum-l">\u2713 Completi</div></div>
-      <div class="let-sum-box" style="border-color:rgba(200,120,120,.3)"><div class="let-sum-n" style="color:var(--red)" id="lettDaFare">0</div><div class="let-sum-l">\u2717 Da fare</div></div>
+      <div class="let-sum-box" style="border-color:rgba(63,185,80,.3)"><div class="let-sum-n" style="color:var(--green)" id="lettFatti">0</div><div class="let-sum-l">✓ Completi</div></div>
+      <div class="let-sum-box" style="border-color:rgba(200,120,120,.3)"><div class="let-sum-n" style="color:var(--red)" id="lettDaFare">0</div><div class="let-sum-l">✗ Da fare</div></div>
     </div>
     <div class="let-bar"><div id="lettBar"></div></div>
   </div>
   <div class="let-toolbar">
-    <input type="search" class="let-search" id="lettSearch" placeholder="\uD83D\uDD0D Cerca impianto..."/>
+    <input type="search" class="let-search" id="lettSearch" placeholder="🔍 Cerca impianto..."/>
     <button class="let-fbtn on" id="lettFTutti">Tutti</button>
-    <button class="let-fbtn" id="lettFDaFare">\u2717</button>
-    <button class="let-fbtn" id="lettFFatti">\u2713</button>
+    <button class="let-fbtn" id="lettFDaFare">✗</button>
+    <button class="let-fbtn" id="lettFFatti">✓</button>
   </div>
   <div class="panel-scroll" id="lettLista" style="padding:8px 0"></div>
 </div>
 
 <div class="panel" id="lettCtPanel" style="z-index:11">
   <div class="panel-top">
-    <button class="back-btn" id="lettCtBack">\u2039</button>
+    <button class="back-btn" id="lettCtBack">‹</button>
     <div class="panel-title-wrap">
       <div class="panel-title" id="lettCtTitle"></div>
       <div class="panel-sub" id="lettCtSub"></div>
@@ -190,7 +193,7 @@
 
   // Mostra i numeri con la virgola, come li scrive il foglio
   function fmtNum(n) {
-    if (n === null || n === undefined || n === '') return '\u2014';
+    if (n === null || n === undefined || n === '') return '—';
     return Number(n).toLocaleString('it-IT', { maximumFractionDigits: 3 });
   }
 
@@ -203,7 +206,7 @@
     const imp = impiantiApp().find(i => String(i.codice).trim() === String(codice).trim());
     return {
       descrizione: imp ? imp.descrizione : codice,
-      comune: imp ? imp.comune : '\u2014',
+      comune: imp ? imp.comune : '—',
     };
   }
 
@@ -305,8 +308,8 @@
     document.getElementById('lettDaFare').textContent = daFare;
     document.getElementById('lettBar').style.width    = pct + '%';
     document.getElementById('lettSub').textContent    =
-      fatti + '/' + tot + ' completi \u00B7 ' +
-      (L.commessa ? etichettaCommessa(L.commessa) + ' \u00B7 ' : '') +
+      fatti + '/' + tot + ' completi · ' +
+      (L.commessa ? etichettaCommessa(L.commessa) + ' · ' : '') +
       (L.cfg && L.cfg.meseCorrente ? L.cfg.meseCorrente : '');
 
     if (L.filtro === 'fatti')  lista = lista.filter(x => x.letti >= x.tot && x.tot > 0);
@@ -323,7 +326,7 @@
         ? 'Nessun impianto per ' + esc(etichettaCommessa(L.commessa))
         : 'Nessun impianto';
       document.getElementById('lettLista').innerHTML =
-        '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\uD83D\uDD22</div>' +
+        '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">🔢</div>' +
         '<div class="empty-txt">' + motivo + '</div>' +
         '<div class="empty-sub">Cambia commessa o filtro</div></div>';
       return;
@@ -332,14 +335,14 @@
     let html = '', ultimoComune = null;
     lista.forEach(x => {
       if (x.comune !== ultimoComune) {
-        html += '<div class="let-comune">\uD83D\uDCCD ' + esc(x.comune || '\u2014') + '</div>';
+        html += '<div class="let-comune">📍 ' + esc(x.comune || '—') + '</div>';
         ultimoComune = x.comune;
       }
       const completo = x.letti >= x.tot && x.tot > 0;
       const parziale = x.letti > 0 && !completo;
       const col = completo ? 'var(--green)' : parziale ? 'var(--yellow)' : 'var(--red)';
       const bg  = completo ? 'rgba(63,185,80,.12)' : parziale ? 'rgba(200,180,100,.12)' : 'rgba(200,120,120,.1)';
-      const ico = completo ? '\u2713' : parziale ? '\u25D0' : '\u2717';
+      const ico = completo ? '✓' : parziale ? '◐' : '✗';
       html +=
         '<div class="let-imp" data-cod="' + esc(x.codice) + '">' +
           '<div class="let-imp-strip" style="background:' + col + '"></div>' +
@@ -351,7 +354,7 @@
               '<div><span class="let-imp-badge" style="background:' + bg + ';color:' + col + '">' +
                 x.letti + '/' + x.tot + ' contatori</span></div>' +
             '</div>' +
-            '<div style="color:var(--muted);font-size:20px">\u203A</div>' +
+            '<div style="color:var(--muted);font-size:20px">›</div>' +
           '</div>' +
         '</div>';
     });
@@ -370,12 +373,12 @@
     const apre = L.cfg && L.cfg.apertoOggi;
 
     document.getElementById('lettCtTitle').textContent = d.descrizione;
-    document.getElementById('lettCtSub').textContent   = cod + ' \u00B7 ' + (d.comune || '') + ' \u00B7 ' + cts.length + ' contatori';
+    document.getElementById('lettCtSub').textContent   = cod + ' · ' + (d.comune || '') + ' · ' + cts.length + ' contatori';
 
     if (!cts.length) {
       document.getElementById('lettCtLista').innerHTML =
         '<div class="empty" style="padding:60px 20px"><div class="empty-txt">Nessun contatore</div>' +
-        '<div class="empty-sub">Questo impianto non \u00E8 nel file importazioni</div></div>';
+        '<div class="empty-sub">Questo impianto non è nel file importazioni</div></div>';
       return;
     }
 
@@ -383,7 +386,7 @@
     let ultimoVettore = null;
     cts.forEach(c => {
       if (c.vettore !== ultimoVettore) {
-        const icoV = c.vettore === 'ELETTRICO' ? '\u26A1' : c.vettore === 'TERMICO' ? '\uD83C\uDF21' : '\uD83D\uDD25';
+        const icoV = c.vettore === 'ELETTRICO' ? '⚡' : c.vettore === 'TERMICO' ? '🌡' : '🔥';
         html += '<div class="chk-sec" style="margin-top:6px">' + icoV + ' ' + esc(c.vettore) + '</div>';
         ultimoVettore = c.vettore;
       }
@@ -400,12 +403,12 @@
             (c.fascia ? '<span class="let-ct-fascia">' + esc(c.fascia) + '</span>' : '') +
             '<span class="let-ct-unita">' + esc(c.unita) + '</span>' +
           '</div>' +
-          '<div class="let-ct-descr">' + esc(c.descrizione || '\u2014') + '<br>' +
-            '<span style="opacity:.6">' + esc(c.codiceIT) + ' \u00B7 elem ' + esc(c.codElem) + '</span></div>' +
+          '<div class="let-ct-descr">' + esc(c.descrizione || '—') + '<br>' +
+            '<span style="opacity:.6">' + esc(c.codiceIT) + ' · elem ' + esc(c.codElem) + '</span></div>' +
           '<div class="let-ct-prec">' +
             '<span class="let-ct-prec-lbl">Ultima</span>' +
             '<span class="let-ct-prec-val">' + fmtNum(c.ultimaLettura) + '</span>' +
-            '<span class="let-ct-prec-data">' + esc(c.dataUltimaLettura || '\u2014') + '</span>' +
+            '<span class="let-ct-prec-data">' + esc(c.dataUltimaLettura || '—') + '</span>' +
           '</div>' +
           '<div class="let-ct-inp-row">' +
             '<input class="let-ct-inp" type="text" inputmode="decimal" placeholder="Nuova lettura" ' +
@@ -420,7 +423,7 @@
           '<div class="let-nota-wrap"><textarea class="let-nota" rows="1" placeholder="Commento (facoltativo)" ' +
             'data-id="' + esc(c.id) + '">' + esc(let_ ? let_.commenti : '') + '</textarea></div>' +
           '<div class="let-ct-esito" id="esito-' + esc(c.id) + '">' +
-            (let_ ? '\u2713 Salvata' + (let_.consumo !== null && let_.consumo !== '' ? ' \u00B7 consumo ' + fmtNum(let_.consumo) : '') : '') +
+            (let_ ? '✓ Salvata' + (let_.consumo !== null && let_.consumo !== '' ? ' · consumo ' + fmtNum(let_.consumo) : '') : '') +
           '</div>' +
         '</div>';
     });
@@ -462,7 +465,7 @@
     const c = L.contatori.find(x => x.id === idContatore);
     if (c && c.ultimaLettura !== null && val < c.ultimaLettura) {
       es.className = 'let-ct-esito warn';
-      es.textContent = '\u26A0 Lettura inferiore alla precedente (' + fmtNum(c.ultimaLettura) + '): non salvabile. Ricontrolla il contatore.';
+      es.textContent = '⚠ Lettura inferiore alla precedente (' + fmtNum(c.ultimaLettura) + '): non salvabile. Ricontrolla il contatore.';
       avviso('Lettura inferiore alla precedente: non salvata', 'err');
       inp.focus();
       return;
@@ -494,16 +497,16 @@
 
       if (!r.ok) {
         es.className = 'let-ct-esito warn';
-        es.textContent = '\u26A0 ' + (r.errore || 'Errore salvataggio');
+        es.textContent = '⚠ ' + (r.errore || 'Errore salvataggio');
         avviso(r.chiuso ? 'Letture chiuse oggi' : 'Errore salvataggio', 'err');
         return;
       }
 
       box.classList.add('letto');
       es.className = 'let-ct-esito';
-      es.textContent = (r.aggiornata ? '\u2713 Aggiornata' : '\u2713 Salvata') +
-        (r.consumo !== '' && r.consumo !== null && r.consumo !== undefined ? ' \u00B7 consumo ' + fmtNum(r.consumo) : '') +
-        (r.calo ? ' \u00B7 \u26A0 inferiore alla precedente' : '');
+      es.textContent = (r.aggiornata ? '✓ Aggiornata' : '✓ Salvata') +
+        (r.consumo !== '' && r.consumo !== null && r.consumo !== undefined ? ' · consumo ' + fmtNum(r.consumo) : '') +
+        (r.calo ? ' · ⚠ inferiore alla precedente' : '');
 
       // Aggiorna lo stato locale senza ricaricare tutto
       const esistente = L.letture.find(l => l.idContatore === idContatore);
@@ -514,10 +517,11 @@
       if (esistente) Object.assign(esistente, nuova); else L.letture.push(nuova);
 
       renderLista();
-      avviso(r.aggiornata ? 'Lettura aggiornata \u2713' : 'Lettura salvata \u2713', 'ok');
+      aggiornaFab();
+      avviso(r.aggiornata ? 'Lettura aggiornata ✓' : 'Lettura salvata ✓', 'ok');
     } catch (e) {
       es.className = 'let-ct-esito warn';
-      es.textContent = '\u26A0 Errore rete \u2014 riprova';
+      es.textContent = '⚠ Errore rete — riprova';
       avviso('Errore rete', 'err');
     } finally {
       btn.disabled = false;
@@ -543,11 +547,11 @@
     if (!L.cfg) { b.className = 'let-banner'; b.textContent = ''; return; }
     if (L.cfg.apertoOggi) {
       b.className = 'let-banner aperto';
-      b.textContent = '\uD83D\uDFE2 Finestra letture aperta \u2014 giorni ' + (L.cfg.giorni || []).join(', ') +
+      b.textContent = '🟢 Finestra letture aperta — giorni ' + (L.cfg.giorni || []).join(', ') +
         (L.cfg.sempreAperte ? ' (blocco disattivato)' : '');
     } else {
       b.className = 'let-banner chiuso';
-      b.textContent = '\uD83D\uDD12 Letture chiuse \u2014 prossima finestra il ' + (L.cfg.prossimaFinestra || '\u2014');
+      b.textContent = '🔒 Letture chiuse — prossima finestra il ' + (L.cfg.prossimaFinestra || '—');
     }
   }
 
@@ -564,6 +568,7 @@
       if (d.avviso) avviso(d.avviso, 'err');
       bannerFinestra();
       renderLista();
+      aggiornaFab();
     } catch (e) {
       document.getElementById('lettLista').innerHTML =
         '<div class="loading-ctr" style="color:var(--red)">Errore caricamento.<br>Controlla la rete.</div>';
@@ -577,7 +582,7 @@
     if (cfg && cfg.ok) { L.cfg = Object.assign(L.cfg || {}, cfg); aggiornaFab(); }
 
     if (cfg && cfg.ok && !cfg.apertoOggi) {
-      avviso('Letture chiuse \u00B7 prossima finestra il ' + (cfg.prossimaFinestra || '\u2014'), 'err');
+      avviso('Letture chiuse · prossima finestra il ' + (cfg.prossimaFinestra || '—'), 'err');
       return;
     }
 
@@ -593,11 +598,24 @@
   function aggiornaFab() {
     const f = document.getElementById('fabLetture');
     if (!f || !L.cfg) return;
-    f.classList.toggle('aperto', !!L.cfg.apertoOggi);
-    f.classList.toggle('chiuso', !L.cfg.apertoOggi);
-    f.title = L.cfg.apertoOggi
-      ? 'Letture contatori \u2014 finestra aperta'
-      : 'Letture chiuse \u2014 prossima finestra il ' + (L.cfg.prossimaFinestra || '\u2014');
+    const aperto = !!L.cfg.apertoOggi;
+    f.classList.toggle('aperto', aperto);
+    f.title = aperto
+      ? 'Letture contatori — finestra aperta'
+      : 'Letture chiuse — prossima finestra il ' + (L.cfg.prossimaFinestra || '—');
+    // Sottotitolo: avanzamento se i dati sono gia' caricati, altrimenti i giorni della finestra
+    const sub = document.getElementById('lettFasciaSub');
+    if (!sub) return;
+    if (L.caricato) {
+      const lista = elencoImpianti();
+      const fatti = lista.filter(x => x.letti >= x.tot && x.tot > 0).length;
+      sub.textContent = fatti + ' di ' + lista.length + ' impianti fatti' +
+        (L.cfg.meseCorrente ? ' · ' + L.cfg.meseCorrente : '');
+    } else {
+      sub.textContent = 'Finestra aperta' +
+        ((L.cfg.giorni || []).length ? ' · giorni ' + L.cfg.giorni.join(', ') : '') +
+        (L.cfg.sempreAperte ? ' (blocco disattivato)' : '');
+    }
   }
 
   // Posizione best-effort: se il GPS non risponde si salva lo stesso
@@ -621,12 +639,17 @@
     document.head.appendChild(st);
 
     const fab = document.createElement('button');
-    fab.className = 'fab-let chiuso';
+    fab.className = 'let-fascia';
     fab.id = 'fabLetture';
-    fab.textContent = '\uD83D\uDD22';
     fab.title = 'Letture contatori';
+    fab.innerHTML =
+      '<div><div class="let-fascia-t">Letture aperte</div>' +
+      '<div class="let-fascia-s" id="lettFasciaSub">Tocca per inserire le letture</div></div>' +
+      '<div class="let-fascia-arr">›</div>';
     fab.addEventListener('click', apriLetture);
-    main.appendChild(fab);
+    // Slot sotto la testata (index.html nuovo); in mancanza, in fondo alla schermata
+    const slot = document.getElementById('lettureSlot') || main;
+    slot.appendChild(fab);
 
     const wrap = document.createElement('div');
     wrap.innerHTML = HTML;
@@ -646,7 +669,7 @@
       });
     });
 
-    // Stato iniziale del FAB (aperto/chiuso) senza aspettare il primo tap
+    // Stato iniziale del pulsante (aperto/chiuso) senza aspettare il primo tap
     apiGetL('/config-letture')
       .then(c => { if (c && c.ok) { L.cfg = Object.assign(L.cfg || {}, c); aggiornaFab(); } })
       .catch(() => {});
