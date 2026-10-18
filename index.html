@@ -6,86 +6,122 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
-<meta name="theme-color" content="#0d1117"/>
+<meta name="theme-color" content="#141414"/>
 <title>Siram Manutenzione</title>
 <link rel="manifest" href="manifest.json"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#1a1a1a;--bg2:#242424;--bg3:#2a2a2a;--bg4:#333333;--text:#f0f0f0;--muted:#888888;--accent:#d0d0d0;--green:#8fbe7a;--yellow:#c8b464;--red:#c87878;--orange:#c89060}
+:root{--bg:#141414;--bg2:#1f1f1f;--bg3:#262626;--bg4:#2c2c2c;--text:#f0f0f0;--muted:#888888;--accent:#d0d0d0;--green:#8fbe7a;--yellow:#c8b464;--red:#c87878;--orange:#c89060}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html{height:100%;-webkit-text-size-adjust:none;text-size-adjust:none}
 body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',system-ui,sans-serif;overscroll-behavior:none;overflow:hidden}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);visibility:hidden;pointer-events:none}
 .screen.active{visibility:visible;pointer-events:auto}
+
+/* === LOGIN === */
 #loginScreen{overflow-y:auto;-webkit-overflow-scrolling:touch}
 .login-inner{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px}
 .brand{font-size:11px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
 .login-title{font-size:34px;font-weight:700;margin-bottom:6px}
 .login-sub{font-size:16px;color:var(--muted);margin-bottom:36px}
-.user-grid{display:flex;flex-direction:column;gap:8px;width:100%;max-width:400px;margin-bottom:28px}
-.user-tile{background:var(--bg2);border:2.5px solid var(--bg4);border-radius:14px;padding:10px 16px;text-align:left;cursor:pointer;display:grid;grid-template-columns:42px 1fr;grid-template-rows:auto auto;column-gap:14px;align-items:center;transition:border-color .12s,background .12s}
-.user-tile.selected{border-color:var(--accent);background:rgba(47,129,247,.1)}
-.user-tile:active{background:var(--bg3)}
+.user-grid{display:flex;flex-direction:column;gap:10px;width:100%;max-width:400px}
+.user-tile{background:var(--bg2);border:2.5px solid var(--bg4);border-radius:14px;padding:12px 18px;text-align:left;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color .12s,background .12s,transform .08s}
+.user-tile.selected{border-color:var(--accent);background:var(--bg3)}
+.user-tile:active{background:var(--bg3);transform:scale(.98)}
 .av{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;margin:0 auto 12px}
-.user-tile .av{grid-row:1/3;width:42px;height:42px;font-size:16px;margin:0}
-.tile-name{font-size:17px;font-weight:700;align-self:end}
-.tile-zona{font-size:12px;color:var(--muted);margin-top:1px;align-self:start}
-.pin-section{width:100%;max-width:340px;display:none}
-.pin-label{font-size:15px;font-weight:600;color:var(--muted);text-align:center;margin-bottom:24px}
-.pin-dots{display:flex;justify-content:center;gap:22px;margin-bottom:30px}
-.pin-dot{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--bg4);transition:background .1s,border-color .1s}
-.pin-dot.on{background:var(--accent);border-color:var(--accent)}
-.pin-dot.err{background:var(--red);border-color:var(--red)}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}
-.pin-key{background:var(--bg3);border:1.5px solid var(--bg4);border-radius:18px;min-height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:var(--text);line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .04s,border-color .04s,transform .04s}
-.pin-key:active{background:var(--accent);border-color:var(--accent);transform:scale(.9)}
-.pin-key.del{font-size:26px;color:var(--muted)}
-.pin-key.del:active{background:var(--bg4);color:var(--text)}
-.pin-key.vuoto{background:transparent;border-color:transparent;pointer-events:none}
-.pin-err{text-align:center;font-size:15px;color:var(--red);margin-top:24px;min-height:24px;font-weight:600}
+.user-tile .av{width:48px;height:48px;font-size:18px;margin:0;flex-shrink:0}
+.tile-name{flex:1;font-size:19px;font-weight:700}
+.tile-arrow{color:var(--muted);font-size:26px;line-height:1}
+
+/* === TESTATA === */
 #mainScreen{overflow:hidden}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 14px;flex-shrink:0}
-.tb-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.user-chip{display:flex;align-items:center;gap:14px}
-.av-sm{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
-.uname-top{font-size:20px;font-weight:700}
-.uzona-top{font-size:14px;color:var(--muted);margin-top:2px}
-.logout-btn{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--muted);padding:10px 18px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif}
-.logout-btn:active{color:var(--red);border-color:var(--red)}
+.topbar{background:var(--bg);padding:max(env(safe-area-inset-top,0px),18px) 20px 0;flex-shrink:0}
+.tb-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tb-date{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.uname-top{font-size:30px;font-weight:700;line-height:1.1}
+.av-top{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:#fff;flex-shrink:0;border:none;cursor:pointer;font-family:'Outfit',sans-serif}
+.av-top:active{transform:scale(.92)}
+#lettureSlot{margin-top:18px}
+#lettureSlot:empty{display:none}
 
-/* === FILTRI COMMESSA + VISTE === */
-.filtri-commesse{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0 8px;margin-bottom:10px}
+/* viste a linguetta */
+.vista-row{display:flex;margin-top:22px;border-bottom:1.5px solid var(--bg4)}
+.vista-btn{flex:1;min-width:0;padding:0 0 12px;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1.5px;color:var(--muted);font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap}
+.vista-btn .vista-count{font-weight:600;margin-left:4px}
+.vista-btn.active{color:var(--text);border-bottom-color:var(--text)}
+
+/* filtri commessa */
+.filtri-commesse{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:14px 0 2px}
 .filtri-commesse::-webkit-scrollbar{display:none}
-.fc-btn{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:22px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s,color .12s,transform .1s}
+.fc-btn{flex-shrink:0;display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;border:1.5px solid var(--bg4);background:var(--bg2);color:#c9c9c9;font-size:13px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;white-space:nowrap}
 .fc-btn:active{transform:scale(.95)}
-.fc-btn.active{color:#1a1a1a;border-color:transparent}
-.fc-count{background:var(--bg4);color:var(--text);padding:1px 8px;border-radius:11px;font-size:12px;font-weight:700}
-.fc-btn.active .fc-count{background:rgba(0,0,0,.22);color:inherit}
-.vista-row{display:flex;gap:8px}
-.vista-btn{flex:1;min-width:0;padding:12px 6px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
-.vista-btn:active{transform:scale(.97)}
-.vista-btn.active{background:var(--bg4);color:var(--text);border-color:var(--accent)}
-.vista-count{background:var(--bg4);color:var(--text);padding:1px 7px;border-radius:10px;font-size:12px;font-weight:700}
-.vista-btn.active .vista-count{background:var(--bg3)}
+.fc-btn.active{background:var(--text);border-color:var(--text);color:var(--bg)}
+.fc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fc-count{background:var(--bg4);color:var(--text);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700}
+.fc-btn.active .fc-count{background:rgba(0,0,0,.15);color:var(--bg)}
 
-/* === RCEE === */
-.rcee-box{background:var(--bg2);border:1.5px solid var(--bg4);border-radius:18px;overflow:hidden;margin-bottom:14px}
+/* === LISTA === */
+.main-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.main-inner{padding:16px 20px 24px}
+.grp-hdr{display:flex;align-items:center;gap:8px;padding:10px 0 8px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.grp-hdr:first-child{padding-top:2px}
+.grp-sq{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.grp-sub{color:#666;letter-spacing:0;margin-left:2px;text-transform:none;font-weight:600}
+.sec-lbl{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 0 10px;display:flex;align-items:center;gap:8px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--bg3)}
+
+/* card libera */
+.req-card{border-radius:18px;margin-bottom:8px;overflow:hidden}
+.req-card.libera{background:var(--bg2)}
+.req-lib-row{display:flex;align-items:center;gap:12px;padding:14px 14px 14px 18px;cursor:pointer}
+.req-lib-row:active{background:var(--bg3)}
+.req-lib-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.req-name-sm{font-size:17px;font-weight:700;line-height:1.2}
+.req-meta{font-size:13px;color:var(--muted)}
+.req-sosp{color:var(--yellow);font-weight:700}
+.req-lib-note{font-size:13px;color:#e0d6a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req-take-rd{flex-shrink:0;border:none;width:48px;height:48px;border-radius:50%;font-family:'Outfit',sans-serif;font-size:26px;font-weight:700;color:var(--bg);cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.req-take-rd:active{filter:brightness(.92);transform:scale(.94)}
+.rcee-tag{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--bg3);border:1px solid var(--bg4);color:var(--accent)}
+.rcee-scad{font-size:12px;font-weight:700;padding:3px 9px;border-radius:9px;background:var(--bg3);color:var(--muted);border:1px solid var(--bg4);white-space:nowrap;display:inline-block}
+.rcee-scad.vicina{background:rgba(200,144,96,.15);color:var(--orange);border-color:rgba(200,144,96,.35)}
+.rcee-scad.scaduta{background:rgba(200,120,120,.15);color:var(--red);border-color:rgba(200,120,120,.35)}
+
+/* riga "già prese in carico" + card presa */
+.prese-row{display:flex;align-items:center;gap:10px;padding:8px 18px;border-radius:12px;border:1.5px dashed var(--bg4);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:8px;background:none;width:100%;font-family:'Outfit',sans-serif;text-align:left}
+.prese-row:active{background:var(--bg2)}
+.prese-avs{display:flex}
+.prese-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;border:2px solid var(--bg);flex-shrink:0}
+.prese-av+.prese-av{margin-left:-8px}
+.prese-txt{flex:1}
+.prese-arr{font-size:20px;line-height:1;transition:transform .15s}
+.prese-row.open .prese-arr{transform:rotate(90deg)}
+.req-card.presa{background:var(--bg);border:1.5px solid var(--bg3)}
+.req-card.presa .req-presa-row{display:flex;align-items:center;gap:12px;padding:12px 14px 12px 18px;cursor:pointer}
+.req-card.presa .req-presa-row:active{background:var(--bg2)}
+.req-card.presa .req-name-sm{font-size:16px;font-weight:600;color:#c9c9c9}
+.req-card.presa .req-meta{color:#777}
+.req-card.presa.chiusa{opacity:.5}
+.req-presa-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.req-presa-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.req-incarico{font-size:13px;font-weight:700;color:var(--muted);background:var(--bg2);border:1px solid var(--bg4);padding:4px 10px;border-radius:10px;white-space:nowrap}
+.req-incarico.mio{color:var(--green);border-color:rgba(143,190,122,.4);background:rgba(143,190,122,.1)}
+.req-prog-sm{font-size:13px;color:var(--muted);font-weight:700}
+
+/* box RCEE compatto nel contenitore */
+.rcee-box{background:var(--bg2);border-radius:18px;overflow:hidden;margin-bottom:14px}
 .rcee-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--bg3);cursor:pointer}
 .rcee-row:first-child{border-top:none}
 .rcee-row:active{background:var(--bg3)}
 .rcee-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .rcee-nome{flex:1;min-width:0;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rcee-cod{font-size:12px;color:var(--muted);flex-shrink:0}
-.rcee-scad{font-size:12px;font-weight:700;padding:3px 9px;border-radius:9px;flex-shrink:0;background:var(--bg3);color:var(--muted);border:1px solid var(--bg4);white-space:nowrap}
-.rcee-scad.vicina{background:rgba(200,144,96,.15);color:var(--orange);border-color:rgba(200,144,96,.35)}
-.rcee-scad.scaduta{background:rgba(200,120,120,.15);color:var(--red);border-color:rgba(200,120,120,.35)}
 .rcee-more{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-top:1px solid var(--bg3);font-size:14px;font-weight:700;color:var(--muted);cursor:pointer}
 .rcee-more:active{background:var(--bg3)}
-.rcee-tag{font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--bg3);border:1px solid var(--bg4);color:var(--accent)}
 
-.main-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.main-inner{padding:16px;padding-bottom:max(90px,calc(80px + env(safe-area-inset-bottom,0px)))}
+/* note del responsabile */
 .note-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(200,120,120,.08);border:1px solid rgba(200,120,120,.35);border-left:3px solid var(--red);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px;line-height:1.35}
 .note-banner .nb-ico{font-size:14px;line-height:1.3}
 .note-banner .nb-body{flex:1;min-width:0}
@@ -94,51 +130,20 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .note-banner.aperta .nb-txt{white-space:pre-wrap}
 .note-banner .nb-x{background:none;border:none;color:var(--muted);font-size:15px;padding:0 2px;line-height:1;cursor:pointer}
 .note-wrap{margin-bottom:6px}
-.sec-lbl{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.sec-lbl::after{content:'';flex:1;height:1px;background:var(--bg3)}
 
-/* === REQ CARDS === */
-.req-card{border:1.5px solid var(--bg4);border-radius:20px;margin-bottom:14px;overflow:hidden}
-.req-card .req-body{padding:18px 18px 14px;cursor:pointer}
-.req-card .req-body:active{background:rgba(0,0,0,.08)}
-.req-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.req-commessa{font-size:12px;font-weight:700;padding:4px 11px;border-radius:11px;letter-spacing:.3px;color:#1a1a1a}
-.req-sosp{font-size:13px;font-weight:700;color:var(--yellow)}
-.req-name{font-size:20px;font-weight:700;line-height:1.25;margin-bottom:6px}
-.req-name-sm{font-size:16px;font-weight:700;line-height:1.25}
-.req-meta{font-size:13px;color:var(--muted)}
-.req-note{margin-top:10px;background:rgba(0,0,0,.2);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5}
-.req-take{width:100%;border:none;padding:15px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#1a1a1a;cursor:pointer;line-height:1}
-.req-take:active{filter:brightness(.92)}
-.req-card.presa{background:var(--bg2)}
-.req-card.presa .req-presa-row{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
-.req-card.presa .req-presa-row:active{background:var(--bg3)}
-.req-card.presa.chiusa{opacity:.5}
-.req-presa-info{flex:1;min-width:0}
-.req-presa-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-.req-incarico{font-size:13px;font-weight:700;color:var(--muted);background:var(--bg3);border:1px solid var(--bg4);padding:4px 10px;border-radius:10px;white-space:nowrap}
-.req-incarico.mio{color:var(--green);border-color:rgba(143,190,122,.4);background:rgba(143,190,122,.1)}
-.req-prog-sm{font-size:13px;color:var(--muted);font-weight:700}
-
-/* carico banner nel panel */
-.carico-banner{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;margin-bottom:18px;font-size:15px}
-.carico-banner.libera{background:rgba(200,180,100,.1);border:1.5px solid rgba(200,180,100,.3);color:var(--yellow)}
-.carico-banner.mio{background:rgba(143,190,122,.1);border:1.5px solid rgba(143,190,122,.3);color:var(--green)}
-.carico-banner.altri{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--muted)}
-.carico-btn{width:100%;padding:14px;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;cursor:pointer;line-height:1;background:var(--accent);color:#1a1a1a}
-.carico-btn:active{transform:scale(.98)}
-.carico-btn.ghost{background:var(--bg4);color:var(--text)}
-
-.empty{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-ico{font-size:64px;margin-bottom:20px;opacity:.3}
 .empty-txt{font-size:20px;margin-bottom:8px}
 .empty-sub{font-size:15px;opacity:.7}
-.fab{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));right:22px;width:68px;height:68px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:36px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(47,129,247,.5);cursor:pointer}
-.fab:active{transform:scale(.88)}
-.fab-cal{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:22px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.fab-cal:active{transform:scale(.90);background:var(--bg3)}
-.fab-imp{position:absolute;bottom:max(22px,calc(18px + env(safe-area-inset-bottom,0px)));left:84px;width:54px;height:54px;border-radius:50%;background:var(--bg2);border:1.5px solid var(--bg4);color:var(--muted);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.3);text-decoration:none}
-.fab-imp:active{transform:scale(.90);background:var(--bg3)}
+
+/* === BARRA IN BASSO === */
+.bottombar{flex-shrink:0;padding:12px 20px max(24px,calc(16px + env(safe-area-inset-bottom,0px)));background:var(--bg);border-top:1px solid #222;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bb-imp{height:54px;padding:0 18px;border-radius:27px;background:var(--bg2);border:1.5px solid var(--bg4);color:#c9c9c9;display:flex;align-items:center;gap:10px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.bb-imp:active{background:var(--bg3)}
+.bb-new{width:58px;height:58px;border-radius:50%;background:var(--text);border:none;color:var(--bg);font-size:32px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Outfit',sans-serif}
+.bb-new:active{transform:scale(.92)}
+
+/* === PANNELLI === */
 .panel{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;z-index:10;overflow:hidden}
 .panel.open{transform:translateX(0)}
 .panel-top{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0}
@@ -153,6 +158,13 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .info-lbl{font-size:13px;color:var(--muted);margin-bottom:5px}
 .info-val{font-size:18px;font-weight:700}
 .note-box{background:var(--bg3);border-left:4px solid var(--accent);border-radius:0 12px 12px 0;padding:14px 16px;font-size:15px;line-height:1.55;margin-bottom:20px}
+.carico-banner{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;margin-bottom:18px;font-size:15px}
+.carico-banner.libera{background:rgba(200,180,100,.1);border:1.5px solid rgba(200,180,100,.3);color:var(--yellow)}
+.carico-banner.mio{background:rgba(143,190,122,.1);border:1.5px solid rgba(143,190,122,.3);color:var(--green)}
+.carico-banner.altri{background:var(--bg3);border:1.5px solid var(--bg4);color:var(--muted)}
+.carico-btn{width:100%;padding:14px;border:none;border-radius:12px;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;cursor:pointer;line-height:1;background:var(--accent);color:#1a1a1a}
+.carico-btn:active{transform:scale(.98)}
+.carico-btn.ghost{background:var(--bg4);color:var(--text)}
 .chk-sec{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .chk-sec::after{content:'';flex:1;height:1px;background:var(--bg3)}
 .chk-item{background:var(--bg2);border:1.5px solid var(--bg4);border-radius:18px;margin-bottom:12px;overflow:hidden}
@@ -180,10 +192,6 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .panel-fab.completa{background:var(--green);color:#fff}
 .panel-fab.completa:active{background:#2ea043}
 .panel-fab.riapri{background:var(--bg3);color:var(--muted);border:1.5px solid var(--bg4)}
-.panel-actions{position:absolute;bottom:max(18px,calc(14px + env(safe-area-inset-bottom,0px)));left:18px;right:18px;display:flex;gap:10px;z-index:1}
-.panel-actions .panel-fab{position:static;flex:1}
-.panel-btn-post{padding:22px;border-radius:20px;border:1.5px solid var(--bg4);background:var(--bg3);color:var(--muted);font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;cursor:pointer;line-height:1;white-space:nowrap}
-.panel-btn-post:active{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.4);color:var(--yellow)}
 .post-option{display:flex;align-items:center;gap:16px;padding:18px 16px;background:var(--bg3);border-radius:14px;margin-bottom:10px;cursor:pointer;border:1.5px solid var(--bg4);font-size:16px;font-weight:600;color:var(--text)}
 .post-option:active{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:var(--yellow)}
 .post-icon{width:42px;height:42px;border-radius:12px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
@@ -203,9 +211,9 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .sheet-btns{display:flex;gap:14px}
 .sheet-btn{flex:1;padding:20px;border-radius:16px;border:none;font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;cursor:pointer;line-height:1}
 .sheet-btn.cancel{background:var(--bg3);color:var(--muted);border:1.5px solid var(--bg4)}
-.sheet-btn.ok{background:var(--accent);color:#fff}
+.sheet-btn.ok{background:var(--accent);color:#1a1a1a}
 .sheet-btn:active{opacity:.8;transform:scale(.96)}
-.toast{position:absolute;bottom:max(100px,calc(90px + env(safe-area-inset-bottom,0px)));left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg3);border:1.5px solid var(--bg4);color:var(--text);padding:13px 26px;border-radius:28px;font-size:15px;font-weight:600;opacity:0;transition:opacity .22s,transform .22s;z-index:30;white-space:nowrap;pointer-events:none}
+.toast{position:absolute;bottom:max(110px,calc(100px + env(safe-area-inset-bottom,0px)));left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg3);border:1.5px solid var(--bg4);color:var(--text);padding:13px 26px;border-radius:28px;font-size:15px;font-weight:600;opacity:0;transition:opacity .22s,transform .22s;z-index:30;white-space:nowrap;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.ok{background:rgba(63,185,80,.2);border-color:rgba(63,185,80,.4);color:var(--green)}
 .toast.err{background:rgba(248,81,73,.15);border-color:rgba(248,81,73,.4);color:var(--red)}
@@ -223,17 +231,10 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sys
 .mc-btn.conferma{background:var(--green);color:#fff}
 .mc-btn.conferma:active{background:#2ea043}
 .loading-ctr{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--muted);font-size:16px;gap:16px}
-.chk-prev-btn{background:none;border:1.5px solid rgba(200,180,100,.35);color:var(--yellow);font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;flex-shrink:0;line-height:1}
 .rda-tipo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .rda-tipo-btn{padding:16px 10px;border-radius:14px;border:1.5px solid var(--bg4);background:var(--bg2);color:var(--muted);font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;text-align:center;transition:all .12s;line-height:1.3}
 .rda-tipo-btn.sel{border-color:rgba(100,180,220,.5);background:rgba(100,180,220,.1);color:#7ab0d8}
 .rda-tipo-btn:active{background:var(--bg3)}
-.chk-prev-btn:active{background:rgba(200,180,100,.15)}
-.chk-prev-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;flex-shrink:0;line-height:1}
-.chk-prev-pill.richiesto{background:rgba(200,180,100,.15);color:var(--yellow);border:1px solid rgba(200,180,100,.3)}
-.chk-prev-pill.inviato{background:rgba(100,150,200,.15);color:#7ab0d8;border:1px solid rgba(100,150,200,.3)}
-.chk-prev-pill.accettato{background:rgba(143,190,122,.15);color:var(--green);border:1px solid rgba(143,190,122,.3)}
-.chk-prev-pill.rifiutato{background:rgba(200,120,120,.15);color:var(--red);border:1px solid rgba(200,120,120,.3)}
 .new-int-overlay{position:absolute;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:15}
 .new-int-overlay.open{display:flex}
 .new-int-top{background:var(--bg2);border-bottom:1px solid var(--bg3);padding:max(env(safe-area-inset-top,0px),14px) 18px 16px;display:flex;align-items:center;gap:16px;flex-shrink:0}
@@ -251,59 +252,44 @@ select.nif-input option{background:var(--bg2)}
 .nif-fab:disabled{opacity:.4;cursor:default}
 .spinner{width:32px;height:32px;border:3px solid var(--bg4);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.week-day{padding:10px 6px;border-radius:12px;background:var(--bg3);border:1.5px solid var(--bg4);margin-bottom:8px}
-.week-day.oggi{background:rgba(47,129,247,.1);border-color:rgba(47,129,247,.3)}
-.week-day-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.week-day-nome{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.week-day-num{font-size:12px;font-weight:700;color:var(--muted);font-family:'DM Mono',monospace}
-.week-day.oggi .week-day-nome,.week-day.oggi .week-day-num{color:var(--accent)}
-.week-int{font-size:13px;padding:6px 10px;background:var(--bg2);border-radius:8px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer}
-.week-int:active{background:var(--bg4)}
-.week-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.week-empty{font-size:13px;color:var(--muted);padding:4px 2px;opacity:.6}
 </style>
 </head>
 <body>
 <div id="app">
   <div class="screen active" id="loginScreen">
     <div class="login-inner">
-      <div class="brand">Siram Veolia</div>
+      <div class="brand">Veolia</div>
       <div class="login-title">Manutenzione</div>
-      <div class="login-sub">Chi sei?</div>
+      <div class="login-sub">Tocca il tuo nome per entrare</div>
       <div class="user-grid">
-        <div class="user-tile" onclick="selUser('Matteo')"  id="tile-Matteo"><div class="av" style="background:linear-gradient(135deg,#2f81f7,#1a56db)">M</div><div class="tile-name">Matteo</div><div class="tile-zona">Pesaro</div></div>
-        <div class="user-tile" onclick="selUser('Stefano')" id="tile-Stefano"><div class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">S</div><div class="tile-name">Stefano</div><div class="tile-zona">Pesaro</div></div>
-        <div class="user-tile" onclick="selUser('Michele')" id="tile-Michele"><div class="av" style="background:linear-gradient(135deg,#3fb950,#16a34a)">Mi</div><div class="tile-name">Michele</div><div class="tile-zona">Verucchio</div></div>
-        <div class="user-tile" onclick="selUser('Ezio')"    id="tile-Ezio"><div class="av" style="background:linear-gradient(135deg,#fb8f44,#c2410c)">E</div><div class="tile-name">Ezio</div><div class="tile-zona">Misano &#xB7; Gabicce</div></div>
-        <div class="user-tile" onclick="selUser('Aziz')"    id="tile-Aziz"><div class="av" style="background:linear-gradient(135deg,#2dd4bf,#0f766e)">A</div><div class="tile-name">Aziz</div><div class="tile-zona">&#x2014;</div></div>
-      </div>
-      <div class="pin-section" id="pinSection">
-        <div class="pin-label" id="pinLabel">Inserisci PIN</div>
-        <div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
-        <div class="pin-pad">
-          <div class="pin-key" onclick="addPin('1')">1</div><div class="pin-key" onclick="addPin('2')">2</div><div class="pin-key" onclick="addPin('3')">3</div>
-          <div class="pin-key" onclick="addPin('4')">4</div><div class="pin-key" onclick="addPin('5')">5</div><div class="pin-key" onclick="addPin('6')">6</div>
-          <div class="pin-key" onclick="addPin('7')">7</div><div class="pin-key" onclick="addPin('8')">8</div><div class="pin-key" onclick="addPin('9')">9</div>
-          <div class="pin-key vuoto"></div><div class="pin-key" onclick="addPin('0')">0</div><div class="pin-key del" onclick="delPin()">&#x232B;</div>
-        </div>
-        <div class="pin-err" id="pinErr"></div>
+        <div class="user-tile" onclick="selUser('Matteo')"  id="tile-Matteo"><div class="av" style="background:linear-gradient(135deg,#2f81f7,#1a56db)">M</div><div class="tile-name">Matteo</div><div class="tile-arrow">&#x203A;</div></div>
+        <div class="user-tile" onclick="selUser('Stefano')" id="tile-Stefano"><div class="av" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">S</div><div class="tile-name">Stefano</div><div class="tile-arrow">&#x203A;</div></div>
+        <div class="user-tile" onclick="selUser('Michele')" id="tile-Michele"><div class="av" style="background:linear-gradient(135deg,#3fb950,#16a34a)">Mi</div><div class="tile-name">Michele</div><div class="tile-arrow">&#x203A;</div></div>
+        <div class="user-tile" onclick="selUser('Ezio')"    id="tile-Ezio"><div class="av" style="background:linear-gradient(135deg,#fb8f44,#c2410c)">E</div><div class="tile-name">Ezio</div><div class="tile-arrow">&#x203A;</div></div>
+        <div class="user-tile" onclick="selUser('Aziz')"    id="tile-Aziz"><div class="av" style="background:linear-gradient(135deg,#2dd4bf,#0f766e)">A</div><div class="tile-name">Aziz</div><div class="tile-arrow">&#x203A;</div></div>
       </div>
     </div>
   </div>
+
   <div class="screen" id="mainScreen">
     <div class="topbar">
-      <div class="tb-row"><div class="user-chip"><div class="av-sm" id="mainAv"></div><div><div class="uname-top" id="mainNome"></div><div class="uzona-top" id="mainZona"></div></div></div><button class="logout-btn" onclick="logout()">Esci</button></div>
-      <div class="filtri-commesse" id="filtriCommesse"></div>
-      <div class="vista-row">
-        <button class="vista-btn active" id="vistaContenitore" onclick="setVista('contenitore')">&#x1F4E6; Contenitore</button>
-        <button class="vista-btn" id="vistaMie" onclick="setVista('mie')">&#x1F477; Le mie</button>
-        <button class="vista-btn" id="vistaRcee" onclick="setVista('rcee')">&#x1F4CB; RCEE</button>
+      <div class="tb-row">
+        <div class="tb-who"><div class="tb-date" id="mainData"></div><div class="uname-top" id="mainNome"></div></div>
+        <button class="av-top" id="mainAv" onclick="logout()" title="Esci"></button>
       </div>
+      <div id="lettureSlot"></div>
+      <div class="vista-row">
+        <button class="vista-btn active" id="vistaContenitore" onclick="setVista('contenitore')">Contenitore</button>
+        <button class="vista-btn" id="vistaMie" onclick="setVista('mie')">Le mie</button>
+        <button class="vista-btn" id="vistaRcee" onclick="setVista('rcee')">RCEE</button>
+      </div>
+      <div class="filtri-commesse" id="filtriCommesse"></div>
     </div>
     <div class="main-scroll" id="mainScroll"><div class="main-inner" id="listaEl"><div class="loading-ctr"><div class="spinner"></div>Caricamento...</div></div></div>
-    <button class="fab" onclick="openNewInt()">&#xFF0B;</button>
-    <button class="fab-cal" onclick="openWeekSheet()" title="Prossimi interventi">&#x1F4C5;</button>
-    <button class="fab-imp" onclick="openImpiantiPanel()" title="I miei impianti">&#x1F3E2;</button>
+    <div class="bottombar">
+      <button class="bb-imp" onclick="openImpiantiPanel()"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>Impianti</button>
+      <button class="bb-new" onclick="openNewInt()" title="Nuova richiesta">&#xFF0B;</button>
+    </div>
   </div>
 
   <!-- PANEL I MIEI IMPIANTI -->
@@ -414,16 +400,6 @@ select.nif-input option{background:var(--bg2)}
     </div>
   </div>
 
-  <div class="sheet-overlay" id="weekSheet">
-    <div class="sheet" style="max-height:85vh;overflow-y:auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div class="sheet-title" style="margin:0">Prossimi 7 giorni</div>
-        <button class="sheet-btn cancel" style="width:auto;padding:8px 14px;font-size:14px" onclick="closeWeekSheet()">&#x2715;</button>
-      </div>
-      <div id="weekContent"></div>
-    </div>
-  </div>
-
   <div class="modal-chiusura-overlay" id="modalChiusura">
     <div class="modal-chiusura">
       <div class="mc-title">Chiudi ordine di lavoro</div>
@@ -496,7 +472,7 @@ const PROXY_URL = 'https://siram-proxy.onrender.com';
 async function apiGet(path){ const r=await fetch(PROXY_URL+path); return r.json(); }
 async function apiPost(path,body){ const r=await fetch(PROXY_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); return r.json(); }
 
-const USERS={Matteo:{pin:'2001',zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{pin:'2002',zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{pin:'2003',zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{pin:'2004',zona:'Misano \u00B7 Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'},Aziz:{pin:'2005',zona:'\u2014',color:'linear-gradient(135deg,#2dd4bf,#0f766e)',initial:'A'}};
+const USERS={Matteo:{zona:'Pesaro',color:'linear-gradient(135deg,#2f81f7,#1a56db)',initial:'M'},Stefano:{zona:'Pesaro',color:'linear-gradient(135deg,#8b5cf6,#6d28d9)',initial:'S'},Michele:{zona:'Verucchio',color:'linear-gradient(135deg,#3fb950,#16a34a)',initial:'Mi'},Ezio:{zona:'Misano · Gabicce',color:'linear-gradient(135deg,#fb8f44,#c2410c)',initial:'E'},Aziz:{zona:'—',color:'linear-gradient(135deg,#2dd4bf,#0f766e)',initial:'A'}};
 
 // === COMMESSE (ricavate dal comune dell'impianto) ===
 const COMMESSE=[
@@ -520,14 +496,15 @@ function commessaDi(imp){
   }
   return COMMESSE_BY_KEY['Altri'];
 }
-// Una richiesta \u00E8 "presa in carico" se ha un operaio valorizzato
+function commessaDiInt(i){ return commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)); }
+// Una richiesta è "presa in carico" se ha un operaio valorizzato
 function isPresa(i){ return !!(i.operaio && i.operaio!=='' && i.operaio!=='DaAssegnare'); }
 
 // === RCEE ===
 // Le richieste create dal pulsante "Assegna" della scheda RCEE hanno la nota che inizia con [RCEE]
 function isRcee(i){ return /^\s*\[RCEE\]/.test((i&&i.note)||''); }
 // Estrae scadenza e alimentazione/potenza dalla nota:
-// "[RCEE] Controllo efficienza energetica \u2014 scad. 30/09/2026 \u00B7 Metano 112.2kW (imp. 107553) | ..."
+// "[RCEE] Controllo efficienza energetica — scad. 30/09/2026 · Metano 112.2kW (imp. 107553) | ..."
 function rceeInfo(i){
   const note=(i&&i.note)||'';
   const out={scad:'',scadTxt:'',pot:''};
@@ -537,7 +514,7 @@ function rceeInfo(i){
     out.scad=m[3]+'-'+mm+'-'+dd;
     out.scadTxt=dd+'/'+mm;
   }
-  const p=note.match(/scad\.\s*\d{1,2}\/\d{1,2}\/\d{4}\s*\u00B7\s*([^|(]+)/i);
+  const p=note.match(/scad\.\s*\d{1,2}\/\d{1,2}\/\d{4}\s*·\s*([^|(]+)/i);
   if(p) out.pot=p[1].trim();
   return out;
 }
@@ -554,7 +531,7 @@ function rceeScadPill(info){
   if(!info.scad) return '<span class="rcee-scad">senza scad.</span>';
   const g=giorniA(info.scad);
   const cls = g<0 ? 'scaduta' : (g<=15 ? 'vicina' : '');
-  const txt = g<0 ? '\u26A0 scad. '+info.scadTxt : 'scad. '+info.scadTxt;
+  const txt = g<0 ? '⚠ scad. '+info.scadTxt : 'scad. '+info.scadTxt;
   return `<span class="rcee-scad ${cls}">${txt}</span>`;
 }
 // Ordina per scadenza RCEE (le senza scadenza in fondo)
@@ -563,29 +540,33 @@ function byScad(a,b){
   return sa.localeCompare(sb);
 }
 
-let currentUser=null,pinBuf='',S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[],note:[]},currentIntId=null,extraForId=null,expandedNota={};
+let currentUser=null,S={impianti:[],interventi:[],checklist:[],preventivi:[],rdacat:[],note:[]},currentIntId=null,extraForId=null,expandedNota={};
 let vista='contenitore', commessaSel='';
+let preseAperte={};   // gruppi "già prese in carico" espansi, per commessa
 
-function selUser(n){currentUser=n;pinBuf='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('tile-'+n).classList.add('selected');document.getElementById('pinLabel').textContent='PIN per '+n;document.getElementById('pinSection').style.display='block';document.getElementById('pinErr').textContent='';aggDots();setTimeout(()=>document.getElementById('pinSection').scrollIntoView({behavior:'smooth',block:'nearest'}),80)}
-function addPin(d){if(pinBuf.length>=4)return;pinBuf+=d;aggDots();if(pinBuf.length===4)setTimeout(verifica,30)}
-function delPin(){pinBuf=pinBuf.slice(0,-1);aggDots();document.getElementById('pinErr').textContent=''}
-function aggDots(){for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);d.classList.toggle('on',i<pinBuf.length);d.classList.remove('err')}}
-function verifica(){if(pinBuf===USERS[currentUser].pin){entra()}else{for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.add('err');document.getElementById('pinErr').textContent='PIN errato, riprova';setTimeout(()=>{pinBuf='';aggDots()},900)}}
+// === LOGIN: tocco sul nome, nessun PIN ===
+function selUser(n){
+  if(!USERS[n])return;
+  currentUser=n;
+  document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));
+  document.getElementById('tile-'+n).classList.add('selected');
+  setTimeout(entra,120);
+}
 function entra(){
   window.currentUser = currentUser;
   const u=USERS[currentUser];
   const av=document.getElementById('mainAv');
   av.style.background=u.color;av.textContent=u.initial;
   document.getElementById('mainNome').textContent=currentUser;
-  document.getElementById('mainZona').textContent=u.zona;
+  document.getElementById('mainData').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('loginScreen').classList.remove('active');
   document.getElementById('mainScreen').classList.add('active');
   caricaDati();
   const openId = sessionStorage.getItem('openInterventoId');
   if(openId){ sessionStorage.removeItem('openInterventoId'); setTimeout(()=>openPanel(openId),800); }
 }
-function logout(){currentUser=null;pinBuf=''; window.currentUser=null;
-                  S={impianti:[],interventi:[],checklist:[]};vista='contenitore';commessaSel='';document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('pinSection').style.display='none';document.getElementById('pinErr').textContent='';aggDots();document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
+function logout(){currentUser=null; window.currentUser=null;
+                  S={impianti:[],interventi:[],checklist:[]};vista='contenitore';commessaSel='';preseAperte={};document.querySelectorAll('.user-tile').forEach(t=>t.classList.remove('selected'));document.getElementById('mainScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active');document.getElementById('loginScreen').scrollTop=0}
 
 async function caricaDati(){
   try{
@@ -609,36 +590,42 @@ function setCommessa(key){
   commessaSel = (commessaSel===key ? '' : key);
   renderLista();
 }
+function togglePrese(key){
+  preseAperte[key]=!preseAperte[key];
+  renderLista();
+}
 
 function renderVistaBtns(){
-  document.getElementById('vistaContenitore').classList.toggle('active',vista==='contenitore');
-  document.getElementById('vistaMie').classList.toggle('active',vista==='mie');
-  document.getElementById('vistaRcee').classList.toggle('active',vista==='rcee');
-  // Badge RCEE: controlli ancora liberi (rispetta il filtro commessa)
-  let rc=S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato==='Aperto' && !isPresa(i) && isRcee(i));
-  if(commessaSel) rc=rc.filter(i=>commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)).key===commessaSel);
-  const n=rc.length;
-  document.getElementById('vistaRcee').innerHTML='\uD83D\uDCCB RCEE'+(n?`<span class="vista-count">${n}</span>`:'');
+  const straord=S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato==='Aperto');
+  const inComm=i=>!commessaSel || commessaDiInt(i).key===commessaSel;
+  const nCont=straord.filter(i=>!isPresa(i) && inComm(i)).length;
+  const nMie =straord.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser) && inComm(i)).length;
+  const nRcee=straord.filter(i=>!isPresa(i) && isRcee(i) && inComm(i)).length;
+  const btn=(id,lbl,n,on)=>{const b=document.getElementById(id);b.classList.toggle('active',on);b.innerHTML=lbl+(n?`<span class="vista-count">${n}</span>`:'');};
+  btn('vistaContenitore','Contenitore',nCont,vista==='contenitore');
+  btn('vistaMie','Le mie',nMie,vista==='mie');
+  btn('vistaRcee','RCEE',nRcee,vista==='rcee');
 }
 
 function renderFiltriCommesse(){
   // Conta le richieste LIBERE (nel contenitore) per commessa
   const libere = S.interventi.filter(i=>i.tipoVisita==='Straordinaria' && i.stato==='Aperto' && !isPresa(i));
   const cont={};
-  libere.forEach(i=>{ const co=commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)); cont[co.key]=(cont[co.key]||0)+1; });
+  libere.forEach(i=>{ const co=commessaDiInt(i); cont[co.key]=(cont[co.key]||0)+1; });
   const el=document.getElementById('filtriCommesse');
-  el.innerHTML=COMMESSE.map(co=>{
+  let html=`<button class="fc-btn ${commessaSel?'':'active'}" onclick="setCommessa('')">Tutte</button>`;
+  html+=COMMESSE.map(co=>{
     const n=cont[co.key]||0;
     const active=commessaSel===co.key;
-    // Spento: tinta tenue nel colore commessa. Selezionato: stesso colore pieno e saturo.
-    const style=active
-      ? `background:${co.color};border-color:${co.color};color:#1a1a1a`
-      : `background:${co.color}22;border-color:${co.color}55;color:${co.color}`;
-    const badge=active
-      ? `background:rgba(0,0,0,.2);color:#1a1a1a`
-      : `background:${co.color}33;color:${co.color}`;
-    return `<button class="fc-btn ${active?'active':''}" style="${style}" onclick="setCommessa('${co.key}')">${co.label}${n?`<span class="fc-count" style="${badge}">${n}</span>`:''}</button>`;
+    return `<button class="fc-btn ${active?'active':''}" onclick="setCommessa('${co.key}')"><span class="fc-dot" style="background:${co.color}"></span>${co.label}${n?`<span class="fc-count">${n}</span>`:''}</button>`;
   }).join('');
+  el.innerHTML=html;
+}
+
+// Iniziali degli operai che hanno in carico le richieste (max 3)
+function avatarsHTML(lista){
+  const nomi=[...new Set(lista.map(i=>i.operaio).filter(Boolean))].slice(0,3);
+  return '<span class="prese-avs">'+nomi.map(n=>{const u=USERS[n]||{color:'var(--bg4)',initial:n.charAt(0)};return `<span class="prese-av" style="background:${u.color}">${u.initial}</span>`;}).join('')+'</span>';
 }
 
 function renderLista(){
@@ -654,9 +641,9 @@ function renderLista(){
   if(vista==='rcee') straord=straord.filter(isRcee);
 
   // Filtro commessa
-  if(commessaSel) straord=straord.filter(i=>commessaDi(S.impianti.find(x=>x.codice===i.codiceImpianto)).key===commessaSel);
+  if(commessaSel) straord=straord.filter(i=>commessaDiInt(i).key===commessaSel);
 
-  const libere    = straord.filter(i=>!isPresa(i) && i.stato==='Aperto');
+  const libere     = straord.filter(i=>!isPresa(i) && i.stato==='Aperto');
   const prese      = straord.filter(i=>isPresa(i) && i.stato==='Aperto');
   const chiuseOggi = straord.filter(i=>i.stato==='Chiuso' && (i.dataChiusura===oggi || i.dataPrevista===oggi));
 
@@ -671,33 +658,43 @@ function renderLista(){
     // TAB RCEE: card dedicate ordinate per scadenza
     libere.sort(byScad); prese.sort(byScad);
     if(libere.length){
-      html+='<div class="sec-lbl">\uD83D\uDCCB Da prendere in carico</div>';
+      html+='<div class="sec-lbl" style="margin-top:0">Da prendere in carico</div>';
       html+=libere.map(i=>rceeCardHTML(i)).join('');
     }
     if(prese.length){
-      html+='<div class="sec-lbl" style="margin-top:8px">\uD83D\uDC77 Prese in carico</div>';
+      html+='<div class="sec-lbl">Prese in carico</div>';
       html+=prese.map(i=>cardHTML(i)).join('');
     }
+  } else if(vista==='mie'){
+    // LE MIE: elenco piatto, oggi in alto
+    prese.sort(byDate);
+    html+=prese.map(i=>cardHTML(i)).join('');
   } else {
+    // CONTENITORE: raggruppato per commessa. Libere in evidenza, prese dietro una riga apribile
     libere.sort(byDate); prese.sort(byDate);
     const libNorm = libere.filter(i=>!isRcee(i));
     const libRcee = libere.filter(isRcee).sort(byScad);
-    if(libNorm.length){
-      html+='<div class="sec-lbl">\uD83D\uDCE6 Nel contenitore</div>';
-      html+=libNorm.map(i=>cardHTML(i)).join('');
-    }
+    COMMESSE.forEach(co=>{
+      const lib=libNorm.filter(i=>commessaDiInt(i).key===co.key);
+      const pre=prese.filter(i=>commessaDiInt(i).key===co.key);
+      if(!lib.length && !pre.length) return;
+      const sub = lib.length ? `· ${lib.length} da prendere` : '· niente da prendere';
+      html+=`<div class="grp-hdr" style="color:${co.color}"><span class="grp-sq" style="background:${co.color}"></span>${co.label}<span class="grp-sub">${sub}</span></div>`;
+      html+=lib.map(i=>cardHTML(i)).join('');
+      if(pre.length){
+        const open=!!preseAperte[co.key];
+        html+=`<button class="prese-row ${open?'open':''}" onclick="togglePrese('${co.key}')">${avatarsHTML(pre)}<span class="prese-txt">${pre.length} già pres${pre.length===1?'a':'e'} in carico</span><span class="prese-arr">›</span></button>`;
+        if(open) html+=pre.map(i=>cardHTML(i)).join('');
+      }
+    });
     if(libRcee.length){
-      html+=`<div class="sec-lbl" style="margin-top:${libNorm.length?8:0}px">\uD83D\uDCCB Controlli RCEE \u00B7 ${libRcee.length}</div>`;
+      html+=`<div class="sec-lbl">Controlli RCEE · ${libRcee.length}</div>`;
       html+='<div class="rcee-box">'+libRcee.map(i=>rceeRowHTML(i)).join('')
-          +`<div class="rcee-more" onclick="setVista('rcee')">Apri la tab RCEE \u203A</div></div>`;
-    }
-    if(prese.length){
-      html+='<div class="sec-lbl" style="margin-top:8px">\uD83D\uDC77 Prese in carico</div>';
-      html+=prese.map(i=>cardHTML(i)).join('');
+          +`<div class="rcee-more" onclick="setVista('rcee')">Apri la tab RCEE ›</div></div>`;
     }
   }
   if(chiuseOggi.length){
-    html+='<div class="sec-lbl" style="margin-top:8px">\u2713 Completate oggi</div>';
+    html+='<div class="sec-lbl">✓ Completate oggi</div>';
     html+=chiuseOggi.map(i=>cardHTML(i)).join('');
   }
   if(!libere.length && !prese.length && !chiuseOggi.length){
@@ -706,7 +703,7 @@ function renderLista(){
     else if(vista==='rcee') msg='<div class="empty-txt">Nessun controllo RCEE'+(commessaSel?' per '+COMMESSE_BY_KEY[commessaSel].label:'')+'</div><div class="empty-sub">Le richieste RCEE assegnate dal responsabile compaiono qui</div>';
     else if(commessaSel) msg='<div class="empty-txt">Nessuna richiesta per '+COMMESSE_BY_KEY[commessaSel].label+'</div><div class="empty-sub">Cambia commessa o vista</div>';
     else msg='<div class="empty-txt">Contenitore vuoto</div><div class="empty-sub">Nessuna richiesta straordinaria al momento</div>';
-    html='<div class="empty"><div class="empty-ico">\u2705</div>'+msg+'</div>';
+    html='<div class="empty"><div class="empty-ico">✅</div>'+msg+'</div>';
   }
   document.getElementById('listaEl').innerHTML=noteBannerHTML()+html;
 }
@@ -735,6 +732,18 @@ async function notaLetta(id){
   apiPost('/nota-letta',{id,operaio:currentUser}).catch(()=>{});
 }
 
+// Data prevista in forma breve: "oggi", "domani", "in attesa da N gg", "lun 20 ott"
+function dataBreve(i){
+  const oggi=new Date().toISOString().slice(0,10);
+  const d=i.dataPrevista||'';
+  if(!d) return '';
+  if(d===oggi) return 'oggi';
+  const g=giorniA(d);
+  if(g===1) return 'domani';
+  if(g<0) return `<span class="req-sosp">⚠ in attesa da ${-g} g${-g===1?'':'g'}</span>`;
+  return fmtData(d);
+}
+
 // Riga compatta RCEE nel Contenitore: solo impianto, codice e scadenza
 function rceeRowHTML(i){
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
@@ -753,24 +762,21 @@ function rceeCardHTML(i){
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   const co=commessaDi(imp);
   const info=rceeInfo(i);
-  return `<div class="req-card libera" style="background:${co.color}22;border-color:${co.color}66">
-    <div class="req-body" onclick="openPanel('${i.id}')">
-      <div class="req-top">
-        <span class="req-commessa" style="background:${co.color}">${co.label}</span>
-        ${rceeScadPill(info)}
+  return `<div class="req-card libera">
+    <div class="req-lib-row" onclick="openPanel('${i.id}')">
+      <div class="req-lib-info">
+        <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
+        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' · '+imp.comune:''}${info.pot?' · '+info.pot:''}</div>
+        <div>${rceeScadPill(info)}</div>
       </div>
-      <div class="req-name">${imp?imp.descrizione:i.codiceImpianto}</div>
-      <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}${info.pot?' \u00B7 '+info.pot:''}</div>
+      <button class="req-take-rd" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')" title="Prendi in carico">＋</button>
     </div>
-    <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">\u270B Prendi in carico</button>
   </div>`;
 }
 
 function cardHTML(i){
   const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
   const co=commessaDi(imp);
-  const oggi=new Date().toISOString().slice(0,10);
-  const isPast=(i.dataPrevista||'')<oggi;
   const preso=isPresa(i);
   const mio=i.operaio===currentUser;
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
@@ -779,33 +785,32 @@ function cardHTML(i){
   const rcee=isRcee(i);
 
   if(!preso){
-    // CARD LIBERA \u2014 piena, sfondo colore commessa
-    return `<div class="req-card libera" style="background:${co.color}22;border-color:${co.color}66">
-      <div class="req-body" onclick="openPanel('${i.id}')">
-        <div class="req-top">
-          <span class="req-commessa" style="background:${co.color}">${co.label}</span>
-          ${isPast?'<span class="req-sosp">\u26A0 in attesa</span>':''}
+    // CARD LIBERA — neutra, "+" tondo nel colore della commessa
+    return `<div class="req-card libera">
+      <div class="req-lib-row" onclick="openPanel('${i.id}')">
+        <div class="req-lib-info">
+          <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
+          <div class="req-meta">${i.codiceImpianto} · ${dataBreve(i)}</div>
+          ${i.note?`<div class="req-lib-note">${i.note}</div>`:''}
         </div>
-        <div class="req-name">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}</div>
-        ${i.note?`<div class="req-note">\uD83D\uDCCB ${i.note}</div>`:''}
+        <button class="req-take-rd" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')" title="Prendi in carico">＋</button>
       </div>
-      <button class="req-take" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')">\u270B Prendi in carico</button>
     </div>`;
   }
 
-  // CARD PRESA \u2014 pi\u00F9 piccola, desaturata, con "in carico a X"
+  // CARD PRESA — spenta, con chi ce l'ha in carico
   let metaRcee='';
-  if(rcee){ const inf=rceeInfo(i); metaRcee=' \u00B7 <span class="rcee-tag">RCEE</span>'+(inf.scadTxt?' scad. '+inf.scadTxt:''); }
-  return `<div class="req-card presa ${isChiuso?'chiusa':''}" style="border-left:4px solid ${co.color}">
+  if(rcee){ const inf=rceeInfo(i); metaRcee=' · <span class="rcee-tag">RCEE</span>'+(inf.scadTxt?' scad. '+inf.scadTxt:''); }
+  const chi = isChiuso ? '✓ '+i.operaio : (mio ? 'in carico a te' : 'in carico a '+i.operaio);
+  return `<div class="req-card presa ${isChiuso?'chiusa':''}">
     <div class="req-presa-row" onclick="openPanel('${i.id}')">
       <div class="req-presa-info">
         <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
-        <div class="req-meta">${i.codiceImpianto}${imp&&imp.comune?' \u00B7 '+imp.comune:''}${metaRcee}${isPast&&!isChiuso&&!rcee?' \u00B7 \u26A0 sospeso':''}</div>
+        <div class="req-meta">${i.codiceImpianto} · ${chi}${metaRcee}${(!isChiuso&&!rcee)?' · '+dataBreve(i):''}</div>
       </div>
       <div class="req-presa-right">
-        <span class="req-incarico ${mio?'mio':''}">${isChiuso?'\u2713 ':'\uD83D\uDC77 '}${i.operaio}</span>
-        <span class="req-prog-sm">${done}/${chk.length}</span>
+        ${mio?'':`<span class="prese-av" style="background:${(USERS[i.operaio]||{}).color||'var(--bg4)'};width:34px;height:34px;font-size:13px;border:none">${(USERS[i.operaio]||{}).initial||''}</span>`}
+        <span class="req-prog-sm" style="${mio?'':'display:none'}">${done}/${chk.length}</span>
       </div>
     </div>
   </div>`;
@@ -816,7 +821,7 @@ async function prendiInCarico(id){
   const i=S.interventi.find(x=>x.id===id); if(!i)return;
   i.operaio=currentUser;
   renderLista();
-  try{ await apiPost('/aggiorna-intervento',{id,stato:i.stato||'Aperto',operaio:currentUser}); toast('Preso in carico \u2713','ok'); }
+  try{ await apiPost('/aggiorna-intervento',{id,stato:i.stato||'Aperto',operaio:currentUser}); toast('Preso in carico ✓','ok'); }
   catch(e){ toast('Errore rete','err'); }
 }
 async function prendiInCaricoDaPanel(){
@@ -826,7 +831,7 @@ async function prendiInCaricoDaPanel(){
   catch(e){ toast('Errore rete','err'); }
   openPanel(currentIntId);
   renderLista();
-  toast('Preso in carico \u2713','ok');
+  toast('Preso in carico ✓','ok');
 }
 function openRiassegnaSheet(){
   const colleghi=Object.keys(USERS).filter(n=>n!==currentUser);
@@ -851,7 +856,7 @@ function panelInfoHTML(i){
     const info=rceeInfo(i);
     const g=giorniA(info.scad);
     const col = g===null ? '' : (g<0 ? 'color:var(--red)' : (g<=15 ? 'color:var(--orange)' : ''));
-    return `<div class="info-box"><div class="info-lbl">Scadenza RCEE</div><div class="info-val" style="${col}">${info.scad?fmtData(info.scad):'\u2014'}</div></div>
+    return `<div class="info-box"><div class="info-lbl">Scadenza RCEE</div><div class="info-val" style="${col}">${info.scad?fmtData(info.scad):'—'}</div></div>
       <div class="info-box"><div class="info-lbl">Data prevista</div><div class="info-val">${fmtData(i.dataPrevista)}</div></div>`;
   }
   return `<div class="info-box"><div class="info-lbl">Tipo visita</div><div class="info-val">${i.tipoVisita}</div></div>
@@ -869,7 +874,7 @@ function openPanel(id){
   const rcee=isRcee(i);
 
   document.getElementById('panelTitle').textContent=imp?imp.descrizione:i.codiceImpianto;
-  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' \u00B7 '+imp.comune:'')+((i.dataPrevista<oggi&&i.stato==='Aperto'&&!rcee)?' \u00B7 \u26A0 Sospeso':'');
+  document.getElementById('panelSub').textContent=i.codiceImpianto+(imp&&imp.comune?' · '+imp.comune:'')+((i.dataPrevista<oggi&&i.stato==='Aperto'&&!rcee)?' · ⚠ Sospeso':'');
   document.getElementById('panelInfo').innerHTML=panelInfoHTML(i);
 
   let noteHtml='';
@@ -877,30 +882,30 @@ function openPanel(id){
   // Banner stato presa in carico (solo se non chiuso)
   if(i.stato!=='Chiuso'){
     if(!preso){
-      noteHtml += `<div class="carico-banner libera"><div>${rcee?'\uD83D\uDCCB Controllo RCEE':'\uD83D\uDCE6 Nel contenitore'} \u2014 non ancora presa in carico</div><button class="carico-btn" onclick="prendiInCaricoDaPanel()">\u270B Prendi in carico</button></div>`;
+      noteHtml += `<div class="carico-banner libera"><div>${rcee?'📋 Controllo RCEE':'📦 Nel contenitore'} — non ancora presa in carico</div><button class="carico-btn" onclick="prendiInCaricoDaPanel()">✋ Prendi in carico</button></div>`;
     } else if(mio){
-      noteHtml += `<div class="carico-banner mio"><div>\uD83D\uDC77 In carico a <strong>te</strong></div><button class="carico-btn ghost" onclick="openRiassegnaSheet()">\u21AA Riassegna a un collega</button></div>`;
+      noteHtml += `<div class="carico-banner mio"><div>👷 In carico a <strong>te</strong></div><button class="carico-btn ghost" onclick="openRiassegnaSheet()">↪ Riassegna a un collega</button></div>`;
     } else {
-      noteHtml += `<div class="carico-banner altri"><div>\uD83D\uDC77 In carico a <strong>${i.operaio}</strong></div><button class="carico-btn ghost" onclick="prendiInCaricoDaPanel()">\u21AA Passa a me</button></div>`;
+      noteHtml += `<div class="carico-banner altri"><div>👷 In carico a <strong>${i.operaio}</strong></div><button class="carico-btn ghost" onclick="prendiInCaricoDaPanel()">↪ Passa a me</button></div>`;
     }
   }
 
   // Note intervento (per le RCEE senza le righe ripetute "Riaperto il...")
   const notaVis = rcee ? pulisciNotaRcee(i.note) : i.note;
-  if(notaVis) noteHtml += `<div class="note-box">\uD83D\uDCCB ${notaVis}</div>`;
+  if(notaVis) noteHtml += `<div class="note-box">📋 ${notaVis}</div>`;
 
-  // Secondo operaio + RDA: solo se la richiesta \u00E8 presa in carico
+  // Secondo operaio + RDA: solo se la richiesta è presa in carico
   if(i.stato!=='Chiuso' && preso){
     if(i.secondoOperaio){
-      noteHtml += `<div class="secondo-banner">\uD83D\uDC65 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">\u2715</button></div>`;
+      noteHtml += `<div class="secondo-banner">👥 Richiesto supporto di <strong>${i.secondoOperaio}</strong><button onclick="rimuoviSecondo()" title="Rimuovi segnalazione">✕</button></div>`;
     } else {
-      noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">\uD83D\uDC65 Serve un secondo operaio</button>`;
+      noteHtml += `<button onclick="openSecondoSheet()" style="width:100%;padding:14px;background:rgba(139,92,246,.08);border:1.5px dashed rgba(139,92,246,.3);border-radius:14px;color:#a78bfa;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px">👥 Serve un secondo operaio</button>`;
     }
     const rdaCorrente = (S.rdacat||[]).find(r => r.idIntervento === id && r.stato !== 'Annullata');
     if(rdaCorrente){
-      noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">\uD83D\uDED2</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
+      noteHtml += `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(100,180,220,.08);border:1.5px solid rgba(100,180,220,.25);border-radius:14px;margin-bottom:14px"><span style="font-size:18px">🛒</span><div style="flex:1;font-size:14px"><div style="font-weight:600;color:#7ab0d8">${rdaCorrente.tipologia}</div><div style="color:var(--muted);margin-top:2px">${rdaCorrente.nota}</div></div><span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:rgba(100,180,220,.15);color:#7ab0d8">${rdaCorrente.stato}</span></div>`;
     } else {
-      noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">\uD83D\uDED2 RDA / CAT</button>`;
+      noteHtml += `<button onclick="openRdaSheet('${id}')" style="width:100%;padding:14px;background:rgba(100,180,220,.06);border:1.5px dashed rgba(100,180,220,.3);border-radius:14px;color:#7ab0d8;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px">🛒 RDA / CAT</button>`;
     }
   }
 
@@ -915,8 +920,8 @@ function renderChk(id){
   const chk=S.checklist.filter(c=>c.idIntervento===id);
   if(!chk.length){
     document.getElementById('panelChk').innerHTML=`
-      <div style="color:var(--muted);font-size:16px;padding:16px 0 8px">Nessuna attivit\u00E0 in checklist.</div>
-      <button class="add-extra-btn" onclick="openSheet('${id}')">\uFF0B Aggiungi attivit\u00E0 extra</button>`;
+      <div style="color:var(--muted);font-size:16px;padding:16px 0 8px">Nessuna attività in checklist.</div>
+      <button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
     return;
   }
   const norm=chk.filter(c=>c.extra!=='SI'),ext=chk.filter(c=>c.extra==='SI');
@@ -924,19 +929,19 @@ function renderChk(id){
     const isDone=c.eseguita==='SI',isExp=!!expandedNota[c.id];
     return`<div class="chk-item ${isDone?'done':''}">
       <div class="chk-main" onclick="toggleChk('${c.id}','${id}')">
-        <div class="chk-box ${isDone?'done':''}"><span class="chk-icon">\u2713</span></div>
+        <div class="chk-box ${isDone?'done':''}"><span class="chk-icon">✓</span></div>
         <div class="chk-txt">${c.attivita}</div>
         ${c.extra==='SI'?'<span class="chk-extra-pill">EXTRA</span>':''}
-        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'\u25B2':'\u25BC'}</button>
+        <button class="chk-expand" onclick="event.stopPropagation();toggleNota('${c.id}')">${isExp?'▲':'▼'}</button>
       </div>
-      ${c.note?`<div class="nota-preview">\u26A0 ${c.note}</div>`:''}
+      ${c.note?`<div class="nota-preview">⚠ ${c.note}</div>`:''}
       <div class="nota-area ${isExp?'open':''}">
         <textarea class="nota-inp" id="ni-${c.id}" placeholder="Anomalia, osservazione...">${c.note||''}</textarea>
         <button class="nota-save" onclick="salvaNota('${c.id}','${id}')">Salva nota</button>
       </div>
     </div>`;
   }).join('');
-  document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">\uFF0B Aggiungi attivit\u00E0 extra</button>`;
+  document.getElementById('panelChk').innerHTML=html+`<button class="add-extra-btn" onclick="openSheet('${id}')">＋ Aggiungi attività extra</button>`;
 }
 
 function closePanel(){document.getElementById('panel').classList.remove('open');document.getElementById('panelFab').style.display='none';expandedNota={};renderLista()}
@@ -949,7 +954,7 @@ function aggFab(i){
   const preso=isPresa(i);
   const fab=document.getElementById('panelFab');
   const pb=document.getElementById('postBtn');
-  // Richiesta nel contenitore: niente completa/posticipa finch\u00E9 non \u00E8 presa
+  // Richiesta nel contenitore: niente completa/posticipa finché non è presa
   if(i.stato!=='Chiuso' && !preso){
     fab.style.display='none';
     if(pb)pb.style.display='none';
@@ -958,10 +963,10 @@ function aggFab(i){
   const chk=S.checklist.filter(c=>c.idIntervento===i.id);
   const done=chk.filter(c=>c.eseguita==='SI').length;
   if(i.stato==='Chiuso'){
-    fab.style.display='';fab.textContent='\u21BA Riapri intervento';fab.className='panel-fab riapri';
+    fab.style.display='';fab.textContent='↺ Riapri intervento';fab.className='panel-fab riapri';
     if(pb)pb.style.display='none';
   } else {
-    fab.style.display='';fab.textContent=`\u2713 Completato (${done}/${chk.length})`;fab.className='panel-fab completa';
+    fab.style.display='';fab.textContent=`✓ Completato (${done}/${chk.length})`;fab.className='panel-fab completa';
     if(pb)pb.style.display='';
   }
 }
@@ -970,13 +975,13 @@ function closePostSheet(){document.getElementById('postSheet').classList.remove(
 function showPostDate(){document.getElementById('postDateWrap').style.display='block'}
 function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);return d}
 async function posticipa(tipo){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;let nuovaData;if(tipo==='domani')nuovaData=addDays(new Date(),1).toISOString().slice(0,10);else if(tipo==='settimana')nuovaData=addDays(new Date(),7).toISOString().slice(0,10);else if(tipo==='custom'){nuovaData=document.getElementById('postDateInp').value;if(!nuovaData){toast('Seleziona una data','err');return;}}closePostSheet();try{await apiPost('/posticipa-intervento',{id:currentIntId,nuovaData});i.dataPrevista=nuovaData;document.getElementById('panelInfo').innerHTML=panelInfoHTML(i);renderLista();toast('Posticipato a '+fmtData(nuovaData),'ok');}catch(e){toast('Errore rete','err');}}
-async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' \u00B7 '+done+'/'+chk.length+' attivit\u00E0 completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
+async function toggleChiudi(){const i=S.interventi.find(x=>x.id===currentIntId);if(!i)return;if(i.stato==='Chiuso'){i.stato='Aperto';aggFab(i);renderLista();await apiPost('/aggiorna-intervento',{id:currentIntId,stato:'Aperto'});if(i.interventoCollegato){const coll=S.interventi.find(x=>x.id===i.interventoCollegato);if(coll){coll.stato='Aperto';renderLista();}}toast('Riaperto','ok');return;}const chk=S.checklist.filter(c=>c.idIntervento===currentIntId);const done=chk.filter(c=>c.eseguita==='SI').length;const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);document.getElementById('mcSub').textContent=(imp?imp.descrizione:i.codiceImpianto)+' · '+done+'/'+chk.length+' attività completate';document.getElementById('mcNota').value='';document.getElementById('modalChiusura').classList.add('open');}
 function closeModalChiusura(){document.getElementById('modalChiusura').classList.remove('open')}
 async function confermaChiusura(){
   const nota=document.getElementById('mcNota').value.trim();
   if(!nota){
     document.getElementById('mcNota').style.borderColor='var(--red)';
-    document.getElementById('mcNota').placeholder='\u26A0 Campo obbligatorio \u2014 descrivi cosa \u00E8 stato fatto';
+    document.getElementById('mcNota').placeholder='⚠ Campo obbligatorio — descrivi cosa è stato fatto';
     document.getElementById('mcNota').focus();
     return;
   }
@@ -993,11 +998,11 @@ async function confermaChiusura(){
     const coll=S.interventi.find(x=>x.id===i.interventoCollegato);
     if(coll){coll.stato='Chiuso';renderLista();}
   }
-  toast(i.interventoCollegato?'Completato \u2713 (chiuso anche il collega)':'Completato \u2713','ok');
+  toast(i.interventoCollegato?'Completato ✓ (chiuso anche il collega)':'Completato ✓','ok');
 }
 
 let nifTipoSel = '';
-function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} \u2014 ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
+function openNewInt(){const sel=document.getElementById('nifImp');sel.innerHTML='<option value="">Seleziona impianto...</option>'+S.impianti.map(i=>`<option value="${i.codice}">${i.codice} — ${i.descrizione}</option>`).join('');sel.value='';nifTipoSel='';document.getElementById('nifOrd').classList.remove('sel');document.getElementById('nifStr').classList.remove('sel');document.getElementById('nifData').value=new Date().toISOString().slice(0,10);document.getElementById('nifNote').value='';document.getElementById('newIntOverlay').classList.add('open');}
 function closeNewInt(){document.getElementById('newIntOverlay').classList.remove('open')}
 function selNifTipo(tipo){nifTipoSel=tipo;document.getElementById('nifOrd').classList.toggle('sel',tipo==='Ordinaria');document.getElementById('nifStr').classList.toggle('sel',tipo==='Straordinaria');}
 function onNifImpChange(){}
@@ -1008,12 +1013,12 @@ async function inviaNewInt(){
   if(!data){toast('Inserisci la data','err');return;}
   const btn=document.getElementById('nifSubmit');btn.disabled=true;btn.textContent='Invio...';
   try{
-    // Straordinaria \u2192 entra nel CONTENITORE (operaio vuoto). Ordinaria \u2192 resta a chi la crea.
+    // Straordinaria → entra nel CONTENITORE (operaio vuoto). Ordinaria → resta a chi la crea.
     const operaioNew = nifTipoSel==='Straordinaria' ? '' : currentUser;
     const r=await apiPost('/crea-intervento',{codiceImpianto:imp,tipoVisita:nifTipoSel,operaio:operaioNew,dataPrevista:data,note:document.getElementById('nifNote').value.trim(),attivitaExtra:[]});
     if(!r.ok){toast('Errore invio','err');btn.disabled=false;btn.textContent='Invia richiesta';return;}
     closeNewInt();
-    toast(nifTipoSel==='Straordinaria'?'Richiesta aggiunta al contenitore \u2713':'Intervento creato \u2713','ok');
+    toast(nifTipoSel==='Straordinaria'?'Richiesta aggiunta al contenitore ✓':'Intervento creato ✓','ok');
     await caricaDati();
   }catch(e){toast('Errore rete','err');btn.disabled=false;btn.textContent='Invia richiesta';}
   finally{btn.disabled=false;btn.textContent='Invia richiesta';}
@@ -1021,10 +1026,7 @@ async function inviaNewInt(){
 
 function openSheet(intId){extraForId=intId||currentIntId;document.getElementById('sheetInp').value='';document.getElementById('sheetOverlay').classList.add('open');setTimeout(()=>document.getElementById('sheetInp').focus(),280)}
 function closeSheet(){document.getElementById('sheetOverlay').classList.remove('open')}
-async function salvaExtra(){const val=document.getElementById('sheetInp').value.trim();if(!val)return;closeSheet();try{const r=await apiPost('/aggiungi-extra',{idIntervento:extraForId,attivita:val});if(!r.ok){toast('Errore','err');return}S.checklist.push({id:r.id,idIntervento:extraForId,attivita:val,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'});if(document.getElementById('panel').classList.contains('open')&&extraForId===currentIntId){renderChk(extraForId);aggFab(S.interventi.find(i=>i.id===extraForId))}renderLista();toast('Attivit\u00E0 aggiunta','ok')}catch(e){toast('Errore rete','err')}}
-
-function openWeekSheet(){const oggi=new Date();const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];const MESI=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];let html='';for(let g=0;g<7;g++){const d=new Date(oggi);d.setDate(oggi.getDate()+g);const ds=d.toISOString().slice(0,10);const isOggi=g===0;const ints=S.interventi.filter(i=>(i.operaio===currentUser||i.secondoOperaio===currentUser)&&i.dataPrevista===ds&&i.stato!=='Chiuso');html+=`<div class="week-day ${isOggi?'oggi':''}"><div class="week-day-hdr"><span class="week-day-nome">${isOggi?'Oggi':GIORNI[d.getDay()]}</span><span class="week-day-num">${d.getDate()} ${MESI[d.getMonth()]}</span></div>`;if(!ints.length){html+=`<div class="week-empty">Nessun intervento</div>`;}else{ints.forEach(i=>{const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);const nome=imp?imp.descrizione:i.codiceImpianto;const isSecondo=i.secondoOperaio===currentUser&&i.operaio!==currentUser;const colore=isSecondo?'var(--orange)':'var(--accent)';html+=`<div class="week-int" onclick="closeWeekSheet();openPanel('${i.id}')"><div class="week-dot" style="background:${colore}"></div><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</div>${isSecondo?'<span style="font-size:11px;color:var(--orange)">+2</span>':''}</div>`;});}html+='</div>';}document.getElementById('weekContent').innerHTML=html;document.getElementById('weekSheet').classList.add('open');}
-function closeWeekSheet(){document.getElementById('weekSheet').classList.remove('open')}
+async function salvaExtra(){const val=document.getElementById('sheetInp').value.trim();if(!val)return;closeSheet();try{const r=await apiPost('/aggiungi-extra',{idIntervento:extraForId,attivita:val});if(!r.ok){toast('Errore','err');return}S.checklist.push({id:r.id,idIntervento:extraForId,attivita:val,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'});if(document.getElementById('panel').classList.contains('open')&&extraForId===currentIntId){renderChk(extraForId);aggFab(S.interventi.find(i=>i.id===extraForId))}renderLista();toast('Attività aggiunta','ok')}catch(e){toast('Errore rete','err')}}
 
 let rdaIntId=null,rdaTipoSel='';
 const RDA_TIPI=['Sostituzione apparecchiatura','Supporto tecnico','Materiali/Ricambi','Altro'];
@@ -1044,10 +1046,10 @@ function closeSecondoSheet(){document.getElementById('secondoSheet').classList.r
 async function segnalaSecondo(nomeCollega){closeSecondoSheet();try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:nomeCollega});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio=nomeCollega;openPanel(currentIntId);toast(`Segnalato: serve ${nomeCollega}`,'ok');}catch(e){toast('Errore rete','err');}}
 async function rimuoviSecondo(){try{await apiPost('/segnala-secondo',{id:currentIntId,secondoOperaio:''});const i=S.interventi.find(x=>x.id===currentIntId);if(i)i.secondoOperaio='';openPanel(currentIntId);toast('Segnalazione rimossa','ok');}catch(e){toast('Errore rete','err');}}
 
-function fmtData(s){if(!s)return'\u2014';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
+function fmtData(s){if(!s)return'—';return new Date(s+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}
 function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className='toast '+(type||'');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400)}
 
-// \u2500\u2500 PANEL I MIEI IMPIANTI \u2500\u2500
+// ── PANEL I MIEI IMPIANTI ──
 const STAGIONE_INIZIO = '2026-04-16';
 const STAGIONE_FINE   = '2026-10-01';
 let IMP = { impianti:[], interventi:[] };
@@ -1104,7 +1106,7 @@ async function caricaImpianti() {
     renderImpiantiPanel();
   } catch(e) {
     document.getElementById('impLista').innerHTML =
-      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\u26A0\uFE0F</div>Errore caricamento</div>';
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">⚠️</div>Errore caricamento</div>';
   }
 }
 
@@ -1154,7 +1156,7 @@ function renderImpiantiPanel() {
   document.getElementById('impProgress').style.width= pct+'%';
   document.getElementById('impProgLeft').textContent= nVerdi+' completati';
   document.getElementById('impProgRight').textContent= pct+'%';
-  document.getElementById('impiantiSub').textContent = nVerdi+'/'+nTot+' completati \u00B7 stagione 2026';
+  document.getElementById('impiantiSub').textContent = nVerdi+'/'+nTot+' completati · stagione 2026';
 
   let lista = stati;
   if(impFiltro==='verde') lista = lista.filter(x=>x.s.stato==='verde');
@@ -1168,17 +1170,17 @@ function renderImpiantiPanel() {
 
   if(!lista.length) {
     document.getElementById('impLista').innerHTML =
-      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">\uD83C\uDFE2</div>Nessun impianto trovato</div>';
+      '<div class="empty" style="padding:60px 20px"><div style="font-size:48px;opacity:.3;margin-bottom:12px">🏢</div>Nessun impianto trovato</div>';
     return;
   }
 
   let html='', ultimoComune=null;
   lista.forEach(({imp, s}) => {
     if(imp.comune !== ultimoComune) {
-      html += `<div style="padding:10px 18px 4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">\uD83D\uDCCD ${imp.comune||'\u2014'}</div>`;
+      html += `<div style="padding:10px 18px 4px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">📍 ${imp.comune||'—'}</div>`;
       ultimoComune = imp.comune;
     }
-    const icon     = s.stato==='verde' ? '\u2713' : s.stato==='giallo' ? '\u2192' : '\u2717';
+    const icon     = s.stato==='verde' ? '✓' : s.stato==='giallo' ? '→' : '✗';
     const colStr   = s.stato==='verde' ? 'var(--green)' : s.stato==='giallo' ? 'var(--yellow)' : 'var(--red)';
     const colBg    = s.stato==='verde' ? 'rgba(63,185,80,.12)' : s.stato==='giallo' ? 'rgba(200,180,100,.1)' : 'rgba(200,120,120,.1)';
     const stripCol = s.stato==='verde' ? 'var(--green)' : 'var(--red)';
@@ -1197,7 +1199,7 @@ function renderImpiantiPanel() {
             <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:${colBg};color:${colStr}">${dataLbl}</span>
           </div>
         </div>
-        ${s.id ? `<div style="color:var(--muted);font-size:20px">\u203A</div>` : ''}
+        ${s.id ? `<div style="color:var(--muted);font-size:20px">›</div>` : ''}
       </div>
     </div>`;
   });
