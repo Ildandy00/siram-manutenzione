@@ -393,6 +393,9 @@
       <div id="formErr" class="banner err" hidden style="margin-top:10px"></div>
       <div class="actions">
         <button id="btnReset" class="btn ghost">Annulla modifiche</button>
+        <button id="btnCopia" class="btn ghost" title="Copia le 8 righe di questo programma per incollarle su un altro circuito">Copia programma</button>
+        <button id="btnIncolla" class="btn ghost" disabled title="Incolla le righe copiate in questo programma (poi Applica)">Incolla programma</button>
+        <span id="copiaInfo" class="muted" style="font-size:12px"></span>
         <span class="spacer"></span>
         <span id="chgCount" class="muted"></span>
         <button id="btnApplica" class="btn primary" disabled>Applica programma</button>
@@ -882,12 +885,12 @@
       banner.hidden = false;
       banner.className = 'banner ok';
       banner.textContent = `Programma letto da Coster il ${S.baselineAt || ''}. Modifica le righe: quelle cambiate si evidenziano.`;
-      $('editorHint').textContent = 'Deselezionando tutti i giorni la riga viene disabilitata. Prima della scrittura Coster viene riletto e ti viene mostrato il confronto da confermare.';
+      $('editorHint').textContent = 'Deselezionando tutti i giorni la riga viene disabilitata. "Applica programma" scrive subito su Coster, senza chiedere conferma; il confronto resta visibile nel lavoro.';
     } else {
       banner.hidden = false;
       banner.className = 'banner info';
       banner.textContent = 'Programma non ancora letto: puoi leggerlo (consigliato) oppure compilare solo i campi da cambiare — i campi vuoti mantengono il valore attuale, e senza giorni selezionati restano i giorni attuali.';
-      $('editorHint').textContent = 'In ogni caso, prima della scrittura Coster viene letto e ti viene mostrato il confronto da confermare.';
+      $('editorHint').textContent = '"Applica programma" legge Coster e scrive subito, senza chiedere conferma; il confronto resta visibile nel lavoro.';
     }
 
     const body = $('progBody');
@@ -945,7 +948,57 @@
       );
       body.append(tr);
     }
+    aggiornaCopia();
     refreshChanges();
+  }
+
+  // ============================================================
+  // COPIA / INCOLLA PROGRAMMA (23/10/2026)
+  // Le 8 righe come sono nell'editor (giorni, da, a, °C, disabilitata) restano in
+  // memoria nel browser (sessionStorage): si copia da un circuito, si cambia
+  // schedule, si incolla e si preme Applica. Ogni circuito e' comunque una
+  // scrittura a se' sul PC (~1 minuto per riga modificata).
+  // ============================================================
+  const COPIA_KEY = 'orariCoster.programmaCopiato';
+
+  function programmaCopiato() {
+    try { return JSON.parse(sessionStorage.getItem(COPIA_KEY) || 'null'); } catch (e) { return null; }
+  }
+
+  function copiaProgramma() {
+    if (!S.schedule) return;
+    const imp = S.catalog.impianti.find((p) => p.ref === S.schedule.impianto_ref) || {};
+    const righe = S.edits.map((e, i) => {
+      const b = S.baseline && S.baseline[i];
+      // riga disabilitata (o non letta e vuota) -> si copia come disabilitata
+      const attiva = !e.disable && e.days && e.start && e.end && e.temp !== '';
+      return attiva ? { days: e.days, start: e.start, end: e.end, temp: String(e.temp) } : { off: true };
+    });
+    const dati = { righe, da: `${impiantoLabel(imp)} · ${S.schedule.nome}`, quando: Date.now(), letto: Boolean(S.baseline) };
+    try { sessionStorage.setItem(COPIA_KEY, JSON.stringify(dati)); } catch (e) { /* niente memoria: pazienza */ }
+    aggiornaCopia();
+  }
+
+  function incollaProgramma() {
+    const c = programmaCopiato();
+    if (!c || !S.schedule) return;
+    for (let i = 0; i < ROWS(); i++) {
+      const r = c.righe[i];
+      if (!r) break;
+      S.edits[i] = r.off
+        ? { days: 0, start: '', end: '', temp: '', disable: true }
+        : { days: r.days, start: r.start, end: r.end, temp: r.temp, disable: false };
+    }
+    renderEditor();
+    $('formErr').hidden = true;
+  }
+
+  function aggiornaCopia() {
+    const c = programmaCopiato();
+    const attive = c ? c.righe.filter((r) => !r.off).length : 0;
+    $('btnIncolla').disabled = !c || !S.schedule;
+    $('copiaInfo').textContent = c ? `copiato da ${c.da} (${attive} ${attive === 1 ? 'riga attiva' : 'righe attive'})` : '';
+    $('btnCopia').disabled = !S.schedule;
   }
 
   /** Costruisce l'elenco delle modifiche da inviare; lancia Error se ci sono dati non validi. */
@@ -1095,12 +1148,12 @@
   function stepsFor(job) {
     return job.tipo === 'lettura'
       ? [['in_coda', 'In coda'], ['connessione', 'Controller'], ['lettura', 'Lettura'], ['completato', 'Fatto']]
-      : [['in_coda', 'In coda'], ['connessione', 'Controller'], ['lettura', 'Lettura'], ['attesa_conferma', 'Conferma'],
+      : [['in_coda', 'In coda'], ['connessione', 'Controller'], ['lettura', 'Lettura'],
          ['scrittura', 'Scrittura'], ['verifica', 'Verifica'], ['completato', 'Fatto']];
   }
 
   function stepIndex(job, steps) {
-    const alias = { preso: 'connessione', confermato: 'scrittura', rollback: 'verifica', nessuna_modifica: 'completato' };
+    const alias = { preso: 'connessione', attesa_conferma: 'lettura', confermato: 'scrittura', rollback: 'verifica', nessuna_modifica: 'completato' };
     const key = alias[job.stato] || job.stato;
     let idx = steps.findIndex(([k]) => k === key);
     if (idx < 0) {
@@ -2008,6 +2061,8 @@
   $('btnLeggi').addEventListener('click', () => createJob('lettura'));
   $('btnApplica').addEventListener('click', () => createJob('modifica'));
   $('btnReset').addEventListener('click', () => { resetEdits(); renderEditor(); });
+  $('btnCopia').addEventListener('click', copiaProgramma);
+  $('btnIncolla').addEventListener('click', incollaProgramma);
   $('btnConferma').addEventListener('click', confirmJob);
   $('btnAnnullaJob').addEventListener('click', cancelJob);
   $('btnChiudiJob').addEventListener('click', closeJob);
