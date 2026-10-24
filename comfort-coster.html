@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siram — Comfort</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  comfort-coster.html — controllo comfort rispetto all'orario del cliente (24/10/2026).
+  Legge la fotografia dell'analisi (chiave "comfort", scritta da scripts/controllo_comfort.py sul PC)
+  dal server siram-proxy con il PIN delle pagine Orari/Analisi. Stessa palette di responsabile.html.
+  Un giorno alla volta: calde prima dell'ora, spente tardi, fredde; colore piu' scuro = piu' grave.
+  Ogni zona si apre e mostra gli ultimi 21 giorni (mattina e sera).
+  ?giorno=AAAA-MM-GG apre direttamente quel giorno (link nella mail).
+-->
+<style>
+  :root { --bg:#282828; --bg2:#444; --bg3:#4e4e4e; --bg4:#585858; --text:#eee; --muted:#999; --accent:#ccc;
+          --green:#8fbe7a; --yellow:#c8b464; --red:#c87878; --orange:#c89060; --blue:#7ab0d8;
+          --hot:#ff5a4e; --hot-soft:#5a2b27; --late:#ff9f43; --late-soft:#5a3f1f; --cold:#4ea8ff; --cold-soft:#1f3a5a; }
+  * { box-sizing:border-box }
+  html, body { margin:0; background:var(--bg); color:var(--text); font-family:Outfit, system-ui, sans-serif; }
+  html.embedded .brand { display:none }
+  .wrap { max-width:1080px; margin:0 auto; padding:18px 16px 60px }
+  html.embedded .wrap { max-width:none }
+  .brand { font-family:'DM Mono', monospace; font-size:12px; letter-spacing:2px; color:var(--muted); text-transform:uppercase }
+  header.top { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px }
+  h1 { font-size:30px; font-weight:700; margin:4px 0 0; letter-spacing:-.5px }
+  .sub { color:var(--muted); font-size:14px; margin-top:4px }
+  .pill { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:var(--bg2); border-radius:999px; padding:4px 10px }
+  .pill i { width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block }
+  .pill.ok i { background:var(--green) } .pill.off i { background:var(--red) }
+  .dayctl { display:flex; align-items:center; gap:8px }
+  .btn { background:var(--bg3); color:var(--text); border:0; border-radius:10px; padding:9px 14px; font:inherit; font-size:14px; cursor:pointer }
+  .btn:hover { background:var(--bg4) } .btn:disabled { opacity:.4; cursor:default }
+  .btn.primary { background:var(--text); color:#111; font-weight:600 }
+  input[type=date], select, input[type=search] { background:var(--bg3); color:var(--text); border:0; border-radius:10px; padding:9px 12px; font:inherit; font-size:14px; color-scheme:dark }
+  .tiles { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin:6px 0 22px }
+  .tile { background:var(--bg2); border-radius:16px; padding:16px 18px; cursor:pointer; border:2px solid transparent; transition:border-color .15s }
+  .tile.on { border-color:var(--accent) }
+  .tile b { display:block; font-size:36px; font-weight:700; letter-spacing:-1px; line-height:1 }
+  .tile span { display:block; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-top:8px }
+  .tile.hot b { color:var(--hot) } .tile.late b { color:var(--late) } .tile.cold b { color:var(--cold) } .tile.ok b { color:var(--green) }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px }
+  .toolbar .sp { flex:1 }
+  h2 { font-size:18px; font-weight:600; margin:22px 0 8px; display:flex; align-items:baseline; gap:10px }
+  h2 small { color:var(--muted); font-weight:400; font-size:13px }
+  .list { background:var(--bg2); border-radius:16px; overflow:hidden }
+  .row { display:grid; grid-template-columns:6px 1fr auto; align-items:center; cursor:pointer; border-top:1px solid rgba(255,255,255,.05) }
+  .row:first-child { border-top:0 }
+  .row:hover .main { background:rgba(255,255,255,.03) }
+  .row .bar { align-self:stretch }
+  .row .main { padding:12px 14px }
+  .row .name { font-weight:600; font-size:15px }
+  .row .name small { color:var(--muted); font-weight:400; font-size:12px; margin-left:8px }
+  .row .why { color:var(--muted); font-size:13px; margin-top:2px }
+  .row .big { font-family:'DM Mono', monospace; font-size:20px; font-weight:500; padding:12px 16px; white-space:nowrap }
+  .empty { padding:16px; color:var(--muted); font-size:14px }
+  .strip { grid-column:1 / -1; padding:10px 14px 14px 20px; background:rgba(0,0,0,.15); display:none }
+  .row.open + .strip { display:block }
+  .strip .lbl { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:6px 0 4px }
+  .days { display:flex; gap:3px; flex-wrap:wrap }
+  .day { width:22px; height:22px; border-radius:6px; background:var(--bg3); position:relative }
+  .day[title]:hover { outline:2px solid var(--accent) }
+  .day.hot { background:var(--hot) } .day.late { background:var(--late) } .day.cold { background:var(--cold) } .day.ok { background:#4f7f45 } .day.nd { background:var(--bg3); opacity:.5 }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:12px; margin-top:28px }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px }
+  .chips { display:flex; gap:8px; flex-wrap:wrap }
+  .chip { background:var(--bg2); border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer }
+  .chip b { font-family:'DM Mono', monospace; font-weight:500 }
+  .chip.hot { border-left:4px solid var(--hot) } .chip.late { border-left:4px solid var(--late) } .chip.cold { border-left:4px solid var(--cold) }
+  #gate { max-width:360px; margin:80px auto; background:var(--bg2); border-radius:16px; padding:24px }
+  #gate input { width:100%; margin:12px 0; font-size:22px; letter-spacing:6px; text-align:center; background:var(--bg3); border:0; border-radius:10px; padding:12px; color:var(--text) }
+  .banner { background:var(--bg2); border-left:4px solid var(--red); padding:10px 14px; border-radius:10px; margin-bottom:14px; font-size:14px }
+  @media (max-width:640px) { .tiles { grid-template-columns:repeat(2,1fr) } h1 { font-size:24px } .row .big { font-size:17px } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="gate">
+    <div class="brand">Siram · Comfort</div>
+    <h1 style="font-size:22px">PIN</h1>
+    <div class="sub">Lo stesso delle pagine Orari e Analisi.</div>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
+    <button class="btn primary" style="width:100%" id="btnPin">Entra</button>
+    <div id="gateErr" class="sub" style="color:var(--red);margin-top:10px"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <header class="top">
+      <div>
+        <div class="brand">Siram · Telegestione</div>
+        <h1 id="titolo">Comfort</h1>
+        <div class="sub" id="sotto"></div>
+      </div>
+      <div class="dayctl">
+        <button class="btn" id="prev" title="giorno prima">‹</button>
+        <input type="date" id="giorno">
+        <button class="btn" id="next" title="giorno dopo">›</button>
+        <span class="pill" id="pill"><i></i><span>…</span></span>
+      </div>
+    </header>
+
+    <div id="banner" class="banner" style="display:none"></div>
+
+    <div class="tiles">
+      <div class="tile hot" data-f="hot"><b id="nHot">0</b><span>calde prima dell'ora</span></div>
+      <div class="tile late" data-f="late"><b id="nLate">0</b><span>spente tardi</span></div>
+      <div class="tile cold" data-f="cold"><b id="nCold">0</b><span>fredde all'ora del cliente</span></div>
+      <div class="tile ok" data-f="ok"><b id="nOk">0</b><span>a posto</span></div>
+    </div>
+
+    <div class="toolbar">
+      <select id="commessa"><option value="">Tutte le commesse</option></select>
+      <input type="search" id="cerca" placeholder="cerca impianto o zona">
+      <div class="sp"></div>
+      <span class="sub" id="conta"></span>
+    </div>
+
+    <div id="blocchi"></div>
+
+    <h2 id="hRic">Ricorrenti <small>zone segnalate da più giorni (ultimi 7)</small></h2>
+    <div class="chips" id="ricorrenti"></div>
+
+    <div class="legend">
+      <span><i style="background:var(--hot)"></i>calda prima dell'ora del cliente</span>
+      <span><i style="background:var(--late)"></i>ancora calda a fine orario</span>
+      <span><i style="background:var(--cold)"></i>sotto il setpoint di 3° all'ora del cliente</span>
+      <span><i style="background:#4f7f45"></i>a posto</span>
+      <span>Colore più scuro nelle barre = più grave. Dati dal PC dell'ufficio, giro delle 02:00 (ieri) e delle 08:30 (oggi).</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const SERVER = 'https://siram-proxy.onrender.com';
+const PIN_KEY = 'orari_coster_pin';
+const RICARICA_MS = 60000;
+if (window.self !== window.top) document.documentElement.classList.add('embedded');
+
+const S = { pin: '', dati: null, impronta: '', giorno: '', filtro: '', commessa: '', cerca: '', aperte: new Set() };
+const $ = id => document.getElementById(id);
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const GG = ['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];
+
+function storageGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function storageSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+
+async function api(path, opts = {}) {
+  const r = await fetch(SERVER + '/analisi' + path, Object.assign({ headers: { 'X-Orari-Pin': S.pin } }, opts));
+  if (r.status === 401 || r.status === 403) throw new Error('PIN non valido');
+  if (!r.ok) throw new Error('Server: ' + r.status);
+  return r;
+}
+
+async function entra(pin) {
+  S.pin = pin;
+  const st = await (await api('/stato')).json();
+  storageSet(PIN_KEY, pin);
+  $('gate').style.display = 'none'; $('app').style.display = '';
+  await carica(st);
+  setInterval(controlla, RICARICA_MS);
+}
+
+async function carica(st) {
+  const r = await api('/dati');
+  S.dati = await r.json();
+  S.impronta = (st && st.impronta) || r.headers.get('ETag') || '';
+  const agente = st && st.agente_online;
+  $('pill').className = 'pill ' + (agente ? 'ok' : 'off');
+  $('pill').querySelector('span').textContent = agente ? 'PC collegato' : 'PC non collegato';
+  if (!S.giorno) {
+    const q = new URLSearchParams(location.search).get('giorno');
+    const giorni = giorniDisponibili();
+    S.giorno = (q && giorni.includes(q)) ? q : (giorni[giorni.length - 1] || q || '');
+  }
+  disegna();
+}
+
+async function controlla() {
+  try {
+    const st = await (await api('/stato')).json();
+    if (st.impronta && st.impronta !== S.impronta) await carica(st);
+  } catch (e) { /* al prossimo giro */ }
+}
+
+const comfort = () => (S.dati && S.dati.comfort) || { giorni: [], zone: [] };
+function giorniDisponibili() { return [...new Set(comfort().giorni.map(r => r.giorno))].sort(); }
+
+function classe(r) {
+  // ordine di gravita' per la riga del giorno: freddo > caldo prima > spento tardi
+  if (r.esito === 'FREDDO' || r.esito === 'NON_ACCESO') return 'cold';
+  if (r.esito === 'ANTICIPO' || r.esito === 'SEMPRE_CALDO') return 'hot';
+  if (r.esito_sera === 'SPENTO_TARDI') return 'late';
+  if (r.esito === 'OK') return 'ok';
+  return 'nd';
+}
+function mix(a, b, f) {   // colore tra a (chiaro) e b (scuro), f 0..1
+  f = Math.max(0, Math.min(1, f));
+  const A = a.match(/\w\w/g).map(x => parseInt(x, 16)), B = b.match(/\w\w/g).map(x => parseInt(x, 16));
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join('');
+}
+function hm(min) { min = Math.round(min); const h = Math.floor(min / 60), m = min % 60; return h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`; }
+function nome(r) {
+  const imp = String(r.impianto || '');
+  const cod = r.codice_k && !imp.startsWith(r.codice_k) ? r.codice_k + ' ' : '';
+  return cod + imp;
+}
+function gravita(r, tipo) {
+  if (tipo === 'hot') return r.esito === 'SEMPRE_CALDO' ? 1 : (r.anticipo_min - 45) / 435;
+  if (tipo === 'late') return (r.tenuta_min - 45) / 315;
+  if (tipo === 'cold') return r.esito === 'NON_ACCESO' ? Math.max(0.6, (r.deficit_c - 3) / 5) : (r.deficit_c - 3) / 5;
+  return 0;
+}
+function descr(r, tipo) {
+  if (tipo === 'hot') return r.esito === 'SEMPRE_CALDO'
+    ? ['tutta la notte', `a temperatura già da mezzanotte · cliente alle ${r.ora_cliente}`]
+    : [hm(r.anticipo_min), `a temperatura dalle ${r.ora_comfort} · cliente alle ${r.ora_cliente}`];
+  if (tipo === 'late') return [r.tenuta_min >= 360 ? 'oltre 6 h' : hm(r.tenuta_min), `ancora ${fmt(r.amb_fine)}° alla fine dell'orario (${r.ora_fine_cliente}) · si poteva spegnere prima`];
+  if (tipo === 'cold') return [fmt(r.amb_ora_cliente) + '°', r.esito === 'NON_ACCESO'
+    ? `alle ${r.ora_cliente} · riscaldamento mai partito · target ${fmt(r.target_c, 0)}°`
+    : `alle ${r.ora_cliente} · target ${fmt(r.target_c, 0)}° · mancano ${fmt(r.deficit_c)}°`];
+  return [fmt(r.amb_ora_cliente) + '°', `alle ${r.ora_cliente} · target ${fmt(r.target_c, 0)}° · a temperatura dalle ${r.ora_comfort || '–'}`];
+}
+const fmt = (v, d = 1) => (v === null || v === undefined || isNaN(v)) ? '–' : Number(v).toFixed(d);
+
+const BLOCCHI = [
+  { k: 'hot', titolo: 'Calde prima dell\'ora', sotto: 'riscaldamento sprecato', chiaro: '#5a2b27', scuro: '#ff5a4e',
+    sel: r => r.esito === 'ANTICIPO' || r.esito === 'SEMPRE_CALDO', ord: r => (r.esito === 'SEMPRE_CALDO' ? 9999 : r.anticipo_min) },
+  { k: 'late', titolo: 'Spente tardi', sotto: 'ancora calde a fine orario', chiaro: '#5a3f1f', scuro: '#ff9f43',
+    sel: r => r.esito_sera === 'SPENTO_TARDI', ord: r => r.tenuta_min },
+  { k: 'cold', titolo: 'Fredde all\'ora del cliente', sotto: 'comfort mancato', chiaro: '#1f3a5a', scuro: '#4ea8ff',
+    sel: r => r.esito === 'FREDDO' || r.esito === 'NON_ACCESO', ord: r => r.deficit_c },
+  { k: 'ok', titolo: 'A posto', sotto: 'nei tempi, niente da fare', chiaro: '#2f4a2a', scuro: '#4f7f45',
+    sel: r => r.esito === 'OK' && r.esito_sera !== 'SPENTO_TARDI', ord: r => 0 },
+];
+
+function righeGiorno() {
+  const g = comfort().giorni.filter(r => r.giorno === S.giorno);
+  return g.filter(r => (!S.commessa || r.commessa === S.commessa) &&
+                       (!S.cerca || (nome(r) + ' ' + r.zona).toLowerCase().includes(S.cerca)));
+}
+
+function disegna() {
+  const c = comfort();
+  const d = S.giorno ? new Date(S.giorno + 'T00:00:00') : null;
+  $('giorno').value = S.giorno;
+  $('titolo').textContent = d ? `${GG[(d.getDay() + 6) % 7]} ${d.getDate()} ${MESI[d.getMonth()]}` : 'Comfort';
+  const giorni = giorniDisponibili();
+  $('prev').disabled = !giorni.length || S.giorno <= giorni[0];
+  $('next').disabled = !giorni.length || S.giorno >= giorni[giorni.length - 1];
+  const sel = $('commessa');
+  const commesse = [...new Set(c.giorni.map(r => r.commessa))].sort();
+  if (sel.options.length !== commesse.length + 1) {
+    sel.innerHTML = '<option value="">Tutte le commesse</option>' + commesse.map(x => `<option>${x}</option>`).join('');
+    sel.value = S.commessa;
+  }
+  const tutte = c.giorni.filter(r => r.giorno === S.giorno);
+  const righe = righeGiorno();
+  $('sotto').textContent = tutte.length ? `${tutte.length} zone controllate · calcolato ${(tutte[0].calcolato_il || '').replace('T', ' ').slice(0, 16)}` : 'nessun dato per questo giorno';
+  $('banner').style.display = c.giorni.length ? 'none' : '';
+  $('banner').textContent = 'Nessun dato del controllo comfort nella fotografia: il PC non ha ancora fatto il giro.';
+  for (const b of BLOCCHI) $('n' + b.k[0].toUpperCase() + b.k.slice(1)).textContent = righe.filter(b.sel).length;
+  document.querySelectorAll('.tile').forEach(t => t.classList.toggle('on', t.dataset.f === S.filtro));
+  $('conta').textContent = S.commessa || S.cerca ? `${righe.length} di ${tutte.length} zone` : '';
+
+  const cont = $('blocchi'); cont.innerHTML = '';
+  for (const b of BLOCCHI) {
+    if (S.filtro && S.filtro !== b.k) continue;
+    if (b.k === 'ok' && !S.filtro) continue;        // "a posto" si vede solo cliccando il riquadro
+    const lista = righe.filter(b.sel).sort((x, y) => b.ord(y) - b.ord(x));
+    const h2 = document.createElement('h2'); h2.innerHTML = `${b.titolo} <small>${b.sotto} · ${lista.length}</small>`;
+    const box = document.createElement('div'); box.className = 'list';
+    if (!lista.length) box.innerHTML = `<div class="empty">Nessuna.</div>`;
+    for (const r of lista) {
+      const [big, why] = descr(r, b.k);
+      const col = mix(b.chiaro, b.scuro, gravita(r, b.k));
+      const row = document.createElement('div'); row.className = 'row' + (S.aperte.has(r.zone_id) ? ' open' : '');
+      row.dataset.z = r.zone_id;
+      const ric = ricorrente(r.zone_id);
+      row.innerHTML = `<div class="bar" style="background:${col}"></div>
+        <div class="main"><div class="name">${esc(nome(r))} / ${esc(r.zona)}${ric ? `<small>${ric}</small>` : ''}</div><div class="why">${esc(why)}</div></div>
+        <div class="big" style="color:${col}">${esc(big)}</div>`;
+      row.onclick = () => { S.aperte.has(r.zone_id) ? S.aperte.delete(r.zone_id) : S.aperte.add(r.zone_id); disegna(); };
+      box.appendChild(row);
+      const strip = document.createElement('div'); strip.className = 'strip'; strip.innerHTML = striscia(r.zone_id);
+      box.appendChild(strip);
+    }
+    cont.appendChild(h2); cont.appendChild(box);
+  }
+  // ricorrenti
+  const ric = (c.zone || []).filter(z => z.classe && z.classe !== 'OK' && (!S.commessa || z.commessa === S.commessa));
+  const ord = { FREDDO_SISTEMATICO: 0, ANTICIPO_SISTEMATICO: 1, SPENTO_TARDI_SISTEMATICO: 2, DA_TENERE_D_OCCHIO: 3 };
+  ric.sort((a, b) => (ord[a.classe] ?? 9) - (ord[b.classe] ?? 9));
+  $('ricorrenti').innerHTML = ric.length ? ric.map(z => {
+    const k = z.classe === 'FREDDO_SISTEMATICO' ? 'cold' : z.classe === 'ANTICIPO_SISTEMATICO' ? 'hot' : z.classe === 'SPENTO_TARDI_SISTEMATICO' ? 'late' : '';
+    const n = z.classe === 'FREDDO_SISTEMATICO' ? `freddo ${z.pct_freddo}%` : z.classe === 'ANTICIPO_SISTEMATICO' ? `anticipo ${z.pct_anticipo}%` :
+              z.classe === 'SPENTO_TARDI_SISTEMATICO' ? `tardi ${z.pct_spento_tardi}%` : 'da tenere d\'occhio';
+    return `<span class="chip ${k}" data-z="${esc(z.zone_id)}">${esc(nome(z))} / ${esc(z.zona)} <b>${n}</b></span>`;
+  }).join('') : '<span class="sub">Nessuna zona ricorrente.</span>';
+  $('ricorrenti').querySelectorAll('.chip').forEach(ch => ch.onclick = () => { S.cerca = ''; $('cerca').value = ''; S.filtro = ''; S.aperte.add(ch.dataset.z); disegna(); apriZona(ch.dataset.z); });
+}
+
+function ricorrente(zoneId) {
+  const z = (comfort().zone || []).find(x => x.zone_id === zoneId);
+  if (!z || !z.classe || z.classe === 'OK') return '';
+  return { FREDDO_SISTEMATICO: 'freddo da più giorni', ANTICIPO_SISTEMATICO: 'calda da più giorni', SPENTO_TARDI_SISTEMATICO: 'spenta tardi da più giorni', DA_TENERE_D_OCCHIO: 'da tenere d\'occhio' }[z.classe] || '';
+}
+function apriZona(zoneId) {
+  const el = [...document.querySelectorAll('.row')].find(r => r.dataset.z === zoneId);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function striscia(zoneId) {
+  const tutti = comfort().giorni.filter(r => r.zone_id === zoneId).sort((a, b) => a.giorno < b.giorno ? -1 : 1);
+  const giorni = giorniDisponibili();
+  const per = Object.fromEntries(tutti.map(r => [r.giorno, r]));
+  const cella = (g, r, lato) => {
+    if (!r) return `<div class="day nd" title="${g}: nessun dato"></div>`;
+    let k = 'nd', t = '';
+    if (lato === 'm') {
+      k = (r.esito === 'FREDDO' || r.esito === 'NON_ACCESO') ? 'cold' : (r.esito === 'ANTICIPO' || r.esito === 'SEMPRE_CALDO') ? 'hot' : r.esito === 'OK' ? 'ok' : 'nd';
+      t = `${g} mattina: ${r.esito} · ${fmt(r.amb_ora_cliente)}° alle ${r.ora_cliente}` + (r.anticipo_min != null ? ` · anticipo ${hm(r.anticipo_min)}` : '');
+    } else {
+      k = r.esito_sera === 'SPENTO_TARDI' ? 'late' : r.esito_sera === 'OK' ? 'ok' : 'nd';
+      t = `${g} sera: ${r.esito_sera || 'n.d.'}` + (r.tenuta_min != null ? ` · ancora calda ${hm(r.tenuta_min)} dopo le ${r.ora_fine_cliente}` : '');
+    }
+    return `<div class="day ${k}" title="${esc(t)}"></div>`;
+  };
+  return `<div class="lbl">Mattina · ultimi ${giorni.length} giorni</div><div class="days">${giorni.map(g => cella(g, per[g], 'm')).join('')}</div>
+          <div class="lbl">Sera</div><div class="days">${giorni.map(g => cella(g, per[g], 's')).join('')}</div>`;
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// --- eventi ---
+$('btnPin').onclick = () => entra($('pin').value.trim()).catch(e => { $('gateErr').textContent = e.message; });
+$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnPin').click(); });
+$('giorno').onchange = e => { S.giorno = e.target.value; disegna(); };
+$('prev').onclick = () => { const g = giorniDisponibili(); const i = g.indexOf(S.giorno); S.giorno = g[Math.max(0, i - 1)] || S.giorno; disegna(); };
+$('next').onclick = () => { const g = giorniDisponibili(); const i = g.indexOf(S.giorno); S.giorno = g[Math.min(g.length - 1, i + 1)] || S.giorno; disegna(); };
+$('commessa').onchange = e => { S.commessa = e.target.value; disegna(); };
+$('cerca').oninput = e => { S.cerca = e.target.value.trim().toLowerCase(); disegna(); };
+document.querySelectorAll('.tile').forEach(t => t.onclick = () => { S.filtro = S.filtro === t.dataset.f ? '' : t.dataset.f; disegna(); });
+
+const salvato = storageGet(PIN_KEY);
+if (salvato) entra(salvato).catch(() => { $('gate').style.display = ''; $('app').style.display = 'none'; });
+</script>
+</body>
+</html>

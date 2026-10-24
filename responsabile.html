@@ -66,6 +66,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 /* ANALISI IMPIANTI (pagina analisi-coster.html incorporata) */
 #view-analisi { padding: 0; }
 #analisiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
+#comfortFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
@@ -554,6 +555,7 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="nav-sec">Telegestione</div>
       <div class="nav-item" onclick="nav('orari')" id="nav-orari">🕒 Orari Coster</div>
       <div class="nav-item" onclick="nav('analisi')" id="nav-analisi">🌡️ Analisi impianti</div>
+      <div class="nav-item" onclick="nav('comfort')" id="nav-comfort">🎯 Comfort</div>
       <div class="nav-sec">Anagrafica</div>
       <div class="nav-item" onclick="nav('impianti')" id="nav-impianti">⊞ Impianti</div>
       <div class="nav-item" onclick="nav('catalogo')" id="nav-catalogo">≡ Catalogo</div>
@@ -770,6 +772,11 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- VIEW: ANALISI IMPIANTI (analisi-coster.html incorporata, caricata al primo accesso) -->
       <div class="view" id="view-analisi">
         <iframe id="analisiFrame" title="Analisi impianti" src="about:blank"></iframe>
+      </div>
+
+      <!-- VIEW: COMFORT (comfort-coster.html incorporata, caricata al primo accesso) -->
+      <div class="view" id="view-comfort">
+        <iframe id="comfortFrame" title="Comfort" src="about:blank"></iframe>
       </div>
 
       <!-- VIEW: ORARI COSTER (orari-coster.html incorporata, caricata al primo accesso) -->
@@ -1343,6 +1350,7 @@ function nav(id) {
   if (id==='rcee')       { if(rceeScadenze.length) renderRcee(); else caricaScadenzeRcee(); }
   if (id==='orari')      apriOrari();
   if (id==='analisi')    apriAnalisi();
+  if (id==='comfort')    apriComfort();
 }
 
 // ============================================================
@@ -1365,6 +1373,17 @@ function apriAnalisi() {
   const f = document.getElementById('analisiFrame');
   if (!f.dataset.loaded) {
     f.src = '/analisi-coster.html';
+    f.dataset.loaded = '1';
+  }
+}
+
+// ============================================================
+//  COMFORT — pagina comfort-coster.html incorporata (24/10/2026)
+// ============================================================
+function apriComfort() {
+  const f = document.getElementById('comfortFrame');
+  if (!f.dataset.loaded) {
+    f.src = '/comfort-coster.html';
     f.dataset.loaded = '1';
   }
 }
