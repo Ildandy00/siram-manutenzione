@@ -686,6 +686,11 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
     if (run) parti.push(`ultimo calcolo del motore ${mostraData(dataIso(run.finished_at), true)}`);
     if (d.ultimo_dato_flotta) parti.push(`ultimo dato Coster ${mostraData(dataIso(d.ultimo_dato_flotta), true)}`);
     if (d.generato_il) parti.push(`fotografia dal PC ${mostraData(dataIso(d.generato_il), true)}`);
+    // 27/10/2026: reset di inizio stagione (config/ripartenza_segnalazioni.json sul PC)
+    if (d.ripartenza && d.ripartenza.dal) {
+      const [a, m, g] = String(d.ripartenza.dal).split('-');
+      parti.push(`segnalazioni ripartite dal ${g}/${m}/${a} (${d.ripartenza.archiviate || 0} della stagione scorsa archiviate; sonde guaste escluse dal reset)`);
+    }
     $('subInfo').textContent = parti.join(' · ') || '—';
   }
 
