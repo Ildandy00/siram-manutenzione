@@ -325,6 +325,15 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
 .sch-z b{font-weight:600}
 .sch-z small{display:block;color:var(--muted);font-size:11px;margin-top:2px;overflow-wrap:anywhere}
 .sch-z.dubbia{background:rgba(200,180,100,.08);border:1px dashed rgba(200,180,100,.45)}
+/* 27/10/2026 mappa: stato di comfort dell'ultimo giorno e programmi orari */
+.sch-cf{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;color:var(--text)}
+.sch-cf i{flex:0 0 9px;height:9px;border-radius:50%;display:inline-block}
+.sch-cf.hot i{background:#ff5a4e}.sch-cf.cold i{background:#4ea8ff}.sch-cf.late i{background:#ff9f43}.sch-cf.ok i{background:var(--green)}
+.sch-z.hot{box-shadow:inset 3px 0 0 #ff5a4e}.sch-z.cold{box-shadow:inset 3px 0 0 #4ea8ff}.sch-z.late{box-shadow:inset 3px 0 0 #ff9f43}.sch-z.ok{box-shadow:inset 3px 0 0 var(--green)}
+.sch-prog{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.sch-prog span{font-size:11px;background:rgba(122,176,216,.13);border:1px solid rgba(122,176,216,.35);color:var(--text);border-radius:999px;padding:2px 8px}
+.sch-altri{margin-top:14px;padding:10px 12px;border:1px dashed var(--border);border-radius:9px}
+.sch-altri .h{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:4px}
 .sch-orf{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .sch-orf .sch-z{flex:0 0 244px;margin-top:0}
 .sch-vuoto{color:var(--muted);font-size:12px;font-style:italic;padding:8px 0 0}
@@ -1461,6 +1470,25 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
       : el('dd', { class: 'no', text: mancante || 'assente' });
     return [el('dt', { text: etichetta }), dd];
   }
+  function chipProgrammi(nomi) {
+    if (!(nomi || []).length) return null;
+    return el('div', { class: 'sch-prog', title: 'Programmi orari (pagina Orari Coster)' },
+      ...nomi.map((x) => el('span', { text: '🕒 ' + String(x).replace(/^Setpoint\s+/i, '') })));
+  }
+  function hmin(m) { m = Math.round(Number(m) || 0); const h = Math.floor(m / 60); return h ? `${h} h ${String(m % 60).padStart(2, '0')}` : `${m} min`; }
+  function statoComfort(c) {
+    // -> [classe, testo] dall'ultimo controllo comfort della zona (scripts/controllo_comfort.py)
+    if (!c) return null;
+    const g = c.giorno ? c.giorno.slice(8, 10) + '/' + c.giorno.slice(5, 7) : '';
+    const n = (v) => (v === null || v === undefined) ? '–' : Number(v).toFixed(1);
+    if (c.esito === 'FREDDO') return ['cold', `${g}: ${n(c.amb_ora_cliente)}° alle ${c.ora_cliente}, mancano ${n(c.deficit_c)}°`];
+    if (c.esito === 'NON_ACCESO') return ['cold', `${g}: riscaldamento mai partito prima delle ${c.ora_cliente}`];
+    if (c.esito === 'SEMPRE_CALDO') return ['hot', `${g}: a temperatura tutta la notte (cliente alle ${c.ora_cliente})`];
+    if (c.esito === 'ANTICIPO') return ['hot', `${g}: a temperatura dalle ${c.ora_comfort}, ${hmin(c.anticipo_min)} prima delle ${c.ora_cliente}`];
+    if (c.esito_sera === 'SPENTO_TARDI') return ['late', `${g}: ancora ${n(c.amb_fine)}° alle ${c.ora_fine_cliente}, ${c.tenuta_min >= 360 ? 'oltre 6 h' : hmin(c.tenuta_min)} di calore sprecato`];
+    if (c.esito === 'OK') return ['ok', `${g}: a posto (${n(c.amb_ora_cliente)}° alle ${c.ora_cliente})`];
+    return null;
+  }
   function disegnaSchema(schema, findings, vai) {
     const wrap = el('div', { class: 'sch' }); const inn = el('div', { class: 'sch-in' }); wrap.append(inn);
     const g = schema.generazione || {};
@@ -1494,11 +1522,16 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
         el('div', { class: 'tt' }, el('span', { text: 'Generazione' })),
         el('div', { class: 'sch-vuoto', text: 'nessuna sonda di caldaia riconosciuta' })));
     }
-    (g.acs || []).forEach((c) => riga.append(el('div', { class: 'sch-box' },
+    (g.acs || []).forEach((c, i) => riga.append(el('div', { class: 'sch-box' },
       el('div', { class: 'tt' }, el('span', { text: 'Acqua calda' })),
       el('dl', { class: 'sch-p' },
         ...rigaPunto('misura', c.misura, '—', segDi(c.misura)),
-        ...rigaPunto('richiesta', c.setpoint, '—', segDi(c.setpoint))))));
+        ...rigaPunto('richiesta', c.setpoint, '—', segDi(c.setpoint))),
+      i === 0 ? chipProgrammi(g.programmi_acs) : null)));
+    if (!(g.acs || []).length && (g.programmi_acs || []).length) {
+      riga.append(el('div', { class: 'sch-box' }, el('div', { class: 'tt' }, el('span', { text: 'Acqua calda' })),
+        el('div', { class: 'sch-vuoto', text: 'nessuna sonda ACS riconosciuta' }), chipProgrammi(g.programmi_acs)));
+    }
     (g.collettore || []).forEach((c) => riga.append(el('div', { class: 'sch-box' },
       el('div', { class: 'tt' }, el('span', { text: 'Collettore' })),
       el('dl', { class: 'sch-p' },
@@ -1533,14 +1566,17 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
         ...(c.valvola ? rigaPunto('valvola', c.valvola, '', segDi(c.valvola)) : []),
         ...((c.pompe || []).length ? rigaPunto('pompa', c.pompe.join(', '), '') : []),
         ...((c.ritorni || []).length ? rigaPunto('ritorno', c.ritorni.join(', '), '') : [])));
+      box.append(chipProgrammi(c.programmi) || el('div', { class: 'sch-vuoto', style: 'margin-top:6px', text: 'nessun programma orario abbinato' }));
       const zone = (c.zone || []).map((id) => zonePerId[id]).filter(Boolean);
       if ((schema.zone || []).length) {
         const zbox = el('div', { class: 'sch-zone' },
           el('div', { class: 'h', text: zone.length ? 'zone servite' : 'nessuna zona collegata' }));
         zone.forEach((z) => {
           const sz = perZona[z.id];
-          zbox.append(el('div', { class: 'sch-z' + (sz ? ' dubbia' : '') },
+          const cf = statoComfort(z.comfort);
+          zbox.append(el('div', { class: 'sch-z' + (sz ? ' dubbia' : '') + (cf ? ' ' + cf[0] : '') },
             el('b', { text: z.label }),
+            cf ? el('div', { class: 'sch-cf ' + cf[0] }, el('i'), el('span', { text: cf[1] })) : null,
             (z.sonde || []).length ? el('small', { text: 'ambiente: ' + z.sonde.map(pulisciNome).join(', ') }) : null,
             (z.richiesta || []).length ? el('small', { text: 'richiesta: ' + z.richiesta.map(pulisciNome).join(', ') }) : null,
             (!(z.sonde || []).length && !(z.richiesta || []).length) ? el('small', { text: 'nessuna sonda' }) : null));
@@ -1572,11 +1608,21 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
         el('span', { class: 'et', text: senzaCircuito.length === orfane.length ? 'zone senza circuito proprio' : 'zone da chiarire' })), box));
     }
 
+    if ((schema.programmi_altri || []).length) {
+      inn.append(el('div', { class: 'sch-altri' },
+        el('div', { class: 'h', text: 'altri programmi orari (UTA, termostati, comandi: non abbinati a un circuito)' }),
+        chipProgrammi(schema.programmi_altri)));
+    }
     const pu = schema.punti || {};
     wrap.append(el('div', { class: 'sch-leg' },
       el('span', {}, el('i', { style: 'background:var(--red)' }), 'urgente'),
       el('span', {}, el('i', { style: 'background:var(--yellow)' }), 'da programmare'),
       el('span', {}, el('i', { style: 'background:var(--green)' }), 'da monitorare'),
+      el('span', {}, el('i', { style: 'background:#ff5a4e;border-radius:50%' }), 'zona calda troppo presto'),
+      el('span', {}, el('i', { style: 'background:#ff9f43;border-radius:50%' }), 'spenta tardi'),
+      el('span', {}, el('i', { style: 'background:#4ea8ff;border-radius:50%' }), 'fredda'),
+      el('span', {}, el('i', { style: 'background:var(--green);border-radius:50%' }), 'a posto (ultimo controllo comfort, 7 giorni)'),
+      el('span', { text: '🕒 programmi orari (pagina Orari Coster)' }),
       el('span', { text: 'la percentuale è la confidenza con cui il motore ha ricostruito il circuito' }),
       el('span', { text: 'i nomi sono quelli del sinottico Coster' }),
       pu.totali ? el('span', { text: `${pu.totali} point letti, ${pu.senza_ruolo || 0} ancora senza ruolo` }) : null,
