@@ -67,6 +67,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 #view-analisi { padding: 0; }
 #analisiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 #comfortFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
+#consumiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 
 /* STATS */
 .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
@@ -556,6 +557,7 @@ tr.int-completato td * { text-decoration: line-through; }
       <div class="nav-item" onclick="nav('orari')" id="nav-orari">🕒 Orari Coster</div>
       <div class="nav-item" onclick="nav('analisi')" id="nav-analisi">🌡️ Analisi impianti</div>
       <div class="nav-item" onclick="nav('comfort')" id="nav-comfort">🎯 Comfort</div>
+      <div class="nav-item" onclick="nav('consumi')" id="nav-consumi">🔥 Consumi</div>
       <div class="nav-sec">Anagrafica</div>
       <div class="nav-item" onclick="nav('impianti')" id="nav-impianti">⊞ Impianti</div>
       <div class="nav-item" onclick="nav('catalogo')" id="nav-catalogo">≡ Catalogo</div>
@@ -777,6 +779,11 @@ tr.int-completato td * { text-decoration: line-through; }
       <!-- VIEW: COMFORT (comfort-coster.html incorporata, caricata al primo accesso) -->
       <div class="view" id="view-comfort">
         <iframe id="comfortFrame" title="Comfort" src="about:blank"></iframe>
+      </div>
+
+      <!-- VIEW: CONSUMI (consumi-coster.html incorporata, caricata al primo accesso) -->
+      <div class="view" id="view-consumi">
+        <iframe id="consumiFrame" title="Consumi" src="about:blank"></iframe>
       </div>
 
       <!-- VIEW: ORARI COSTER (orari-coster.html incorporata, caricata al primo accesso) -->
@@ -1351,6 +1358,7 @@ function nav(id) {
   if (id==='orari')      apriOrari();
   if (id==='analisi')    apriAnalisi();
   if (id==='comfort')    apriComfort();
+  if (id==='consumi')    apriConsumi();
 }
 
 // ============================================================
@@ -1384,6 +1392,17 @@ function apriComfort() {
   const f = document.getElementById('comfortFrame');
   if (!f.dataset.loaded) {
     f.src = '/comfort-coster.html';
+    f.dataset.loaded = '1';
+  }
+}
+
+// ============================================================
+//  CONSUMI — pagina consumi-coster.html incorporata (27/10/2026)
+// ============================================================
+function apriConsumi() {
+  const f = document.getElementById('consumiFrame');
+  if (!f.dataset.loaded) {
+    f.src = '/consumi-coster.html';
     f.dataset.loaded = '1';
   }
 }
