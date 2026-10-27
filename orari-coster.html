@@ -547,6 +547,8 @@
     <!-- STORICO -->
     <section class="card t-prog">
       <h2>Ultime richieste <small>(si azzerano se il server si riavvia)</small></h2>
+      <div class="muted" style="font-size:12px;margin-bottom:8px">Le modifiche vanno in coda: mentre il PC scrive puoi passare ad altri programmi e applicarli. L'esito compare qui.</div>
+      <div id="histAlert" class="banner pre" hidden></div>
       <ul class="hist" id="histList"></ul>
       <div class="muted" id="histEmpty">Nessuna richiesta.</div>
     </section>
@@ -603,6 +605,10 @@
     jobId: null,
     jobTimer: null,
     lastJob: null,
+    activeJobs: [],      // 27/10/2026: lavori non ancora conclusi (dallo storico), per non bloccare gli altri programmi
+    histStates: {},      // stato visto per lavoro: avviso quando una modifica in coda finisce
+    histTick: 0,
+    esiti: [],           // ultimi esiti delle modifiche in coda (restano finche' non si chiude l'avviso)
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1071,13 +1077,21 @@
     $('formErr').hidden = !err;
     $('formErr').textContent = err || '';
     $('chgCount').textContent = changes.length ? `${changes.length} ${changes.length === 1 ? 'riga modificata' : 'righe modificate'}` : '';
-    const busy = S.lastJob && !FINAL.has(S.lastJob.stato);
-    $('btnApplica').disabled = Boolean(err) || !changes.length || busy;
+    $('btnApplica').disabled = Boolean(err) || !changes.length || modificaInCorso();
+    $('btnApplica').title = modificaInCorso() ? 'C\'è già una modifica in corso su questo programma: attendi l\'esito.' : '';
   }
 
   // ============================================================
   // LAVORI
   // ============================================================
+  // 27/10/2026: "Applica" si blocca solo se c'e' una modifica non conclusa sullo stesso programma
+  // (il server la rifiuterebbe); sugli altri programmi si puo' andare avanti, i lavori vanno in coda.
+  function modificaInCorso() {
+    if (!S.schedule) return false;
+    const stesso = (j) => j && j.tipo === 'modifica' && !FINAL.has(j.stato)
+      && String(j.schedule_id) === String(S.schedule.id);
+    return stesso(S.lastJob) || S.activeJobs.some(stesso);
+  }
   async function createJob(tipo) {
     if (!S.schedule) return;
     let body = { tipo, schedule_id: S.schedule.id };
@@ -1286,6 +1300,27 @@
       const ul = $('histList');
       ul.innerHTML = '';
       $('histEmpty').hidden = lavori.length > 0;
+      S.activeJobs = lavori.filter((j) => !FINAL.has(j.stato));
+      const esiti = [];
+      for (const j of lavori) {
+        const prima = S.histStates[j.id];
+        if (j.tipo === 'modifica' && prima && !FINAL.has(prima) && FINAL.has(j.stato)) esiti.push(j);
+        S.histStates[j.id] = j.stato;
+      }
+      if (esiti.length) {
+        S.esiti = esiti.concat(S.esiti).slice(0, 8);
+        const ko = S.esiti.filter((j) => ['errore', 'scaduto'].includes(j.stato));
+        const righe = S.esiti.map((j) => {
+          const e = j.etichetta || {};
+          const cosa = ['errore', 'scaduto'].includes(j.stato) ? 'NON SCRITTO' : (STATE_LABEL[j.stato] || j.stato);
+          return `${fmtTime(j.concluso || j.aggiornato)} · ${e.impianto || ''} · ${e.schedule || ''}: ${cosa}`;
+        });
+        const box = $('histAlert');
+        box.hidden = false;
+        box.className = 'banner pre ' + (ko.length ? 'err' : 'ok');
+        box.textContent = (ko.length ? 'Attenzione: ' + (ko.length === 1 ? 'una modifica in coda non è andata' : ko.length + ' modifiche in coda non sono andate')
+          + ' a buon fine (aprile dallo storico per i dettagli).\n' : '') + righe.join('\n') + '\n(clic per chiudere)';
+      }
       for (const j of lavori) {
         const e = j.etichetta || {};
         ul.append(el('li', {
@@ -1304,6 +1339,7 @@
         const running = lavori.find((j) => !FINAL.has(j.stato));
         if (running) showJob(await api('/jobs/' + running.id));
       }
+      refreshChanges();
     } catch (err) {
       handleErr(err, 'storico');
     }
@@ -2048,10 +2084,15 @@
       setInterval(refreshStatus, 10000);
       setInterval(loadStra, 15000);
       setInterval(loadSpeg, 15000);
-      setInterval(() => { if (!S.jobId) loadHistory(); }, 30000);
+      // storico: ogni 5 s finche' ci sono lavori in coda o in corso, altrimenti ogni 30 s
+      setInterval(() => {
+        S.histTick += 1;
+        if (S.activeJobs.length || S.histTick % 6 === 0) loadHistory();
+      }, 5000);
     }
   }
 
+  $('histAlert').addEventListener('click', () => { S.esiti = []; $('histAlert').hidden = true; });
   $('pinBtn').addEventListener('click', submitPin);
   $('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPin(); });
   $('selCommessa').addEventListener('change', onCommessa);
