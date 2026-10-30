@@ -360,6 +360,7 @@ textarea.fc { resize: vertical; min-height: 72px; }
 
 tr.int-completato td { text-decoration: line-through; color: var(--muted) !important; opacity: .55; }
 tr.int-completato td * { text-decoration: line-through; }
+tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !important; opacity: 1; }
 
 /* GIORNO SELEZIONATO */
 .cal-cell.selected { background: rgba(59,130,246,.1); outline: 1px solid rgba(59,130,246,.3); }
@@ -1701,7 +1702,7 @@ function openGiorno(dateStr) {
       const hasPratica=!!praticaDiIntervento(i);
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg3);border-radius:8px;margin-bottom:6px;font-size:13px">
         <div><div style="font-weight:600">${imp?imp.descrizione:i.codiceImpianto}${hasPratica?'<span class="pra-dot"></span>':''}</div>
-        <div style="font-size:11px;color:var(--muted)">${isAttivita(i) ? '✍ '+operaiDi(i).join(', ')+' · '+escN(String(i.note||'').slice(0,80)) : `${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}`}</div></div>
+        <div style="font-size:11px;color:var(--muted)">${isAttivita(i) ? '✍ '+operaiDi(i).join(', ')+' · '+escN(String(i.note||'').slice(0,80)) : `${i.operaio||'— contenitore'} · ${i.tipoVisita} · ${done}/${chk.length}${i.stato==='Chiuso'&&i.oreImpiegate?' · ⏱ '+oreLbl(i.oreImpiegate):''}`}</div></div>
         <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');${isAttivita(i)?`openModalAttivita('${i.id}')`:`openDettaglio('${i.id}')`}">Apri</button>
       </div>`;
     }).join('');
@@ -1714,7 +1715,7 @@ function openGiorno(dateStr) {
         const col=commessaDi(imp).color;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:${col}33;border-left:3px solid ${col};border-radius:8px;margin-bottom:6px;font-size:13px">
           <div><div style="font-weight:600;text-decoration:line-through">${imp?imp.descrizione:i.codiceImpianto}</div>
-          <div style="font-size:11px;color:var(--muted)">${i.operaio||'\u2014'} \u00B7 aperta il ${fmtGgMm(i.dataPrevista)}</div></div>
+          <div style="font-size:11px;color:var(--muted)">${i.operaio||'\u2014'} \u00B7 aperta il ${fmtGgMm(i.dataPrevista)}${i.oreImpiegate?' \u00B7 ⏱ '+oreLbl(i.oreImpiegate):''}</div></div>
           <button class="btn btn-ghost btn-sm" onclick="closeModal('modalGiorno');openDettaglio('${i.id}')">Apri</button>
         </div>`;
       }).join('');
@@ -2929,7 +2930,7 @@ function renderInterventi() {
   lista.sort((a,b)=>{ if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1; return (b.dataPrevista||'').localeCompare(a.dataPrevista||''); });
   const el=document.getElementById('tblInterventi');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
-  el.innerHTML=`<table><thead><tr><th>Stato</th><th>Impianto</th><th>Tipo</th><th>Operaio</th><th>Data</th><th>Checklist</th><th></th></tr></thead><tbody>`+
+  el.innerHTML=`<table><thead><tr><th>Stato</th><th>Impianto</th><th>Tipo</th><th>Operaio</th><th>Data</th><th>Ore</th><th>Checklist</th><th></th></tr></thead><tbody>`+
     lista.map(i=>{
       const imp=S.impianti.find(x=>x.codice===i.codiceImpianto);
       const chk=S.checklist.filter(c=>c.idIntervento===i.id);
@@ -2946,6 +2947,7 @@ function renderInterventi() {
         <td><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span></td>
         <td>${operaioTxt}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${i.dataPrevista}${i.dataFine&&i.dataFine>i.dataPrevista?' → '+i.dataFine:''}</td>
+        <td class="td-ore" style="font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap">${isChiuso&&i.oreImpiegate?oreLbl(i.oreImpiegate):'—'}</td>
         <td>
           <div class="prog-wrap">
             <div class="prog-bar"><div class="prog-fill ${isChiuso?'done':'wip'}" style="width:${pct}%"></div></div>
@@ -3019,7 +3021,7 @@ function openDettaglio(id) {
       : '')
     + (notaChiusura
       ? `<div style="font-size:13px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);border-left:3px solid #4ade80;border-radius:8px;padding:10px 12px;margin-bottom:14px">
-           <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">✓ Nota di chiusura${i.operaio?' — '+i.operaio:''}</div>
+           <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">✓ Nota di chiusura${i.operaio?' — '+i.operaio:''}${i.stato==='Chiuso'&&i.oreImpiegate?` · <span style="text-transform:none">⏱ ${oreLbl(i.oreImpiegate)}</span>`:''}</div>
            ${notaChiusura}
          </div>`
       : '');
