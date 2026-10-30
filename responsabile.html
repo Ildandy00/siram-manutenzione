@@ -497,6 +497,12 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
 .ev-row .ev-op { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .ev-row .ev-op.libera { opacity: .65; font-weight: 400; }
 .ev-row .ev-op.ord-op { color: var(--muted); font-weight: 600; }
+/* Ore impiegate accanto all'operaio: restano leggibili anche quando la riga chiusa e' sbiadita e barrata */
+.ev-row .ev-ore { flex-shrink: 0; font-family: 'DM Mono',monospace; font-size: 10px; font-weight: 700; font-style: normal; line-height: 14px; padding: 0 5px; border-radius: 7px; color: #fff; background: rgba(255,255,255,.2); text-decoration: none !important; }
+.ev-ord.completato:has(.ev-ore), .ev-str.completato:has(.ev-ore), .ev-chiusura:has(.ev-ore) { opacity: 1; text-decoration: none; }
+.ev-ord.completato:has(.ev-ore) .ev-row > :not(.ev-ore) { opacity: .25; text-decoration: line-through; }
+.ev-str.completato:has(.ev-ore) .ev-row > :not(.ev-ore) { opacity: .4; text-decoration: line-through; }
+.ev-chiusura:has(.ev-ore) .ev-row > :not(.ev-ore) { opacity: .7; }
 
 /* toggle nascondi ordinari */
 .toggle-ord-btn {
@@ -1548,7 +1554,9 @@ function evRowHtml(nome, isOrd, i, extra) {
   } else {
     opHtml = `<span class="ev-op libera">📦</span>`;
   }
-  return `<div class="ev-row"><span class="ev-name">${nome}${extra||''}</span>${opHtml}</div>`;
+  const oreHtml = i.stato==='Chiuso' && i.oreImpiegate
+    ? `<span class="ev-ore" title="Ore impiegate: ${oreLbl(i.oreImpiegate)}">${escH(String(i.oreImpiegate).replace('.',','))}</span>` : '';
+  return `<div class="ev-row"><span class="ev-name">${nome}${extra||''}</span>${opHtml}${oreHtml}</div>`;
 }
 
 function renderSettimana() {
