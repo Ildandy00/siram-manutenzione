@@ -2225,6 +2225,7 @@ const OPERAI_LIST = [
 ];
 
 function escH(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function oreLbl(v){ return escH(String(v).replace('.',','))+' h'; }
 function euro(v){ const n=parseFloat(v); return isNaN(n)?'':'€ '+n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function dataIT(d){ if(!d) return ''; const m=String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[3]}/${m[2]}/${m[1].slice(2)}`:d; }
 function oggiLocale(){ return new Date().toLocaleDateString('sv-SE',{timeZone:'Europe/Rome'}); }
@@ -2530,6 +2531,7 @@ function openPratica(id) {
             <div style="font-size:11px;color:var(--muted)">📅 ${dataIT(i.dataPrevista)} · ${done}/${chk.length} attività
               <span class="badge ${i.stato==='Chiuso'?'badge-chiuso':'badge-aperto'}" style="margin-left:6px">${escH(i.stato)}</span></div>
             ${i.notaChiusura?`<div style="font-size:11px;color:var(--muted);margin-top:2px">💬 ${escH(i.notaChiusura)}</div>`:''}
+            ${i.stato==='Chiuso'&&i.oreImpiegate?`<div style="font-size:11px;color:var(--muted);margin-top:2px">⏱ ${oreLbl(i.oreImpiegate)}</div>`:''}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="closeModal('modalPratica');openDettaglio('${i.id}')">Apri →</button>
         </div>`;
@@ -2997,6 +2999,7 @@ function openDettaglio(id) {
     <div><strong>Data prevista:</strong> ${i.dataPrevista}</div>
     <div><strong>Creato il:</strong> ${i.creatoIl||'—'}</div>
     ${i.dataChiusura?`<div><strong>Chiuso il:</strong> ${i.dataChiusura}</div>`:''}
+    ${i.stato==='Chiuso'&&i.oreImpiegate?`<div><strong>Ore impiegate:</strong> ${oreLbl(i.oreImpiegate)}</div>`:''}
     ${i.dataFine&&i.dataFine>i.dataPrevista?`<div><strong>Fine lavori:</strong> ${i.dataFine}</div>`:''}
   `;
 
@@ -3452,6 +3455,7 @@ function openStorico(codiceImpianto) {
       </div>
       ${i.note?`<div style="font-size:13px;font-style:italic;color:var(--muted);margin-bottom:6px">📝 ${i.note}</div>`:''}
       ${(i.notaChiusura||'')?`<div style="font-size:13px;color:#4ade80;margin-bottom:6px">✓ Chiusura: ${i.notaChiusura}</div>`:''}
+      ${i.stato==='Chiuso'&&i.oreImpiegate?`<div style="font-size:13px;color:#4ade80;margin-bottom:6px">⏱ Ore impiegate: ${oreLbl(i.oreImpiegate)}</div>`:''}
       ${(i.noteResponsabile||'')?`<div style="font-size:13px;color:#7ab0d8;margin-bottom:6px">📋 Risolto: ${i.noteResponsabile}</div>`:''}
       ${chk.length?`<div class="stor-chk">${chk.map(c=>`<span class="stor-chip ${c.eseguita==='SI'?'done':'skip'}">${c.eseguita==='SI'?'✓':'○'} ${c.attivita}</span>`).join('')}</div>`:''}
     </div>`;
