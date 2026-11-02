@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siram — Accensioni</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  accensioni-coster.html — orari e temperature del cliente e dell'impianto (02/11/2026).
+  Legge la fotografia dell'analisi (chiave "accensioni", scritta da scripts/esporta_accensioni.py sul PC)
+  dal server siram-proxy con il PIN delle pagine Orari/Analisi. Stessa palette di responsabile.html.
+  Giorno: per ogni circuito una riga Cliente e sotto una riga Impianto (inizio, fine, gradi, barra).
+  Settimana: 7 giorni affiancati, gradi ai lati della barra, ore passando col mouse; un clic sul giorno lo apre.
+  ?giorno=AAAA-MM-GG apre direttamente quel giorno.
+-->
+<style>
+  :root { --bg:#282828; --bg2:#444; --bg3:#4e4e4e; --bg4:#585858; --text:#eee; --muted:#999; --accent:#ccc;
+          --green:#8fbe7a; --blue:#7ab0d8; --red:#c87878; --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.22); }
+  * { box-sizing:border-box }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:Outfit, system-ui, sans-serif; }
+  html.embedded .brand { display:none }
+  #app { height:100vh; display:flex; flex-direction:column; padding:14px 20px 12px }
+  .brand { font-family:'DM Mono', monospace; font-size:11px; letter-spacing:2px; color:var(--muted); text-transform:uppercase }
+  header.top { display:flex; align-items:flex-end; justify-content:space-between; gap:12px 16px; flex-wrap:wrap; margin-bottom:10px }
+  h1 { font-size:26px; font-weight:700; margin:2px 0 0; letter-spacing:-.5px }
+  .sub { color:var(--muted); font-size:13px; margin-top:2px }
+  .ctl { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .btn { background:var(--bg3); color:var(--text); border:0; border-radius:10px; padding:7px 12px; font:inherit; font-size:13px; cursor:pointer }
+  .btn:hover { background:var(--bg4) }
+  .btn.primary { background:var(--text); color:#111; font-weight:600 }
+  input[type=date], select, input[type=search] { background:var(--bg3); color:var(--text); border:0; border-radius:10px; padding:7px 10px; font:inherit; font-size:13px; color-scheme:dark }
+  .seg { display:flex; background:var(--bg3); border-radius:10px; overflow:hidden }
+  .seg button { background:none; border:0; color:#bbb; font:inherit; font-size:13px; padding:7px 12px; cursor:pointer }
+  .seg button.on { background:var(--text); color:#111; font-weight:600 }
+  .pill { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); background:var(--bg2); border-radius:999px; padding:4px 10px }
+  .pill i { width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block }
+  .pill.ok i { background:var(--green) } .pill.off i { background:var(--red) }
+  .tab { background:var(--bg2); border-radius:14px; flex:1; min-height:0; overflow:auto; position:relative }
+  .tab > .int { min-width:1120px }
+  .mono { font-family:'DM Mono', monospace }
+  .empty { padding:18px; color:var(--muted); font-size:14px }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:12px; margin:0 0 8px }
+  .legend i { display:inline-block; width:18px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px }
+  .cl { color:var(--blue) } .im { color:var(--green) }
+  .bar { position:absolute; border-radius:3px; min-width:2px }
+  .bar.cl { background:var(--blue) } .bar.im { background:var(--green) }
+  .ore { background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); background-size:calc(100% / 24) 100% }
+  .ore6 { background-image:linear-gradient(to right, var(--line2) 1px, transparent 1px); background-size:25% 100% }
+  /* giorno */
+  .g-riga { display:flex; height:20px; align-items:center; font-size:12px }
+  .g-testa { display:flex; height:24px; align-items:center; font-size:11px; color:var(--muted); border-bottom:1px solid var(--line2); position:sticky; top:0; background:var(--bg2); z-index:2 }
+  .g-nome { width:250px; flex:none; padding-left:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .g-nome b { font-weight:600 } .g-nome span { color:#ccc } .g-nome.sotto span { margin-left:14px }
+  .g-tipo { width:62px; flex:none; font-size:11px }
+  .g-ora { width:62px; flex:none }
+  .g-t { width:64px; flex:none; font-weight:500 }
+  .g-asse { flex:1; position:relative; height:100%; min-width:0 }
+  .g-asse span { position:absolute; top:5px; transform:translateX(-50%) }
+  .g-asse span:first-child { transform:none }
+  .g-tl { flex:1; position:relative; height:100%; min-width:0 }
+  .sep { border-top:1px solid var(--line2) } .fine { border-bottom:1px solid var(--line) }
+  /* settimana */
+  .s-testa { display:flex; height:38px; border-bottom:1px solid var(--line2); position:sticky; top:0; background:var(--bg2); z-index:2 }
+  .s-nome { width:170px; flex:none; padding:0 8px 0 22px; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .s-g { flex:1; min-width:0; position:relative; border-left:1px solid var(--line2) }
+  .s-g.we { background:rgba(255,255,255,.035) }
+  .s-testa .s-g { font-size:12px; cursor:pointer } .s-testa .s-g:hover { background:rgba(255,255,255,.07) }
+  .s-testa .s-g b { display:block; padding:3px 6px; font-weight:600 }
+  .s-tick { position:absolute; left:34px; right:34px; bottom:2px; height:12px; font-size:10px; color:var(--muted) }
+  .s-tick span { position:absolute }
+  .s-imp { height:19px; background:rgba(0,0,0,.18); border-top:1px solid var(--line2); font-size:12px; font-weight:600; padding:2px 12px; white-space:nowrap }
+  .s-riga { display:flex; height:16px; line-height:16px }
+  .s-num { position:absolute; top:0; width:32px; font-size:11px; padding:0 3px }
+  .s-num.d { right:0; text-align:right } .s-num.s { left:0 }
+  .s-pista { position:absolute; left:34px; right:34px; top:0; bottom:0 }
+  #gate { max-width:360px; margin:80px auto; background:var(--bg2); border-radius:16px; padding:24px }
+  #gate input { width:100%; margin:12px 0; font-size:22px; letter-spacing:6px; text-align:center; background:var(--bg3); border:0; border-radius:10px; padding:12px; color:var(--text) }
+  @media (max-width:640px) { #app { padding:10px 16px } h1 { font-size:22px } }
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="brand">Siram · Accensioni</div>
+  <h1 style="font-size:22px">PIN</h1>
+  <div class="sub">Lo stesso delle pagine Orari e Analisi.</div>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
+  <button class="btn primary" style="width:100%" id="btnPin">Entra</button>
+  <div id="gateErr" class="sub" style="color:var(--red);margin-top:10px"></div>
+</div>
+
+<div id="app" style="display:none">
+  <header class="top">
+    <div>
+      <div class="brand">Siram · Telegestione</div>
+      <h1>Accensioni</h1>
+      <div class="sub" id="sotto"></div>
+    </div>
+    <div class="ctl">
+      <select id="commessa"><option value="">Tutte le commesse</option></select>
+      <input type="search" id="cerca" placeholder="cerca impianto o circuito">
+      <button class="btn" id="prev" title="indietro">‹</button>
+      <input type="date" id="giorno">
+      <button class="btn" id="next" title="avanti">›</button>
+      <div class="seg"><button id="vGiorno">Giorno</button><button id="vSettimana">Settimana</button></div>
+      <span class="pill" id="pill"><i></i><span>…</span></span>
+    </div>
+  </header>
+  <div class="legend" id="legenda"></div>
+  <div class="tab" id="tab"></div>
+</div>
+
+<script>
+const SERVER = 'https://siram-proxy.onrender.com';
+const PIN_KEY = 'orari_coster_pin';
+const RICARICA_MS = 60000;
+if (window.self !== window.top) document.documentElement.classList.add('embedded');
+
+const S = { pin: '', dati: null, impronta: '', giorno: '', vista: 'giorno', commessa: '', cerca: '' };
+const $ = id => document.getElementById(id);
+const GIORNI = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+const GIORNI_LUNGHI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+
+function storageGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function storageSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+async function api(path, opts = {}) {
+  const r = await fetch(SERVER + '/analisi' + path, Object.assign({ headers: { 'X-Orari-Pin': S.pin } }, opts));
+  if (r.status === 401 || r.status === 403) throw new Error('PIN non valido');
+  if (!r.ok) throw new Error('Server: ' + r.status);
+  return r;
+}
+
+async function entra(pin) {
+  S.pin = pin;
+  const st = await (await api('/stato')).json();
+  storageSet(PIN_KEY, pin);
+  $('gate').style.display = 'none'; $('app').style.display = '';
+  await carica(st);
+  setInterval(controlla, RICARICA_MS);
+}
+
+async function carica(st) {
+  const r = await api('/dati');
+  S.dati = await r.json();
+  S.impronta = (st && st.impronta) || r.headers.get('ETag') || '';
+  const agente = st && st.agente_online;
+  $('pill').className = 'pill ' + (agente ? 'ok' : 'off');
+  $('pill').querySelector('span').textContent = agente ? 'PC collegato' : 'PC non collegato';
+  const giorni = Object.keys(dati().giorni).sort();
+  if (!S.giorno) {
+    const q = new URLSearchParams(location.search).get('giorno');
+    S.giorno = q || giorni[giorni.length - 1] || iso(new Date());
+  }
+  const com = [...new Set(dati().circuiti.map(c => c.commessa).filter(Boolean))];
+  $('commessa').innerHTML = '<option value="">Tutte le commesse</option>' + com.map(c => `<option${c === S.commessa ? ' selected' : ''}>${esc(c)}</option>`).join('');
+  disegna();
+}
+
+async function controlla() {
+  try {
+    const st = await (await api('/stato')).json();
+    if (st.impronta && st.impronta !== S.impronta) await carica(st);
+  } catch (e) { /* al prossimo giro */ }
+}
+
+const dati = () => (S.dati && S.dati.accensioni) || { circuiti: [], giorni: {} };
+const due = n => String(n).padStart(2, '0');
+const hh = m => due(Math.floor(m / 60)) + ':' + due(m % 60);
+const num = v => v == null ? '' : v.toFixed(1).replace('.', ',');
+const gradi = v => v == null ? '' : num(v) + '°';
+const pct = m => m / 1440 * 100;
+function iso(d) { return d.getFullYear() + '-' + due(d.getMonth() + 1) + '-' + due(d.getDate()); }
+function data(s) { const p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2], 12); }
+function sposta(s, n) { const d = data(s); d.setDate(d.getDate() + n); return iso(d); }
+function lunedi(s) { const d = data(s); return sposta(s, -((d.getDay() + 6) % 7)); }
+function etichetta(s) { const d = data(s); return GIORNI[d.getDay()] + ' ' + due(d.getDate()) + '/' + due(d.getMonth() + 1); }
+const breve = c => String(c.impianto).split(' - ')[0];
+
+function passaFiltro(c) {
+  if (S.commessa && c.commessa !== S.commessa) return false;
+  const q = S.cerca.trim().toLowerCase();
+  return !q || (c.codice + ' ' + c.impianto + ' ' + c.circuito).toLowerCase().includes(q);
+}
+
+// {indice del circuito: {cliente, acceso}} di un giorno
+function delGiorno(g) {
+  const out = {};
+  for (const [i, cliente, acceso] of (dati().giorni[g] || [])) out[i] = { cliente, acceso };
+  return out;
+}
+
+function disegna() {
+  $('giorno').value = S.giorno;
+  $('vGiorno').className = S.vista === 'giorno' ? 'on' : '';
+  $('vSettimana').className = S.vista === 'settimana' ? 'on' : '';
+  if (S.vista === 'giorno') disegnaGiorno(); else disegnaSettimana();
+}
+
+function disegnaGiorno() {
+  const d = data(S.giorno);
+  $('sotto').textContent = GIORNI_LUNGHI[d.getDay()] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear();
+  $('legenda').innerHTML = '<span><i style="background:var(--blue)"></i>orario del cliente</span><span><i style="background:var(--green)"></i>quello che ha fatto l\'impianto</span><span>gradi ambiente a inizio e fine. Dati dal PC dell\'ufficio: giro delle 02:00 (ieri) e delle 08:00 (oggi).</span>';
+  const voci = delGiorno(S.giorno);
+  const circuiti = dati().circuiti;
+  const asse = Array.from({ length: 12 }, (_, i) => `<span class="mono" style="left:${i * 2 / 24 * 100}%">${due(i * 2)}</span>`).join('');
+  let h = `<div class="g-testa"><div class="g-nome">Impianto · circuito</div><div class="g-tipo"></div><div class="g-ora">Inizio</div><div class="g-ora">Fine</div><div class="g-t">T inizio</div><div class="g-t">T fine</div><div class="g-asse">${asse}</div></div>`;
+  const riga = (nome, sotto, tipo, cl, f, sep, fine) => `<div class="g-riga${sep ? ' sep' : ''}${fine ? ' fine' : ''}">
+    <div class="g-nome${sotto ? ' sotto' : ''}" title="${esc(nome.title)}">${nome.html}</div><div class="g-tipo ${cl}">${tipo}</div>
+    <div class="g-ora mono ${cl}">${f ? hh(f[0]) : '—'}</div><div class="g-ora mono ${cl}">${f ? (f[4] ? 'in corso' : hh(f[1])) : ''}</div>
+    <div class="g-t mono">${f ? gradi(f[2]) : ''}</div><div class="g-t mono">${f ? gradi(f[3]) : ''}</div>
+    <div class="g-tl ore">${f ? `<div class="bar ${cl}" style="left:${pct(f[0])}%;width:${pct(f[1]) - pct(f[0])}%;top:3px;height:14px"></div>` : ''}</div></div>`;
+  let ult = null, n = 0;
+  circuiti.forEach((c, i) => {
+    const v = voci[i];
+    if (!v || !passaFiltro(c)) return;
+    n++;
+    const nuovo = c.impianto !== ult;
+    ult = c.impianto;
+    const vuota = { html: '', title: '' };
+    const nome = { html: (nuovo ? `<b>${esc(breve(c))}</b> ` : '') + `<span>${esc(c.circuito)}</span>`, title: c.impianto + ' · ' + c.circuito };
+    const cl = v.cliente.length ? v.cliente : [null];
+    const im = v.acceso.length ? v.acceso : [null];
+    cl.forEach((f, j) => { h += riga(j ? vuota : nome, !nuovo, j ? '' : 'Cliente', 'cl', f, j === 0 && nuovo, false); });
+    im.forEach((f, j) => { h += riga(vuota, false, j ? '' : 'Impianto', 'im', f, false, j === im.length - 1); });
+  });
+  $('tab').innerHTML = n ? `<div class="int">${h}</div>` : '<div class="empty">Nessun dato per questo giorno con questi filtri.</div>';
+}
+
+function disegnaSettimana() {
+  const lun = lunedi(S.giorno);
+  const giorni = Array.from({ length: 7 }, (_, i) => sposta(lun, i));
+  $('sotto').textContent = 'settimana dal ' + etichetta(giorni[0]).slice(4) + ' al ' + etichetta(giorni[6]).slice(4) + '/' + data(giorni[6]).getFullYear();
+  $('legenda').innerHTML = '<span><i style="background:var(--blue)"></i>orario del cliente</span><span><i style="background:var(--green)"></i>quello che ha fatto l\'impianto</span><span>a sinistra i gradi a inizio barra, a destra a fine barra; le ore passando col mouse; un clic sul giorno lo apre.</span>';
+  const voci = giorni.map(delGiorno);
+  let h = `<div class="s-testa"><div class="s-nome"></div>${giorni.map(g => {
+    const w = [0, 6].includes(data(g).getDay());
+    return `<div class="s-g${w ? ' we' : ''}" data-g="${g}"><b>${etichetta(g)}</b><div class="s-tick mono">${[0, 6, 12, 18].map(o => `<span style="left:${o / 24 * 100}%">${due(o)}</span>`).join('')}</div></div>`;
+  }).join('')}</div>`;
+  const cella = (f, cl, nome) => `${f ? `<div class="s-num s mono" >${num(f[2])}</div>` : ''}<div class="s-pista ore6">${f ? `<div class="bar ${cl}" style="left:${pct(f[0])}%;width:${pct(f[1]) - pct(f[0])}%;top:3px;height:10px"></div>` : ''}</div>${f ? `<div class="s-num d mono">${num(f[3])}</div>` : ''}`;
+  const titolo = (f, nome) => f ? `${nome} ${hh(f[0])}-${f[4] ? 'in corso' : hh(f[1])}${f[2] != null || f[3] != null ? '  ' + (gradi(f[2]) || '?') + ' → ' + (gradi(f[3]) || '?') : ''}` : '';
+  let ult = null, n = 0;
+  dati().circuiti.forEach((c, i) => {
+    if (!passaFiltro(c) || !voci.some(v => v[i])) return;
+    n++;
+    if (c.impianto !== ult) { ult = c.impianto; h += `<div class="s-imp">${esc(c.impianto)}</div>`; }
+    const quante = k => Math.max(0, ...voci.map(v => v[i] ? v[i][k].length : 0));
+    const linee = [];
+    for (let j = 0; j < quante('cliente'); j++) linee.push(['cliente', j, 'cl', 'Cliente']);
+    for (let j = 0; j < quante('acceso'); j++) linee.push(['acceso', j, 'im', 'Impianto']);
+    linee.forEach(([k, j, cl, nome], r) => {
+      h += `<div class="s-riga${r === linee.length - 1 ? ' fine' : ''}"><div class="s-nome" title="${esc(c.impianto + ' · ' + c.circuito)}">${r === 0 ? esc(c.circuito) : ''}</div>${giorni.map((g, x) => {
+        const f = voci[x][i] ? voci[x][i][k][j] : null;
+        const w = [0, 6].includes(data(g).getDay());
+        return `<div class="s-g${w ? ' we' : ''}" title="${esc(titolo(f, nome))}">${cella(f, cl)}</div>`;
+      }).join('')}</div>`;
+    });
+  });
+  $('tab').innerHTML = n ? `<div class="int">${h}</div>` : '<div class="empty">Nessun dato per questa settimana con questi filtri.</div>';
+}
+
+$('btnPin').onclick = () => entra($('pin').value.trim()).catch(e => { $('gateErr').textContent = e.message; });
+$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnPin').click(); });
+$('prev').onclick = () => { S.giorno = sposta(S.giorno, S.vista === 'giorno' ? -1 : -7); disegna(); };
+$('next').onclick = () => { S.giorno = sposta(S.giorno, S.vista === 'giorno' ? 1 : 7); disegna(); };
+$('giorno').onchange = e => { if (e.target.value) { S.giorno = e.target.value; disegna(); } };
+$('vGiorno').onclick = () => { S.vista = 'giorno'; disegna(); };
+$('vSettimana').onclick = () => { S.vista = 'settimana'; disegna(); };
+$('commessa').onchange = e => { S.commessa = e.target.value; disegna(); };
+$('cerca').oninput = e => { S.cerca = e.target.value; disegna(); };
+$('tab').addEventListener('click', e => {
+  const g = e.target.closest('.s-testa .s-g');
+  if (g) { S.giorno = g.dataset.g; S.vista = 'giorno'; disegna(); }
+});
+(function () {
+  const pin = storageGet(PIN_KEY);
+  if (pin) entra(pin).catch(() => {});
+})();
+</script>
+</body>
+</html>
