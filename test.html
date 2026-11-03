@@ -427,6 +427,13 @@ body{background:#121822}
 .cg-fine h2{font-size:24px;margin-top:12px}
 .cg-fine p{color:var(--muted);margin-top:8px;font-size:15px}
 
+.pos-row{font-size:12.5px;color:var(--muted);margin:-6px 2px 14px}
+.pos-row a{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline}
+.pin-edit{width:34px;height:46px;background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 46'><path d='M17 45C17 45 2 27 2 17a15 15 0 0 1 30 0c0 10-15 28-15 28z' fill='%237fe0c0' stroke='%23121822' stroke-width='3'/><circle cx='17' cy='17' r='6' fill='%23121822'/></svg>")}
+.pos-bar{position:absolute;left:12px;right:12px;bottom:max(20px,calc(14px + env(safe-area-inset-bottom,0px)));z-index:12;border-radius:24px;padding:16px}
+.pos-bar button{flex:1;padding:14px 0;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.pos-bar button.ok{background:var(--accent);color:var(--acc-txt)}
+
 </style>
 </head>
 <body>
@@ -1424,7 +1431,11 @@ function avviaGPS(){
     if(!ultimoRenderPos || Math.abs(ultimoRenderPos.lat-POS.lat)+Math.abs(ultimoRenderPos.lng-POS.lng)>0.003){ ultimoRenderPos=POS; renderLista(); }
   },()=>{gpsAvviato=false},{enableHighAccuracy:true,maximumAge:60000,timeout:20000});
 }
-fetch('impianti-coord.json').then(r=>r.json()).then(j=>{GEO=j||{}; if(currentUser) renderLista();}).catch(()=>{});
+let GEO_FIX={}; try{GEO_FIX=JSON.parse(localStorage.getItem('prova_geo_fix')||'{}')||{}}catch(e){}
+function salvaGeoFix(){try{localStorage.setItem('prova_geo_fix',JSON.stringify(GEO_FIX))}catch(e){}}
+let GEO_FILE={};
+function rifaiGeo(){ GEO=Object.assign({},GEO_FILE,GEO_FIX); }
+fetch('impianti-coord.json?v=2').then(r=>r.json()).then(j=>{GEO_FILE=j||{}; rifaiGeo(); if(currentUser) renderLista();}).catch(()=>{});
 
 // --- Mappa ---
 let CLUSTER=null, MAP=null, LAYER=null, ME=null, PUNTI=[], primoFit=true;
@@ -1433,8 +1444,8 @@ function initMappa(){
   MAP=L.map('map',{zoomControl:false,attributionControl:true}).setView([43.93,12.78],10);
   // Mappa scura Esri (senza chiave) + nomi dei luoghi
   const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-  L.tileLayer(ESRI+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap'}).addTo(MAP);
-  L.tileLayer(ESRI+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:16,pane:'overlayPane'}).addTo(MAP);
+  L.tileLayer(ESRI+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap'}).addTo(MAP);
+  L.tileLayer(ESRI+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,pane:'overlayPane'}).addTo(MAP);
   MAP.attributionControl.setPrefix(false);
   LAYER=L.layerGroup().addTo(MAP);
   // le richieste libere vicine si raggruppano in una bolla col numero
@@ -1450,7 +1461,6 @@ function disegnaMappa(visibili){
   visibili.forEach(({i,tipo})=>{
     const g=GEO[i.codiceImpianto]; if(!g) return;
     let lat=g.lat, lng=g.lng;
-    if(g.prec==='comune'){ const h=hashN(i.codiceImpianto); lat+=((h%100)/100-.5)*0.012; lng+=(((h>>7)%100)/100-.5)*0.016; }
     const n=usati[i.codiceImpianto]=(usati[i.codiceImpianto]||0)+1;
     if(n>1){ const a=n*2.4; lat+=Math.sin(a)*0.0004*n; lng+=Math.cos(a)*0.00055*n; }
     let html,sz,z=0;
@@ -1565,7 +1575,8 @@ function rigaHTML(i,opt){
   if(opt.btn && k!=null) meta+=' · '+kmTxt(k)+' km';
   const right = opt.btn ? `<button class="btn-fatto" onclick="event.stopPropagation();segnaFatto('${i.id}')">✓ Fatto</button>`
               : (opt.right!=null ? opt.right : (k!=null?`<div class="ls-km">${kmTxt(k)}<small>KM</small></div>`:''));
-  return `<div class="ls-row" onclick="openPanel('${i.id}')"><div class="ls-lead">${lead}</div><div class="ls-g"><div class="ls-n">${escH(nome)}</div><div class="ls-m">${meta}</div></div>${right}</div>`;
+  const senzaPos=!GEO[i.codiceImpianto]?' <span title="non è sulla mappa" style="font-size:11px;opacity:.6">📍?</span>':'';
+  return `<div class="ls-row" onclick="openPanel('${i.id}')"><div class="ls-lead">${lead}</div><div class="ls-g"><div class="ls-n">${escH(nome)}${senzaPos}</div><div class="ls-m">${meta}</div></div>${right}</div>`;
 }
 function sezione(txt,sub,col){ return `<div class="ls-sec">${col?`<span class="sq" style="background:${col}"></span>`:''}<span style="${col?'color:'+col:''}">${txt}</span>${sub?`<span class="sub">${sub}</span>`:''}</div>`; }
 function box(righe){ return `<div class="ls-box">${righe}</div>`; }
@@ -1642,9 +1653,10 @@ function extraPanelHTML(i){
   const imp=impDi(i), g=GEO[i.codiceImpianto];
   // coordinate solo se trovate dall'indirizzo esatto; altrimenti l'indirizzo lo cerca Google
   const testo=((imp&&imp.indirizzo&&imp.indirizzo!=='altro')?imp.indirizzo:((imp&&imp.descrizione)||''))+', '+((imp&&imp.comune)||'');
-  const dest=(g&&g.prec==='indirizzo')?`${g.lat},${g.lng}`:encodeURIComponent(testo);
+  const dest=(g&&(g.prec==='civico'||g.prec==='manuale'))?`${g.lat},${g.lng}`:encodeURIComponent(testo);
   const k=km(i);
   let h=`<div class="navi-row"><a class="navi-btn" href="https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving" target="_blank" rel="noopener">📍 Naviga${k!=null?' · '+kmTxt(k)+' km':''}</a></div>`;
+  h+=`<div class="pos-row">${g?(g.prec==='via'?'📍 Posizione approssimata (solo la via)':(g.prec==='manuale'?'📍 Posizione sistemata a mano':'📍 Posizione dall\'indirizzo')):'📍 Impianto non ancora sulla mappa'} · <a onclick="sistemaPos('${i.codiceImpianto}')">${g?'è sbagliata?':'mettilo'}</a></div>`;
   if(isFatto(i)) h+=`<div class="fatto-info">✓ Segnato fatto alle ${oraHM(FATTI[i.id])} — lo chiudi a fine giornata</div>`;
   return h;
 }
@@ -1734,6 +1746,33 @@ async function cgConferma(){
     renderCG();
   }catch(e){ toast('Errore rete','err'); }
   finally{ btn.disabled=false; }
+}
+
+// --- Sistemare la posizione di un impianto: si trascina il puntino o si usa "sono qui" ---
+let POS_EDIT=null;
+function sistemaPos(codice){
+  closePanel(); chiudiSheet(); $('bs').style.visibility='hidden';
+  const g=GEO[codice], imp=S.impianti.find(x=>x.codice===codice);
+  const start=g?[g.lat,g.lng]:(POS?[POS.lat,POS.lng]:MAP.getCenter());
+  MAP.setView(start,17);
+  const m=L.marker(start,{draggable:true,autoPan:true,zIndexOffset:5000,icon:L.divIcon({className:'',html:'<div class="pin-edit"></div>',iconSize:[34,46],iconAnchor:[17,44]})}).addTo(MAP);
+  POS_EDIT={codice,m};
+  const bar=document.createElement('div'); bar.id='posBar'; bar.className='pos-bar glass';
+  bar.innerHTML=`<div style="font-size:15px;font-weight:700">${escH(imp?imp.descrizione:codice)}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:2px">Trascina il puntino sull'ingresso della centrale termica, oppure se sei lì tocca "Sono qui"</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button onclick="posAnnulla()">Annulla</button><button onclick="posQui()">📍 Sono qui</button><button class="ok" onclick="posSalva()">Salva</button></div>`;
+  $('mainScreen').appendChild(bar);
+}
+function posQui(){
+  if(!POS){ toast('Posizione non disponibile','err'); return; }
+  POS_EDIT.m.setLatLng([POS.lat,POS.lng]); MAP.setView([POS.lat,POS.lng],18);
+}
+function posAnnulla(){ $('bs').style.visibility=''; if(POS_EDIT){ MAP.removeLayer(POS_EDIT.m); POS_EDIT=null; } const b=$('posBar'); if(b) b.remove(); }
+function posSalva(){
+  const ll=POS_EDIT.m.getLatLng(), c=POS_EDIT.codice;
+  GEO_FIX[c]={lat:+ll.lat.toFixed(6),lng:+ll.lng.toFixed(6),prec:'manuale'}; salvaGeoFix(); rifaiGeo();
+  console.log('[PROVA] posizione impianto',c,GEO_FIX[c]);
+  posAnnulla(); renderLista(); toast('Posizione salvata ✓','ok');
 }
 
 const _notaLetta=notaLetta; notaLetta=async function(id){ await _notaLetta(id); aggiornaNote(); };
