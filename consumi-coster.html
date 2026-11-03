@@ -93,7 +93,7 @@
   <div id="gate">
     <div class="brand">Siram · Consumi</div>
     <h1 style="font-size:22px">PIN</h1>
-    <div class="sub">Lo stesso delle pagine Orari e Analisi.</div>
+    <div class="sub">Lo stesso delle pagine Orari e Analisi. Si chiede una volta sola su questo dispositivo.</div>
     <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
     <button class="btn primary" style="width:100%" id="btnPin">Entra</button>
     <div id="gateErr" class="sub" style="color:var(--red);margin-top:10px"></div>
@@ -156,8 +156,9 @@ const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','
 const COL = ['var(--l0)', 'var(--l1)', 'var(--l2)', 'var(--l3)', 'var(--l4)'];
 const ETI = ['in linea', 'attenzione', 'attenzione', 'alto', 'grave'];
 
-function storageGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
-function storageSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+// Il PIN resta sul dispositivo (localStorage, 03/11/2026): si scrive una volta sola. Prima stava in sessionStorage.
+function storageGet(k) { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function storageSet(k, v) { try { for (const s of [localStorage, sessionStorage]) v == null ? s.removeItem(k) : s.setItem(k, v); } catch (e) {} }
 
 async function api(path, opts = {}) {
   const o = Object.assign({ headers: {} }, opts);
@@ -379,8 +380,15 @@ $('comune').onchange = e => { S.comune = e.target.value; disegna(); };
 $('cerca').oninput = e => { S.cerca = e.target.value.trim().toLowerCase(); disegna(); };
 document.querySelectorAll('.tile').forEach(t => t.onclick = () => { S.filtro = S.filtro === t.dataset.f ? '' : t.dataset.f; disegna(); });
 
+// con il PIN salvato si entra senza vedere la richiesta; se il server non lo accetta piu' si dimentica (niente tentativi a vuoto)
 const salvato = storageGet(PIN_KEY);
-if (salvato) entra(salvato).catch(() => { $('gate').style.display = ''; $('app').style.display = 'none'; });
+if (salvato) {
+  $('gate').style.display = 'none';
+  entra(salvato).catch(e => {
+    if (/PIN/.test(e.message)) storageSet(PIN_KEY, null);
+    $('gate').style.display = ''; $('app').style.display = 'none'; $('gateErr').textContent = e.message;
+  });
+}
 </script>
 </body>
 </html>

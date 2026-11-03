@@ -481,8 +481,9 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   const $ = (id) => document.getElementById(id);
   const vista = () => $('view');
 
-  function storageGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
-  function storageSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+  // Il PIN resta sul dispositivo (localStorage, 03/11/2026): si scrive una volta sola. Prima stava in sessionStorage.
+  function pinGet() { try { return localStorage.getItem(PIN_KEY) || sessionStorage.getItem(PIN_KEY); } catch (e) { return null; } }
+  function pinSet(v) { try { for (const s of [localStorage, sessionStorage]) v == null ? s.removeItem(PIN_KEY) : s.setItem(PIN_KEY, v); } catch (e) {} }
 
   // ============================================================
   // UTILITÀ
@@ -616,7 +617,7 @@ details.rc-el{margin-top:12px}details.rc-el summary{cursor:pointer;color:var(--m
   async function entra(pin) {
     S.pin = pin;
     const st = await api('/stato');
-    storageSet(PIN_KEY, pin);
+    pinSet(pin);
     S.stato = st;
     $('gate').hidden = true;
     $('app').hidden = false;
@@ -2825,9 +2826,16 @@ function disegnaSchedaTecnica(s, el, extra) {
   $('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('pinBtn').click(); });
   $('btnRefresh').addEventListener('click', () => controlla());
 
-  const salvato = storageGet(PIN_KEY);
+  // con il PIN salvato si entra senza vedere la richiesta; si dimentica solo se il server non lo accetta piu'
+  const salvato = pinGet();
   if (salvato) {
-    entra(salvato).catch(() => { storageSet(PIN_KEY, null); });
+    $('gate').hidden = true;
+    entra(salvato).catch((err) => {
+      if (err.pin) pinSet(null);
+      $('gate').hidden = false;
+      $('pinErr').hidden = false;
+      $('pinErr').textContent = err.pin ? 'PIN non valido.' : err.message;
+    });
   } else {
     $('pinInput').focus();
   }

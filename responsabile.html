@@ -38,8 +38,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 .brand { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
 .brand span { color: var(--muted); font-weight: 400; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
-.logout-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-family: 'Outfit', sans-serif; transition: all .15s; }
-.logout-btn:hover { color: var(--red); border-color: rgba(239,68,68,.4); }
 
 /* SHELL */
 .shell { display: flex; flex: 1; overflow: hidden; }
@@ -323,17 +321,6 @@ textarea.fc { resize: vertical; min-height: 72px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-full { display: flex; align-items: center; justify-content: center; height: 300px; gap: 12px; color: var(--muted); }
 
-/* LOGIN */
-#loginWrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 48px; width: 400px; }
-.login-logo { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
-.login-title { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-.login-sub { font-size: 14px; color: var(--muted); margin-bottom: 36px; }
-.login-lbl { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-.login-inp { width: 100%; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 16px; letter-spacing: 6px; margin-bottom: 20px; }
-.login-inp:focus { outline: none; border-color: var(--accent); }
-.login-btn { width: 100%; padding: 13px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: background .15s; }
-.login-err { font-size: 13px; color: var(--red); margin-top: 12px; min-height: 18px; text-align: center; }
 
 /* VISTA SWITCH */
 .vista-switch { display:flex; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:3px; gap:2px; }
@@ -518,27 +505,12 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginWrap">
-  <div class="login-box">
-    <div class="login-logo">Siram Veolia</div>
-    <div class="login-title">Responsabile</div>
-    <div class="login-sub">Inserisci il PIN per accedere</div>
-    <label class="login-lbl">PIN</label>
-    <input class="login-inp" type="password" id="pinInp" maxlength="4"
-      placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="login-btn" onclick="doLogin()">Accedi</button>
-    <div class="login-err" id="loginErr"></div>
-  </div>
-</div>
-
-<!-- APP SHELL -->
-<div id="appShell" style="display:none;flex-direction:column;min-height:100vh">
+<!-- APP SHELL (03/11/2026: niente piu' PIN all'ingresso, la pagina la usa solo Davide) -->
+<div id="appShell" style="display:flex;flex-direction:column;min-height:100vh">
   <div class="topbar">
     <div class="brand">Siram <span>Responsabile</span></div>
     <div class="topbar-right">
       <span style="font-size:12px;color:var(--muted)" id="topDate"></span>
-      <button class="logout-btn" onclick="doLogout()">Esci</button>
     </div>
   </div>
 
@@ -1254,7 +1226,6 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
 //  CONFIG
 // ============================================================
 const PROXY_URL = 'https://siram-proxy.onrender.com';
-const RESP_PIN  = '1234';
 
 // ============================================================
 //  STATO
@@ -1273,29 +1244,13 @@ let reportFilterCorrente  = 'tutti';
 let mostraOrdinari        = true;
 
 // ============================================================
-//  LOGIN
+//  AVVIO (03/11/2026: tolto il PIN d'ingresso, si entra subito)
 // ============================================================
-function doLogin() {
-  const pin = document.getElementById('pinInp').value;
-  if (pin === RESP_PIN) {
-    document.getElementById('loginWrap').style.display = 'none';
-    const shell = document.getElementById('appShell');
-    shell.style.display = 'flex'; shell.style.flexDirection = 'column';
-    document.getElementById('topDate').textContent =
-      new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
-    caricaDati();
-  } else {
-    document.getElementById('loginErr').textContent = 'PIN errato';
-    document.getElementById('pinInp').value = '';
-    setTimeout(() => document.getElementById('loginErr').textContent = '', 2000);
-  }
-}
-function doLogout() {
-  document.getElementById('appShell').style.display = 'none';
-  document.getElementById('loginWrap').style.display = 'flex';
-  document.getElementById('pinInp').value = '';
-}
-document.getElementById('pinInp').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('topDate').textContent =
+    new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
+  caricaDati();
+});
 
 // ============================================================
 //  API

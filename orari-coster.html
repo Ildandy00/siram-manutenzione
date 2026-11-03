@@ -615,6 +615,9 @@
 
   function storageGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
   function storageSet(k, v) { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+  // Il PIN resta sul dispositivo (localStorage, 03/11/2026): si scrive una volta sola. Prima stava in sessionStorage.
+  function pinGet() { try { return localStorage.getItem(PIN_KEY) || sessionStorage.getItem(PIN_KEY); } catch (e) { return null; } }
+  function pinSet(v) { try { for (const s of [localStorage, sessionStorage]) v == null ? s.removeItem(PIN_KEY) : s.setItem(PIN_KEY, v); } catch (e) {} }
 
   // ============================================================
   // API
@@ -705,7 +708,7 @@
   // ============================================================
   function askPin(msg) {
     S.pin = null;
-    storageSet(PIN_KEY, null);
+    pinSet(null);
     $('app').hidden = true;
     $('pinCard').hidden = false;
     $('pinErr').hidden = !msg;
@@ -722,7 +725,7 @@
     $('pinBtn').disabled = true;
     try {
       await api('/stato');
-      storageSet(PIN_KEY, v);
+      pinSet(v);
       $('pinCard').hidden = true;
       await start();
     } catch (err) {
@@ -2125,7 +2128,7 @@
   $('spegIndietro').addEventListener('click', () => { $('spegConferma').hidden = true; });
   $('spegInvia').addEventListener('click', spegInvia);
 
-  S.pin = storageGet(PIN_KEY);
+  S.pin = pinGet();
   if (S.pin) start(); else askPin();
 })();
 </script>

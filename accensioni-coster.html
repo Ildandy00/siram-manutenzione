@@ -12,6 +12,7 @@
   Giorno: per ogni circuito una riga Cliente e sotto una riga Impianto (inizio, fine, gradi, barra).
   Settimana: 7 giorni affiancati, gradi ai lati della barra, ore passando col mouse; un clic sul giorno lo apre.
   ?giorno=AAAA-MM-GG apre direttamente quel giorno.
+  Commesse (03/11/2026): ognuna in una sezione con il suo colore (striscia a sinistra) e un'intestazione che resta in alto.
 -->
 <style>
   :root { --bg:#282828; --bg2:#444; --bg3:#4e4e4e; --bg4:#585858; --text:#eee; --muted:#999; --accent:#ccc;
@@ -73,6 +74,14 @@
   .s-num { position:absolute; top:0; width:32px; font-size:11px; padding:0 3px }
   .s-num.d { right:0; text-align:right } .s-num.s { left:0 }
   .s-pista { position:absolute; left:34px; right:34px; top:0; bottom:0 }
+  /* commesse: colore fisso per commessa (COLORI), striscia a sinistra e intestazione che resta in alto scorrendo */
+  .comm { border-left:4px solid var(--c) }
+  .g-testa, .s-testa { border-left:4px solid transparent }
+  .c-testa { position:sticky; z-index:1; height:26px; display:flex; align-items:center; font-size:13px; white-space:nowrap;
+             background:var(--bg3); background:color-mix(in srgb, var(--c) 26%, var(--bg2)); border-top:1px solid var(--line2) }
+  .g-vista .c-testa { top:24px } .s-vista .c-testa { top:38px }
+  .c-testa > span { position:sticky; left:0; padding:0 12px }
+  .c-testa b { font-weight:700; margin-right:4px } .c-testa .mono { font-size:11px; color:#ddd } .c-testa em { font-style:normal; color:#ccc; font-size:12px }
   #gate { max-width:360px; margin:80px auto; background:var(--bg2); border-radius:16px; padding:24px }
   #gate input { width:100%; margin:12px 0; font-size:22px; letter-spacing:6px; text-align:center; background:var(--bg3); border:0; border-radius:10px; padding:12px; color:var(--text) }
   @media (max-width:640px) { #app { padding:10px 16px } h1 { font-size:22px } }
@@ -82,7 +91,7 @@
 <div id="gate">
   <div class="brand">Siram · Accensioni</div>
   <h1 style="font-size:22px">PIN</h1>
-  <div class="sub">Lo stesso delle pagine Orari e Analisi.</div>
+  <div class="sub">Lo stesso delle pagine Orari e Analisi. Si chiede una volta sola su questo dispositivo.</div>
   <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
   <button class="btn primary" style="width:100%" id="btnPin">Entra</button>
   <div id="gateErr" class="sub" style="color:var(--red);margin-top:10px"></div>
@@ -121,8 +130,9 @@ const GIORNI = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 const GIORNI_LUNGHI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
 
-function storageGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
-function storageSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+// Il PIN resta sul dispositivo (localStorage, 03/11/2026): si scrive una volta sola. Prima stava in sessionStorage.
+function storageGet(k) { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function storageSet(k, v) { try { for (const s of [localStorage, sessionStorage]) v == null ? s.removeItem(k) : s.setItem(k, v); } catch (e) {} }
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function api(path, opts = {}) {
@@ -178,6 +188,35 @@ function lunedi(s) { const d = data(s); return sposta(s, -((d.getDay() + 6) % 7)
 function etichetta(s) { const d = data(s); return GIORNI[d.getDay()] + ' ' + due(d.getDate()) + '/' + due(d.getMonth() + 1); }
 const breve = c => String(c.impianto).split(' - ')[0];
 
+// Colore per commessa: segue il nome, non la posizione, cosi' non cambia coi filtri. Ordine scelto perche'
+// due commesse vicine nell'elenco restino distinguibili anche per chi non vede bene i colori.
+// Niente blu e verde puri: sono le barre del cliente e dell'impianto. Commessa nuova = grigio.
+const COLORI = [['pesaro', '#e8a33d'], ['misano', '#a98be6'], ['verucchio', '#ee6f8a'], ['corinaldo', '#d9c75b'],
+  ['castel di lama', '#e5704f'], ['castelbellino', '#cf72d6'], ['monteciccardo', '#4fc1b0'], ['capitaner', '#7f86e8']];
+function colore(com) {
+  const s = String(com || '').toLowerCase();
+  const t = COLORI.find(([k]) => s.includes(k));
+  return t ? t[1] : '#999999';
+}
+function nomeCommessa(com) {
+  const [nome, codice] = String(com || 'Senza commessa').split(' - ');
+  return { nome: nome.replace(/\s+SIE4\b/i, '').replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowerCase()), codice: codice || '' };
+}
+// Le righe gia' pronte di ogni commessa, nell'ordine in cui compaiono: una sezione con intestazione e striscia colorata
+function sezioni(gruppi) {
+  return [...gruppi.values()].map(g => {
+    const { nome, codice } = nomeCommessa(g.commessa);
+    const n = g.impianti.size;
+    return `<section class="comm" style="--c:${colore(g.commessa)}" data-commessa="${esc(g.commessa)}"><div class="c-testa"><span><b>${esc(nome)}</b> ${codice ? `<span class="mono">${esc(codice)}</span> · ` : ''}<em>${n} impiant${n === 1 ? 'o' : 'i'}</em></span></div>${g.html}</section>`;
+  }).join('');
+}
+function gruppo(gruppi, c) {
+  if (!gruppi.has(c.commessa)) gruppi.set(c.commessa, { commessa: c.commessa, impianti: new Set(), html: '' });
+  const g = gruppi.get(c.commessa);
+  g.impianti.add(c.impianto);
+  return g;
+}
+
 function passaFiltro(c) {
   if (S.commessa && c.commessa !== S.commessa) return false;
   const q = S.cerca.trim().toLowerCase();
@@ -212,20 +251,22 @@ function disegnaGiorno() {
     <div class="g-t mono">${f ? gradi(f[2]) : ''}</div><div class="g-t mono">${f ? gradi(f[3]) : ''}</div>
     <div class="g-tl ore">${f ? `<div class="bar ${cl}" style="left:${pct(f[0])}%;width:${pct(f[1]) - pct(f[0])}%;top:3px;height:14px"></div>` : ''}</div></div>`;
   let ult = null, n = 0;
+  const gruppi = new Map();
   circuiti.forEach((c, i) => {
     const v = voci[i];
     if (!v || !passaFiltro(c)) return;
     n++;
+    const g = gruppo(gruppi, c);
     const nuovo = c.impianto !== ult;
     ult = c.impianto;
     const vuota = { html: '', title: '' };
     const nome = { html: (nuovo ? `<b>${esc(breve(c))}</b> ` : '') + `<span>${esc(c.circuito)}</span>`, title: c.impianto + ' · ' + c.circuito };
     const cl = v.cliente.length ? v.cliente : [null];
     const im = v.acceso.length ? v.acceso : [null];
-    cl.forEach((f, j) => { h += riga(j ? vuota : nome, !nuovo, j ? '' : 'Cliente', 'cl', f, j === 0 && nuovo, false); });
-    im.forEach((f, j) => { h += riga(vuota, false, j ? '' : 'Impianto', 'im', f, false, j === im.length - 1); });
+    cl.forEach((f, j) => { g.html += riga(j ? vuota : nome, !nuovo, j ? '' : 'Cliente', 'cl', f, j === 0 && nuovo, false); });
+    im.forEach((f, j) => { g.html += riga(vuota, false, j ? '' : 'Impianto', 'im', f, false, j === im.length - 1); });
   });
-  $('tab').innerHTML = n ? `<div class="int">${h}</div>` : '<div class="empty">Nessun dato per questo giorno con questi filtri.</div>';
+  $('tab').innerHTML = n ? `<div class="int g-vista">${h}${sezioni(gruppi)}</div>` : '<div class="empty">Nessun dato per questo giorno con questi filtri.</div>';
 }
 
 function disegnaSettimana() {
@@ -241,23 +282,25 @@ function disegnaSettimana() {
   const cella = (f, cl, nome) => `${f ? `<div class="s-num s mono" >${num(f[2])}</div>` : ''}<div class="s-pista ore6">${f ? `<div class="bar ${cl}" style="left:${pct(f[0])}%;width:${pct(f[1]) - pct(f[0])}%;top:3px;height:10px"></div>` : ''}</div>${f ? `<div class="s-num d mono">${num(f[3])}</div>` : ''}`;
   const titolo = (f, nome) => f ? `${nome} ${hh(f[0])}-${f[4] ? 'in corso' : hh(f[1])}${f[2] != null || f[3] != null ? '  ' + (gradi(f[2]) || '?') + ' → ' + (gradi(f[3]) || '?') : ''}` : '';
   let ult = null, n = 0;
+  const gruppi = new Map();
   dati().circuiti.forEach((c, i) => {
     if (!passaFiltro(c) || !voci.some(v => v[i])) return;
     n++;
-    if (c.impianto !== ult) { ult = c.impianto; h += `<div class="s-imp">${esc(c.impianto)}</div>`; }
+    const g = gruppo(gruppi, c);
+    if (c.impianto !== ult) { ult = c.impianto; g.html += `<div class="s-imp">${esc(c.impianto)}</div>`; }
     const quante = k => Math.max(0, ...voci.map(v => v[i] ? v[i][k].length : 0));
     const linee = [];
     for (let j = 0; j < quante('cliente'); j++) linee.push(['cliente', j, 'cl', 'Cliente']);
     for (let j = 0; j < quante('acceso'); j++) linee.push(['acceso', j, 'im', 'Impianto']);
     linee.forEach(([k, j, cl, nome], r) => {
-      h += `<div class="s-riga${r === linee.length - 1 ? ' fine' : ''}"><div class="s-nome" title="${esc(c.impianto + ' · ' + c.circuito)}">${r === 0 ? esc(c.circuito) : ''}</div>${giorni.map((g, x) => {
+      g.html += `<div class="s-riga${r === linee.length - 1 ? ' fine' : ''}"><div class="s-nome" title="${esc(c.impianto + ' · ' + c.circuito)}">${r === 0 ? esc(c.circuito) : ''}</div>${giorni.map((g, x) => {
         const f = voci[x][i] ? voci[x][i][k][j] : null;
         const w = [0, 6].includes(data(g).getDay());
         return `<div class="s-g${w ? ' we' : ''}" title="${esc(titolo(f, nome))}">${cella(f, cl)}</div>`;
       }).join('')}</div>`;
     });
   });
-  $('tab').innerHTML = n ? `<div class="int">${h}</div>` : '<div class="empty">Nessun dato per questa settimana con questi filtri.</div>';
+  $('tab').innerHTML = n ? `<div class="int s-vista">${h}${sezioni(gruppi)}</div>` : '<div class="empty">Nessun dato per questa settimana con questi filtri.</div>';
 }
 
 $('btnPin').onclick = () => entra($('pin').value.trim()).catch(e => { $('gateErr').textContent = e.message; });
@@ -274,8 +317,14 @@ $('tab').addEventListener('click', e => {
   if (g) { S.giorno = g.dataset.g; S.vista = 'giorno'; disegna(); }
 });
 (function () {
+  // con il PIN salvato si entra senza vedere la richiesta; se il server non lo accetta piu' si dimentica (niente tentativi a vuoto)
   const pin = storageGet(PIN_KEY);
-  if (pin) entra(pin).catch(() => {});
+  if (!pin) return;
+  $('gate').style.display = 'none';
+  entra(pin).catch(e => {
+    if (/PIN/.test(e.message)) storageSet(PIN_KEY, null);
+    $('gate').style.display = ''; $('app').style.display = 'none'; $('gateErr').textContent = e.message;
+  });
 })();
 </script>
 </body>
