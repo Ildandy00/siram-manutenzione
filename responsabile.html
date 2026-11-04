@@ -1511,7 +1511,7 @@ function evAttivitaHtml(i, stopProp) {
   const col = commessaDi(imp).color;
   const nome = imp ? imp.descrizione.split(' ').slice(0,3).join(' ') : i.codiceImpianto;
   const chi = operaiDi(i).join('+');
-  const tit = (imp ? imp.descrizione : i.codiceImpianto) + ' \u2014 ' + chi + (i.note ? '\n' + i.note : '');
+  const tit = (imp ? imp.descrizione : i.codiceImpianto) + ' \u2014 ' + chi + (i.segnalazione ? '\n' + i.segnalazione : '') + (i.note ? '\n' + i.note : '');
   return `<div class="ev-att" style="background-color:${col}14;color:${col};border-color:${col}"
     onclick="${stopProp ? 'event.stopPropagation();' : ''}openModalAttivita('${i.id}')" title="${escN(tit)}">
     <div class="ev-row"><span class="ev-name"><span class="att-ico">✍</span>${nome}</span><span class="ev-op" style="color:var(--muted)">${chi}</span></div></div>`;
@@ -2857,7 +2857,7 @@ function renderBacklog() {
       <div class="backlog-info">
         <div class="backlog-imp">${imp?imp.descrizione:i.codiceImpianto}</div>
         <div class="backlog-meta"><span class="badge ${i.tipoVisita==='Ordinaria'?'badge-ord':isAttivita(i)?'badge-att':'badge-str'}">${i.tipoVisita}</span>${imp&&imp.comune?`<span>${imp.comune}</span>`:''}<span style="color:var(--muted)">creato il ${i.creatoIl}</span></div>
-        ${i.note?`<div class="backlog-note">"${i.note}"</div>`:''}
+        ${i.segnalazione?`<div class="backlog-note" style="font-style:normal">📨 ${escH(i.segnalazione)}</div>`:''}${i.note?`<div class="backlog-note">"${i.note}"</div>`:''}
       </div>
       <div class="backlog-actions"><button class="btn btn-primary btn-sm" onclick="openAssegna('${i.id}')">Assegna →</button></div>
     </div>`;
@@ -2908,7 +2908,7 @@ function renderInterventi() {
   let lista=S.interventi.filter(i=>i.stato!=='DaAssegnare');
   if(filtStato) lista=lista.filter(i=>i.stato===filtStato);
   if(filtOp) lista=lista.filter(i=>i.operaio===filtOp||i.secondoOperaio===filtOp||i.operaioSecondario2===filtOp);
-  if(search) lista=lista.filter(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return (i.codiceImpianto+(imp?imp.descrizione:'')+(i.operaio||'')+(i.note||'')).toLowerCase().includes(search); });
+  if(search) lista=lista.filter(i=>{ const imp=S.impianti.find(x=>x.codice===i.codiceImpianto); return (i.codiceImpianto+(imp?imp.descrizione:'')+(i.operaio||'')+(i.segnalazione||'')+(i.note||'')).toLowerCase().includes(search); });
   lista.sort((a,b)=>{ if(a.stato!==b.stato) return a.stato==='Aperto'?-1:1; return (b.dataPrevista||'').localeCompare(a.dataPrevista||''); });
   const el=document.getElementById('tblInterventi');
   if(!lista.length){el.innerHTML='<div class="empty">Nessun intervento trovato</div>';return;}
@@ -2980,6 +2980,7 @@ function openDettaglio(id) {
     <div><strong>Comune:</strong> ${imp?imp.comune||'—':'—'}</div>
     <div><strong>Tipo:</strong> ${i.tipoVisita}</div>
     <div><strong>Operaio:</strong> ${operaioLbl}</div>
+    ${i.segnalazione?`<div><strong>Segnalazione:</strong> ${escH(i.segnalazione)}</div>`:''}
     <div><strong>Data prevista:</strong> ${i.dataPrevista}</div>
     <div><strong>Creato il:</strong> ${i.creatoIl||'—'}</div>
     ${i.dataChiusura?`<div><strong>Chiuso il:</strong> ${i.dataChiusura}</div>`:''}

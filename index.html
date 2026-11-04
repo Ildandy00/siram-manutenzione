@@ -796,6 +796,7 @@ function cardHTML(i){
         <div class="req-lib-info">
           <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
           <div class="req-meta">${i.codiceImpianto} · ${dataBreve(i)}</div>
+          ${i.segnalazione?`<div class="req-meta">📨 ${i.segnalazione}</div>`:''}
           ${i.note?`<div class="req-lib-note">${i.note}</div>`:''}
         </div>
         <button class="req-take-rd" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')" title="Prendi in carico">＋</button>
@@ -897,6 +898,7 @@ function openPanel(id){
 
   // Note intervento (per le RCEE senza le righe ripetute "Riaperto il...")
   const notaVis = rcee ? pulisciNotaRcee(i.note) : i.note;
+  if(i.segnalazione) noteHtml += `<div class="req-meta" style="margin-bottom:8px">📨 Segnalazione <strong>${i.segnalazione}</strong></div>`;
   if(notaVis) noteHtml += `<div class="note-box">📋 ${notaVis}</div>`;
 
   // Secondo operaio + RDA: solo se la richiesta è presa in carico
