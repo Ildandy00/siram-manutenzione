@@ -436,11 +436,22 @@ body{background:#141414}
 
 .pin-altro{width:24px;height:24px;border-radius:50%;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2.5px solid #161616;opacity:.85}
 
-/* nomi degli impianti accanto ai puntini quando si ingrandisce la mappa */
-.pin-wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-.pin-lbl{display:none;position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;font-weight:600;color:#f0f0f0;background:rgba(20,20,20,.86);border:1px solid rgba(255,255,255,.1);padding:3px 9px;border-radius:10px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.pin-lbl.mio{color:var(--accent);border-color:rgba(127,224,192,.45)}
+/* etichette a pillola accanto ai puntini: codice K + nome, dal livello di quartiere */
+.pin-wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:0}
+.pin-wrap>div{position:relative;z-index:1}
+.pin-lbl{display:none;position:absolute;z-index:0;left:calc(var(--s) / 2);top:50%;transform:translateY(-50%);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;
+  font-size:12px;font-weight:600;color:#ededed;background:#242424;border:1px solid #383838;padding:4px 10px 4px calc(var(--s) / 2 + 7px);border-radius:14px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.pin-lbl b{font-weight:800;color:#fff;margin-right:2px}
+.pin-lbl.altro{color:#a8a8a8;background:#1e1e1e}
+.pin-lbl.mio{background:#16241f;border-color:rgba(127,224,192,.55);color:var(--accent)}
+.pin-lbl.mio b{color:var(--accent)}
+.pin-lbl.mio.fatto{background:var(--accent);color:var(--acc-txt);border-color:var(--accent)}
+.pin-lbl.mio.fatto b{color:var(--acc-txt)}
+.pin-lbl.mio.sosp{background:#2a2414;border-color:rgba(242,200,107,.55);color:var(--yellow)}
+.pin-lbl.mio.sosp b{color:var(--yellow)}
+.lbl-urg{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e5534b;margin-left:6px;vertical-align:1px}
 .nomi .pin-lbl{display:block}
+.nomi-lunghi .pin-lbl{max-width:230px}
 
 </style>
 </head>
@@ -1505,12 +1516,18 @@ function initMappa(){
   MAP.attributionControl.setPrefix(false);
   LAYER=L.layerGroup().addTo(MAP);
   // le richieste libere vicine si raggruppano in una bolla col numero
-  CLUSTER = L.markerClusterGroup ? L.markerClusterGroup({maxClusterRadius:38,disableClusteringAtZoom:15,showCoverageOnHover:false,spiderfyOnMaxZoom:true,
-    iconCreateFunction:c=>{const n=c.getChildCount(); const u=c.getAllChildMarkers().some(m=>m.options.urg); return L.divIcon({className:'',html:`<div class="pin-clu ${u?'urg':''}">${n}</div>`,iconSize:[34,34],iconAnchor:[17,17]});}}).addTo(MAP) : LAYER;
-  // vicino agli impianti (ingrandimento 16 e oltre) compaiono i nomi
-  const nomi=()=>$('map').classList.toggle('nomi',MAP.getZoom()>=16);
+  CLUSTER = L.markerClusterGroup ? L.markerClusterGroup({maxClusterRadius:32,disableClusteringAtZoom:14,showCoverageOnHover:false,spiderfyOnMaxZoom:true,
+    iconCreateFunction:c=>{const n=c.getChildCount(); return L.divIcon({className:'',html:`<div class="pin-clu">${n}</div>`,iconSize:[34,34],iconAnchor:[17,17]});}}).addTo(MAP) : LAYER;
+  // dal livello di quartiere (14) compaiono codice e nome; da vicino (16) il nome intero
+  const nomi=()=>{ const z=MAP.getZoom(); $('map').classList.toggle('nomi',z>=14); $('map').classList.toggle('nomi-lunghi',z>=16); };
   MAP.on('zoomend',nomi); nomi();
   MAP.on('click',()=>{ if(SU) chiudiSheet(); $('notePop').classList.remove('open'); });
+}
+// Nome corto per le etichette: "Scuola Elementare "Don Bosco"" -> "El. Don Bosco"
+function nomeBreve(d){
+  return String(d||'').replace(/["“”]/g,'').replace(/Scuola Elementare e Materna/i,'El./Mat.').replace(/Scuola Elementare/i,'El.').replace(/Scuola Materna/i,'Mat.')
+    .replace(/Scuola Media/i,'Media').replace(/Scuola d.Infanzia/i,'Infanzia').replace(/Asilo Nido/i,'Nido').replace(/Palestra/i,'Pal.').replace(/Circoscrizione/i,'Circ.')
+    .replace(/Centro Aggregazione Sociale/i,'CAS').replace(/\s+/g,' ').trim();
 }
 function hashN(s){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;return h}
 function disegnaMappa(visibili){
@@ -1523,12 +1540,14 @@ function disegnaMappa(visibili){
     const n=usati[i.codiceImpianto]=(usati[i.codiceImpianto]||0)+1;
     if(n>1){ const a=n*2.4; lat+=Math.sin(a)*0.0004*n; lng+=Math.cos(a)*0.00055*n; }
     let html,sz,z=0;
-    if(tipo==='libera'){ const co=commessaDiInt(i); html=`<div class="pin-free ${isUrgente(i)?'urg':''} ${isRcee(i)?'rcee':''}" style="background:${co.color}"></div>`; sz=14; }
+    if(tipo==='libera'){ const co=commessaDiInt(i); html=`<div class="pin-free ${isRcee(i)?'rcee':''}" style="background:${co.color}"></div>`; sz=14; }
     else if(tipo==='altro'){ const u=USERS[i.operaio]||{color:'#555',initial:(i.operaio||'?').charAt(0)}; html=`<div class="pin-altro" style="background:${u.color}">${u.initial}</div>`; sz=24; z=500; }
     else if(tipo==='fatto'){ html='<div class="pin-mine fatto">✓</div>'; sz=30; z=1000; }
     else if(tipo==='sosp'){ html='<div class="pin-mine sosp"></div>'; sz=26; z=900; }
     else { html='<div class="pin-mine fare"></div>'; sz=30; z=1000; }
-    { const imp=impDi(i); html=`<div class="pin-wrap">${html}<span class="pin-lbl ${tipo==='libera'||tipo==='altro'?'':'mio'}">${escH(imp?imp.descrizione:i.codiceImpianto)}</span></div>`; }
+    { const imp=impDi(i), cod=/^K\d/i.test(i.codiceImpianto)?`<b>${escH(i.codiceImpianto)}</b> `:'';
+      const cls=tipo==='libera'||tipo==='altro'?tipo:('mio '+tipo);
+      html=`<div class="pin-wrap" style="--s:${sz}px">${html}<span class="pin-lbl ${cls}">${cod}${escH(nomeBreve(imp?imp.descrizione:i.codiceImpianto))}${isUrgente(i)?'<i class="lbl-urg"></i>':''}</span></div>`; }
     L.marker([lat,lng],{icon:L.divIcon({className:'',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:z,keyboard:false,urg:isUrgente(i)})
       .on('click',()=>openPanel(i.id)).addTo(tipo==='libera'?CLUSTER:LAYER);
     PUNTI.push([lat,lng]);
@@ -1629,7 +1648,7 @@ function rigaHTML(i,opt){
   else if(opt.lead==='ck') lead='<span class="ls-ck">✓</span>';
   else if(opt.lead==='sosp') lead='<span class="ls-sosp"></span>';
   else if(opt.lead==='av'){ const u=USERS[i.operaio]||{color:'var(--bg4)',initial:(i.operaio||'?').charAt(0)}; lead=`<span class="prese-av" style="background:${u.color};width:28px;height:28px;font-size:11px;border:none">${u.initial}</span>`; }
-  else lead=`<span class="ls-dot ${isUrgente(i)?'urg':''} ${isRcee(i)?'rcee':''}" style="background:${co.color}"></span>`;
+  else lead=`<span class="ls-dot ${isRcee(i)?'rcee':''}" style="background:${co.color}"></span>`;
   const notaPul=escH(notaBreve(i));
   let meta = opt.meta!=null ? opt.meta : `${i.codiceImpianto} · ${dataBreve(i)}${notaPul?' · '+notaPul:''}`;
   if(opt.meta==null && isUrgente(i)) meta='<b>Urgente</b> · '+meta;
