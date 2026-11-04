@@ -476,6 +476,9 @@ body{background:#141414}
 .pv-btn.ok{flex:1.5;background:var(--accent);color:var(--acc-txt)}
 .pv-links{display:flex;justify-content:space-between;margin-top:12px;font-size:13.5px;font-weight:600}
 .pv-links a{color:var(--muted);cursor:pointer}
+.lbl-n{display:inline-block;min-width:18px;height:18px;line-height:18px;text-align:center;border-radius:9px;background:#f0f0f0;color:#141414;font-size:11px;font-weight:800;margin-left:6px;padding:0 5px}
+.pin-wrap.sel .lbl-n{background:#141414;color:#f0f0f0}
+#map.sat .leaflet-tile-pane{filter:none}
 
 </style>
 </head>
@@ -511,6 +514,7 @@ body{background:#141414}
         <button class="av-top" id="mainAv" onclick="logout()" title="Esci"></button>
         <button class="glass m-btn" onclick="centraSuDiMe()" title="La mia posizione">&#x25CE;</button>
         <button class="glass m-btn" onclick="adattaMappa()" title="Vedi tutto" style="font-size:17px">&#x2922;</button>
+        <button class="glass m-btn" id="btnMappa" onclick="cambiaMappa()" title="Satellite" style="font-size:18px">🛰</button>
       </div>
     </div>
     <div class="bs glass" id="bs">
@@ -1537,14 +1541,22 @@ function rifaiGeo(){
 fetch('impianti-coord.json?v=2').then(r=>r.json()).then(j=>{GEO_FILE=j||{}; rifaiGeo(); if(currentUser) renderLista();}).catch(()=>{});
 
 // --- Mappa ---
-let MARK={}, PREV=null, CLUSTER=null, MAP=null, LAYER=null, ME=null, PUNTI=[], primoFit=true;
+let BASI={}, MARK={}, PREV=null, CLUSTER=null, MAP=null, LAYER=null, ME=null, PUNTI=[], primoFit=true;
 function initMappa(){
   if(MAP||!window.L) return;
   MAP=L.map('map',{zoomControl:false,attributionControl:true}).setView([43.93,12.78],10);
-  // Mappa scura Esri (senza chiave) + nomi dei luoghi
-  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
-  L.tileLayer(ESRI+'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap'}).addTo(MAP);
-  L.tileLayer(ESRI+'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,pane:'overlayPane'}).addTo(MAP);
+  // Due mappe Esri (senza chiave): scura con i nomi dei luoghi, oppure satellite con strade e nomi
+  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const ATTR='Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap';
+  BASI.scura=L.layerGroup([
+    L.tileLayer(ESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,attribution:ATTR}),
+    L.tileLayer(ESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,pane:'overlayPane'})]);
+  BASI.satellite=L.layerGroup([
+    L.tileLayer(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:19,attribution:'Tiles &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics'}),
+    L.tileLayer(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:19,pane:'overlayPane'}),
+    L.tileLayer(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:19,pane:'overlayPane'})]);
+  let tipoMappa='scura'; try{ if(localStorage.getItem('tipo_mappa')==='satellite') tipoMappa='satellite'; }catch(e){}
+  BASI[tipoMappa].addTo(MAP); BASI.attiva=tipoMappa; aggBtnMappa();
   MAP.attributionControl.setPrefix(false);
   LAYER=L.layerGroup().addTo(MAP);
   // le richieste libere vicine si raggruppano in una bolla col numero
@@ -1565,12 +1577,17 @@ function hashN(s){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;re
 function disegnaMappa(visibili){
   if(!MAP) return;
   LAYER.clearLayers(); if(CLUSTER&&CLUSTER!==LAYER) CLUSTER.clearLayers(); PUNTI=[];
-  const usati={};
-  visibili.forEach(({i,tipo})=>{
+  // Un solo puntino per impianto, esattamente sulle sue coordinate: se ci sono piu' richieste
+  // si mostra la piu' importante (le mie prima) con il numero accanto al nome.
+  // (Prima le richieste dello stesso impianto venivano sparse fino a 100 m: sembravano fuori posto.)
+  const PRI={fare:0,fatto:1,sosp:2,libera:3,altro:4}, gruppi={};
+  visibili.forEach(v=>{ (gruppi[v.i.codiceImpianto]=gruppi[v.i.codiceImpianto]||[]).push(v); });
+  Object.values(gruppi).forEach(gr=>{
+    gr.sort((a,b)=>(PRI[a.tipo]-PRI[b.tipo]));
+    const sel=gr.find(v=>v.i.id===PREV);
+    const {i,tipo}=sel||gr[0], quanti=gr.length;
     const g=GEO[i.codiceImpianto]; if(!g) return;
-    let lat=g.lat, lng=g.lng;
-    const n=usati[i.codiceImpianto]=(usati[i.codiceImpianto]||0)+1;
-    if(n>1){ const a=n*2.4; lat+=Math.sin(a)*0.0004*n; lng+=Math.cos(a)*0.00055*n; }
+    const lat=g.lat, lng=g.lng;
     let html,sz,z=0;
     if(tipo==='libera'){ const co=commessaDiInt(i); html=`<div class="pin-free ${isRcee(i)?'rcee':''}" style="background:${co.color}"></div>`; sz=14; }
     else if(tipo==='altro'){ const u=USERS[i.operaio]||{color:'#555',initial:(i.operaio||'?').charAt(0)}; html=`<div class="pin-altro" style="background:${u.color}">${u.initial}</div>`; sz=24; z=500; }
@@ -1579,8 +1596,8 @@ function disegnaMappa(visibili){
     else { html='<div class="pin-mine fare"></div>'; sz=30; z=1000; }
     { const imp=impDi(i), cod=/^K\d/i.test(i.codiceImpianto)?`<b>${escH(i.codiceImpianto)}</b> `:'';
       const cls=tipo==='libera'||tipo==='altro'?tipo:('mio '+tipo);
-      html=`<div class="pin-wrap ${PREV===i.id?'sel':''}" style="--s:${sz}px">${html}<span class="pin-lbl ${cls}">${cod}${escH(nomeBreve(imp?imp.descrizione:i.codiceImpianto))}${isUrgente(i)?'<i class="lbl-urg"></i>':''}</span></div>`; }
-    MARK[i.id]=[lat,lng];
+      html=`<div class="pin-wrap ${PREV===i.id?'sel':''}" style="--s:${sz}px">${html}<span class="pin-lbl ${cls}">${cod}${escH(nomeBreve(imp?imp.descrizione:i.codiceImpianto))}${gr.some(v=>isUrgente(v.i))?'<i class="lbl-urg"></i>':''}${quanti>1?`<span class="lbl-n">${quanti}</span>`:''}</span></div>`; }
+    gr.forEach(v=>{ MARK[v.i.id]=[lat,lng]; });
     L.marker([lat,lng],{icon:L.divIcon({className:'',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:PREV===i.id?3000:z,keyboard:false})
       .on('click',()=>anteprima(i.id)).addTo(tipo==='libera'&&PREV!==i.id?CLUSTER:LAYER);
     PUNTI.push([lat,lng]);
@@ -1940,6 +1957,16 @@ function renderPrev(){
     <div class="pv-btns"><a class="pv-btn" href="${naviURL(i)}" target="_blank" rel="noopener">📍 Naviga</a>${prim}</div>
     <div class="pv-links"><a onclick="openPanel('${i.id}')">Dettagli completi ›</a>${altre.length?`<a onclick="anteprima('${altre[0].id}')">Altre ${altre.length} in questo impianto ›</a>`:''}</div>`;
 }
+
+// --- Mappa scura / satellite ---
+function cambiaMappa(){
+  if(!MAP) return;
+  const nuova=BASI.attiva==='scura'?'satellite':'scura';
+  MAP.removeLayer(BASI[BASI.attiva]); BASI[nuova].addTo(MAP); BASI.attiva=nuova;
+  try{ localStorage.setItem('tipo_mappa',nuova); }catch(e){}
+  aggBtnMappa();
+}
+function aggBtnMappa(){ const b=$('btnMappa'); if(b){ b.textContent=BASI.attiva==='satellite'?'🗺':'🛰'; b.title=BASI.attiva==='satellite'?'Mappa scura':'Satellite'; } $('map').classList.toggle('sat',BASI.attiva==='satellite'); }
 
 const _notaLetta=notaLetta; notaLetta=async function(id){ await _notaLetta(id); aggiornaNote(); };
 </script>
