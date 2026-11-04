@@ -38,6 +38,8 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 .brand { font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
 .brand span { color: var(--muted); font-weight: 400; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
+/* avviso quando i dati sullo schermo non sono quelli di adesso (04/11/2026) */
+.avviso-dati { font-size: 12px; color: #f0c27a; background: rgba(232,163,61,.14); border: 1px solid rgba(232,163,61,.4); border-radius: 8px; padding: 4px 10px; max-width: 560px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* SHELL */
 .shell { display: flex; flex: 1; overflow: hidden; }
@@ -510,6 +512,7 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
   <div class="topbar">
     <div class="brand">Siram <span>Responsabile</span></div>
     <div class="topbar-right">
+      <span id="avvisoDati" class="avviso-dati" hidden></span>
       <span style="font-size:12px;color:var(--muted)" id="topDate"></span>
     </div>
   </div>
@@ -1255,10 +1258,45 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 //  API
 // ============================================================
-async function apiGet(path)     { const r = await fetch(PROXY_URL+path); return r.json(); }
+// 04/11/2026: una risposta di errore (es. Google che rifiuta le letture per troppe richieste) non deve
+// sembrare un foglio vuoto: si lancia l'errore e chi chiama tiene i dati che ha.
+// Se il server risponde con una copia vecchia (intestazione X-Dati-Del) se ne tiene l'ora.
+let datiDel = null;
+async function apiGet(path) {
+  let r;
+  try { r = await fetch(PROXY_URL+path); } catch (e) { throw new Error('il server non risponde'); }
+  let d = null;
+  try { d = await r.json(); } catch (e) {}
+  if (!r.ok || !d) throw new Error(spiegaErrore((d && d.errore) || ('errore del server ' + r.status)));
+  const del = r.headers.get('X-Dati-Del');
+  if (del && (!datiDel || del < datiDel)) datiDel = del;
+  return d;
+}
+function spiegaErrore(msg) {
+  if (/quota/i.test(msg)) return 'Google rifiuta le letture del foglio (troppe in questo minuto)';
+  return msg;
+}
 async function apiPost(path, b) { const r = await fetch(PROXY_URL+path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) }); return r.json(); }
 
-async function caricaDati() {
+// Un caricamento alla volta: chi chiama mentre ce n'e' uno in corso ne aspetta un altro subito dopo
+// (cosi' dopo una modifica si vedono i dati nuovi anche se l'aggiornamento automatico era a meta').
+let caricamento = null, caricamentoDopo = null, ultimoCaricamento = 0, datiCaricati = false, riprova = null;
+function caricaDati() {
+  if (caricamento) {
+    if (!caricamentoDopo) caricamentoDopo = caricamento.then(() => { caricamentoDopo = null; return caricaDati(); });
+    return caricamentoDopo;
+  }
+  caricamento = caricaDatiOra().finally(() => { caricamento = null; });
+  return caricamento;
+}
+function oraBreve(iso) { return new Date(iso).toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }); }
+function avvisoDati(testo) {
+  const el = document.getElementById('avvisoDati');
+  el.hidden = !testo; el.textContent = testo || ''; el.title = testo || '';
+}
+async function caricaDatiOra() {
+  datiDel = null;
+  const mancanti = [];
   try {
     const d = await apiGet('/dati-responsabile');
     S.impianti   = d.impianti   || [];
@@ -1268,7 +1306,7 @@ async function caricaDati() {
     S.assenze    = d.assenze    || [];
     S.pratiche   = d.pratiche   || [];
     S.offerte    = d.offerte    || [];
-    try { const dn = await apiGet('/note-giorno'); S.note = dn.note || []; } catch(e) { S.note = []; }
+    try { const dn = await apiGet('/note-giorno'); S.note = dn.note || []; } catch(e) { mancanti.push('note'); }
 
     const nBacklog = S.interventi.filter(i => i.stato === 'DaAssegnare').length;
     const backlogSec = document.getElementById('backlogSection');
@@ -1286,12 +1324,12 @@ async function caricaDati() {
       const bRda = document.getElementById('badgeRda');
       bRda.textContent = nRda; bRda.style.display = nRda > 0 ? '' : 'none';
       document.getElementById('rdaSummary').textContent = nRda + ' nuove · ' + S.rdacat.filter(r=>r.stato==='In lavorazione').length + ' in lavorazione';
-    } catch(e) { S.rdacat = []; }
+    } catch(e) { mancanti.push('RDA'); }
 
-    try { const rep = await apiGet('/reperibile'); S.reperibilita = rep; renderRepWidget(); } catch(e) { S.reperibilita = null; }
+    try { const rep = await apiGet('/reperibile'); S.reperibilita = rep; renderRepWidget(); } catch(e) { mancanti.push('reperibilità'); }
 
     // Scadenze RCEE (badge + tabella)
-    try { const drc = await apiGet('/scadenze-rcee'); rceeScadenze = drc.scadenze || []; aggiornaBadgeRcee(); if(document.getElementById('view-rcee').classList.contains('active')) renderRcee(); } catch(e) { rceeScadenze = []; }
+    try { const drc = await apiGet('/scadenze-rcee'); rceeScadenze = drc.scadenze || []; aggiornaBadgeRcee(); if(document.getElementById('view-rcee').classList.contains('active')) renderRcee(); } catch(e) { mancanti.push('RCEE'); }
 
     const comuniSet = [...new Set(S.impianti.map(i=>i.comune).filter(Boolean))].sort();
     const selComune = document.getElementById('reportComune');
@@ -1302,8 +1340,19 @@ async function caricaDati() {
     });
     document.getElementById('loadingCal').style.display = 'none';
     document.getElementById('calContent').style.display = 'block';
+    datiCaricati = true;
+    ultimoCaricamento = Date.now();
+    if (datiDel) avvisoDati(`Dati delle ${oraBreve(datiDel)}: Google non risponde adesso, riprovo da solo`);
+    else avvisoDati(mancanti.length ? `Non aggiornati: ${mancanti.join(', ')}. Riprovo da solo` : '');
   } catch(e) {
-    document.getElementById('loadingCal').innerHTML = `<p style="color:var(--red)">Errore: ${e.message}</p>`;
+    // Si tengono i dati gia' sullo schermo: prima la pagina si svuotava (interventi 0, reperibilita' "non assegnato")
+    if (datiCaricati) {
+      avvisoDati(`Dati delle ${oraBreve(ultimoCaricamento)}, non aggiornati: ${e.message}. Riprovo da solo`);
+    } else {
+      document.getElementById('loadingCal').innerHTML = `<p style="color:var(--red)">Dati non caricati: ${escH(e.message)}. Riprovo tra 20 secondi.</p>`;
+    }
+    clearTimeout(riprova);
+    riprova = setTimeout(caricaDati, 20000);
   }
 }
 
@@ -3499,7 +3548,12 @@ function toast(msg,type) {
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-setInterval(()=>{ if(document.getElementById('appShell').style.display!=='none') caricaDati(); }, 60000);
+// Aggiornamento ogni minuto solo con la pagina in vista (04/11/2026): una scheda o l'app in secondo
+// piano non consuma le letture del foglio; tornando sulla pagina si aggiorna subito se e' passato un minuto.
+setInterval(()=>{ if(!document.hidden) caricaDati(); }, 60000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - ultimoCaricamento > 60000) caricaDati();
+});
 </script>
 </body>
 </html>
