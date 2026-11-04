@@ -741,6 +741,7 @@ function salvaProvaMod(){try{localStorage.setItem('prova_mod',JSON.stringify(PRO
 })();
 // Riapplica ai dati appena letti dal server le modifiche fatte in prova
 function applicaProva(){
+  if(!MODO_PROVA){ FATTI=leggiFatti(); return; }
   const giorno=t=>String(t||'').slice(0,10);
   PROVA_MOD.forEach(x=>{
     const b=x.body||{}, I=id=>S.interventi.find(i=>i.id===id);
@@ -1233,7 +1234,7 @@ async function confermaChiusura(){
   i.stato='Chiuso';
   i.oreImpiegate=ore;
   i.dataChiusura=new Date().toISOString().slice(0,10);
-  togliFatto(currentIntId);
+  togliFatto(currentIntId,true);
   aggFab(i);
   openPanel(currentIntId);
   renderLista();
@@ -1450,7 +1451,7 @@ function renderImpiantiPanel() {
   document.getElementById('impLista').innerHTML = html;
 }
 
-if(!MODO_PROVA) setInterval(()=>{if(!currentUser)return;const overlayAperto=document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open');if(!overlayAperto)caricaDati();},5*60*1000);
+if(!MODO_PROVA) setInterval(()=>{if(!currentUser)return;const overlayAperto=document.querySelector('.sheet-overlay.open, .new-int-overlay.open, .panel.open, .cg.open, #posBar, .modal-chiusura-overlay.open');if(!overlayAperto)caricaDati();},5*60*1000);
 
 // ============================================================
 //  PROVA "VETRO" — mappa + foglio che sale + Fatto / Chiudi la giornata
@@ -1470,17 +1471,23 @@ function fmtOre(h){return String(h).replace('.',',')}
 // --- "Fatto": un tocco durante il turno, si chiude a fine giornata ---
 let FATTI={}, ultimoFatto=null, undoTimer=null;
 function fattiKey(){return 'prova_fatti_'+currentUser}
-function leggiFatti(){try{return JSON.parse(localStorage.getItem(fattiKey())||'{}')||{}}catch(e){return {}}}
-function salvaFatti(){try{localStorage.setItem(fattiKey(),JSON.stringify(FATTI))}catch(e){}}
+// Nella versione ufficiale il "fatto" sta nel foglio Interventi (colonna S) ed e' lo stesso su
+// ogni telefono; in prova resta su questo telefono.
+function leggiFatti(){ if(!MODO_PROVA){ const f={}; (S.interventi||[]).forEach(i=>{ if(i.fattoAlle) f[i.id]=i.fattoAlle; }); return f; } try{return JSON.parse(localStorage.getItem(fattiKey())||'{}')||{}}catch(e){return {}}}
+function salvaFatti(){ if(!MODO_PROVA) return; try{localStorage.setItem(fattiKey(),JSON.stringify(FATTI))}catch(e){}}
 function isFatto(i){return !!(i&&FATTI[i.id]&&i.stato==='Aperto')}
 function segnaFatto(id){
   FATTI[id]=new Date().toISOString(); salvaFatti(); ultimoFatto=id;
-  renderLista();
   const i=S.interventi.find(x=>x.id===id), imp=i&&impDi(i);
+  if(!MODO_PROVA){ if(i) i.fattoAlle=FATTI[id]; apiPost('/segna-fatto',{id,fattoAlle:FATTI[id]}).then(r=>{ if(!r||!r.ok) toast('Errore: Fatto non salvato','err'); }).catch(()=>toast('Errore rete: Fatto non salvato','err')); }
+  renderLista();
   $('undoTxt').innerHTML=`<b>${escH(imp?imp.descrizione:(i?i.codiceImpianto:''))}</b> segnato fatto alle ${oraHM(FATTI[id])}<small>lo chiudi con calma a fine giornata</small>`;
   $('undo').classList.toggle('alto',$('panel').classList.contains('open')); $('undo').classList.add('show'); clearTimeout(undoTimer); undoTimer=setTimeout(()=>$('undo').classList.remove('show'),5000);
 }
-function togliFatto(id){delete FATTI[id]; salvaFatti()}
+function togliFatto(id,soloQui){
+  delete FATTI[id]; salvaFatti();
+  if(!MODO_PROVA && !soloQui){ const i=S.interventi.find(x=>x.id===id); if(i) i.fattoAlle=''; apiPost('/segna-fatto',{id,fattoAlle:''}).catch(()=>toast('Errore rete','err')); }
+}
 function annullaFatto(){
   if(ultimoFatto){togliFatto(ultimoFatto); if($('panel').classList.contains('open')&&currentIntId===ultimoFatto) openPanel(currentIntId); ultimoFatto=null; renderLista();}
   $('undo').classList.remove('show');
@@ -1856,7 +1863,7 @@ async function cgConferma(){
     i.stato='Chiuso'; i.oreImpiegate=d.ore; i.dataChiusura=isoOggi();
     await apiPost('/aggiorna-intervento',{id,stato:'Chiuso',notaChiusura:nota,oreImpiegate:d.ore});
     if(i.interventoCollegato){ const coll=S.interventi.find(x=>x.id===i.interventoCollegato); if(coll) coll.stato='Chiuso'; }
-    togliFatto(id);
+    togliFatto(id,true);
     CG.chiusi++; CG.oreTot+=d.ore; CG.idx++;
     renderCG();
   }catch(e){ toast('Errore rete','err'); }
@@ -1885,7 +1892,11 @@ function posQui(){
 function posAnnulla(){ $('bs').style.visibility=''; if(POS_EDIT){ MAP.removeLayer(POS_EDIT.m); POS_EDIT=null; } const b=$('posBar'); if(b) b.remove(); }
 function posSalva(){
   const ll=POS_EDIT.m.getLatLng(), c=POS_EDIT.codice;
-  GEO_FIX[c]={lat:+ll.lat.toFixed(6),lng:+ll.lng.toFixed(6),prec:'manuale'}; salvaGeoFix(); rifaiGeo();
+  const lat=+ll.lat.toFixed(7), lng=+ll.lng.toFixed(7);
+  if(MODO_PROVA){ GEO_FIX[c]={lat,lng,prec:'manuale'}; salvaGeoFix(); }
+  else { const imp=S.impianti.find(x=>x.codice===c); if(imp){ imp.lat=lat; imp.lng=lng; }
+    apiPost('/imposta-coordinate',{codice:c,lat,lng}).then(r=>{ if(!r||!r.ok) toast('Errore: posizione non salvata','err'); }).catch(()=>toast('Errore rete: posizione non salvata','err')); }
+  rifaiGeo();
   console.log('[PROVA] posizione impianto',c,GEO_FIX[c]);
   posAnnulla(); renderLista(); toast('Posizione salvata ✓','ok');
 }
