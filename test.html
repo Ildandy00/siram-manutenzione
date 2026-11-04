@@ -434,6 +434,8 @@ body{background:#121822}
 .pos-bar button{flex:1;padding:14px 0;border-radius:14px;border:none;background:var(--bg3);color:var(--text);font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
 .pos-bar button.ok{background:var(--accent);color:var(--acc-txt)}
 
+.pin-altro{width:24px;height:24px;border-radius:50%;color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2.5px solid #141922;opacity:.85}
+
 </style>
 </head>
 <body>
@@ -457,7 +459,7 @@ body{background:#121822}
     <div id="map"></div>
     <div class="m-top">
       <div class="m-left">
-        <div class="glass m-who"><div class="tb-date" id="mainData"></div><div class="m-name" id="mainNome"></div><div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--yellow);margin-top:2px">PROVA · NON SALVA</div></div>
+        <div class="glass m-who"><div class="tb-date" id="mainData"></div><div class="m-name" id="mainNome"></div><div style="font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--yellow);margin-top:2px">PROVA · NON SALVA <span onclick="azzeraProva()" style="margin-left:6px;text-decoration:underline;cursor:pointer">azzera</span></div></div>
         <div class="m-pills">
           <button class="pill pill-note" id="pillNote" onclick="toggleNotePop()" style="display:none"></button>
           <div id="lettureSlot"></div>
@@ -673,20 +675,52 @@ body{background:#121822}
 </div>
 <script>
 const PROXY_URL = 'https://siram-proxy.onrender.com';
-// MODALITÀ PROVA: si leggono i dati veri, ma nessuna scrittura arriva al server
+// MODALITÀ PROVA: si leggono i dati veri, ma nessuna scrittura arriva al server.
+// Le modifiche restano su questo telefono (valgono per tutti gli operai con cui
+// si entra qui) e si riapplicano ai dati del server a ogni caricamento.
 const MODO_PROVA = true;
+let PROVA_MOD=[]; try{PROVA_MOD=JSON.parse(localStorage.getItem('prova_mod')||'[]')||[]}catch(e){}
+function salvaProvaMod(){try{localStorage.setItem('prova_mod',JSON.stringify(PROVA_MOD))}catch(e){}}
 (function(){
   if(!MODO_PROVA) return;
   const orig=window.fetch.bind(window);
   window.fetch=function(url,opt){
     const m=((opt&&opt.method)||'GET').toUpperCase();
     if(m!=='GET' && String(url).indexOf('siram-proxy')>=0){
-      console.log('[PROVA] scrittura bloccata',m,url,opt&&opt.body);
-      return Promise.resolve(new Response(JSON.stringify({ok:true,success:true,id:'PROVA-'+Date.now()}),{status:200,headers:{'Content-Type':'application/json'}}));
+      const path=String(url).replace(/^https?:\/\/[^/]+/,'').split('?')[0];
+      let body={}; try{body=JSON.parse((opt&&opt.body)||'{}')}catch(e){}
+      const id='PROVA-'+Date.now()+'-'+Math.floor(Math.random()*1000);
+      PROVA_MOD.push({path,body,id,t:new Date().toISOString(),da:window.currentUser||''}); salvaProvaMod();
+      console.log('[PROVA] scrittura tenuta sul telefono',m,path,body);
+      return Promise.resolve(new Response(JSON.stringify({ok:true,success:true,id}),{status:200,headers:{'Content-Type':'application/json'}}));
     }
     return orig(url,opt);
   };
 })();
+// Riapplica ai dati appena letti dal server le modifiche fatte in prova
+function applicaProva(){
+  const giorno=t=>String(t||'').slice(0,10);
+  PROVA_MOD.forEach(x=>{
+    const b=x.body||{}, I=id=>S.interventi.find(i=>i.id===id);
+    if(x.path==='/aggiorna-intervento'){ const i=I(b.id); if(!i) return;
+      if('operaio' in b) i.operaio=b.operaio;
+      if(b.stato){ if(b.stato==='Chiuso'&&i.stato!=='Chiuso') i.dataChiusura=giorno(x.t); i.stato=b.stato; }
+      if('oreImpiegate' in b) i.oreImpiegate=b.oreImpiegate;
+      if('notaChiusura' in b) i.notaChiusura=b.notaChiusura; }
+    else if(x.path==='/posticipa-intervento'){ const i=I(b.id); if(i) i.dataPrevista=b.nuovaData; }
+    else if(x.path==='/segnala-secondo'){ const i=I(b.id); if(i) i.secondoOperaio=b.secondoOperaio; }
+    else if(x.path==='/aggiorna-voce'){ const c=S.checklist.find(c=>c.id===b.id); if(!c) return; if('eseguita' in b) c.eseguita=b.eseguita; if('note' in b) c.note=b.note; }
+    else if(x.path==='/aggiungi-extra'){ if(!S.checklist.some(c=>c.id===x.id)) S.checklist.push({id:x.id,idIntervento:b.idIntervento,attivita:b.attivita,eseguita:'NO',oraCompletamento:'',note:'',extra:'SI'}); }
+    else if(x.path==='/crea-intervento'){ if(!S.interventi.some(i=>i.id===x.id)) S.interventi.push({id:x.id,codiceImpianto:b.codiceImpianto,tipoVisita:b.tipoVisita,operaio:b.operaio||'',dataPrevista:b.dataPrevista,stato:'Aperto',note:b.note||'',secondoOperaio:'',creatoIl:giorno(x.t)}); }
+    else if(x.path==='/crea-rdacat'){ S.rdacat=S.rdacat||[]; if(!S.rdacat.some(r=>r.id===x.id)) S.rdacat.push(Object.assign({id:x.id,stato:'Inviata'},b)); }
+    else if(x.path==='/nota-letta'){ const n=(S.note||[]).find(n=>n.id===b.id); if(n&&n.lettoDa.indexOf(b.operaio)<0) n.lettoDa.push(b.operaio); }
+  });
+}
+function azzeraProva(){
+  if(!confirm('Cancellare tutte le prove fatte su questo telefono (prese in carico, Fatto, chiusure)?')) return;
+  try{ Object.keys(localStorage).filter(k=>k.indexOf('prova_')===0&&k!=='prova_geo_fix').forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  PROVA_MOD=[]; FATTI={}; caricaDati(); toast('Prova azzerata','ok');
+}
 
 (function(){var l=0;document.addEventListener('touchstart',function(e){var n=Date.now();if(n-l<80)e.preventDefault();l=n},{passive:false});document.addEventListener('touchmove',function(e){if(e.touches.length>1)e.preventDefault()},{passive:false})})();
 
@@ -801,6 +835,7 @@ async function caricaDati(){
     S.rdacat = dr.richieste || [];
     const dn = await apiGet('/note-giorno?operaio='+encodeURIComponent(currentUser)).catch(()=>({note:[]}));
     S.note = dn.note || [];
+    applicaProva();
     renderLista();
   }catch(e){document.getElementById('listaEl').innerHTML='<div class="loading-ctr" style="color:var(--red)">Errore connessione.<br>Controlla la rete.</div>'}}
 
@@ -814,7 +849,7 @@ function setCommessa(key){
   commessaSel = (commessaSel===key ? '' : key);
   renderLista();
 }
-function togglePrese(key){
+function togglePrese_vecchio(key){
   preseAperte[key]=!preseAperte[key];
   renderLista();
 }
@@ -937,6 +972,7 @@ function cardHTML(i){
         <div class="req-lib-info">
           <div class="req-name-sm">${imp?imp.descrizione:i.codiceImpianto}</div>
           <div class="req-meta">${i.codiceImpianto} · ${dataBreve(i)}</div>
+          ${i.segnalazione?`<div class="req-meta">📨 ${i.segnalazione}</div>`:''}
           ${i.note?`<div class="req-lib-note">${i.note}</div>`:''}
         </div>
         <button class="req-take-rd" style="background:${co.color}" onclick="event.stopPropagation();prendiInCarico('${i.id}')" title="Prendi in carico">＋</button>
@@ -1038,6 +1074,7 @@ function openPanel(id){
 
   // Note intervento (per le RCEE senza le righe ripetute "Riaperto il...")
   const notaVis = rcee ? pulisciNotaRcee(i.note) : i.note;
+  if(i.segnalazione) noteHtml += `<div class="req-meta" style="margin-bottom:8px">📨 Segnalazione <strong>${i.segnalazione}</strong></div>`;
   if(notaVis) noteHtml += `<div class="note-box">📋 ${notaVis}</div>`;
 
   // Secondo operaio + RDA: solo se la richiesta è presa in carico
@@ -1465,6 +1502,7 @@ function disegnaMappa(visibili){
     if(n>1){ const a=n*2.4; lat+=Math.sin(a)*0.0004*n; lng+=Math.cos(a)*0.00055*n; }
     let html,sz,z=0;
     if(tipo==='libera'){ const co=commessaDiInt(i); html=`<div class="pin-free ${isUrgente(i)?'urg':''} ${isRcee(i)?'rcee':''}" style="background:${co.color}"></div>`; sz=14; }
+    else if(tipo==='altro'){ const u=USERS[i.operaio]||{color:'#555',initial:(i.operaio||'?').charAt(0)}; html=`<div class="pin-altro" style="background:${u.color}">${u.initial}</div>`; sz=24; z=500; }
     else if(tipo==='fatto'){ html='<div class="pin-mine fatto">✓</div>'; sz=30; z=1000; }
     else if(tipo==='sosp'){ html='<div class="pin-mine sosp"></div>'; sz=26; z=900; }
     else { html='<div class="pin-mine fare"></div>'; sz=30; z=1000; }
@@ -1623,7 +1661,7 @@ function renderLista(){
       html+=sezione(co.label,'· '+(lib.length?lib.length+' da prendere':'niente da prendere')+(POS&&lib.length>1?' · più vicine prima':''),co.color);
       if(lib.length) html+=box(lib.map(i=>rigaHTML(i)).join(''));
       if(pre.length){
-        const open=!!preseAperte[co.key];
+        const open=preseAperte[co.key]!==false;
         html+=`<div class="ls-more" onclick="togglePrese('${co.key}')">${avatarsHTML(pre)} ${pre.length} già pres${pre.length===1?'a':'e'} in carico ${open?'▾':'›'}</div>`;
         if(open) html+='<div style="opacity:.7">'+box(pre.map(i=>rigaHTML(i,{lead:'av',meta:i.codiceImpianto+' · in carico a '+escH(i.operaio)})).join(''))+'</div>';
       }
@@ -1643,6 +1681,7 @@ function renderLista(){
   const vis=[];
   (vista==='rcee'?libRcee:libNorm).forEach(i=>vis.push({i,tipo:'libera'}));
   mie.forEach(i=>vis.push({i,tipo:isFatto(i)?'fatto':((i.dataPrevista&&i.dataPrevista<oggi)?'sosp':'fare')}));
+  if(vista!=='mie') aperte.filter(i=>isPresa(i)&&!mio(i)&&(vista==='rcee'?isRcee(i):!isRcee(i))).filter(match).forEach(i=>vis.push({i,tipo:'altro'}));
   disegnaMappa(vis);
   aggiornaNote();
   misuraSheet();
@@ -1774,6 +1813,9 @@ function posSalva(){
   console.log('[PROVA] posizione impianto',c,GEO_FIX[c]);
   posAnnulla(); renderLista(); toast('Posizione salvata ✓','ok');
 }
+
+// i gruppi "già prese in carico" partono aperti: si vede subito chi le ha prese
+function togglePrese(key){ preseAperte[key]=(preseAperte[key]===false); renderLista(); }
 
 const _notaLetta=notaLetta; notaLetta=async function(id){ await _notaLetta(id); aggiornaNote(); };
 </script>
