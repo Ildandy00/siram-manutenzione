@@ -1475,7 +1475,14 @@ let GEO_FILE={};
 // sistemate a mano su questo telefono, poi quelle ricavate dagli indirizzi.
 function rifaiGeo(){
   const foglio={};
-  (S.impianti||[]).forEach(x=>{ if(x.lat!=null&&x.lng!=null&&x.lat!==''&&x.lng!=='') foglio[x.codice]={lat:+x.lat,lng:+x.lng,prec:'foglio'}; });
+  // rete di sicurezza: una coordinata a più di 20 km dal suo comune è un errore e si ignora
+  const CENTRI={pesaro:[43.9098,12.9131],misano:[43.9775,12.6987],verucchio:[43.9836,12.4212],gabicce:[43.9669,12.7563],morciano:[43.914,12.6458],rimini:[44.0594,12.5683]};
+  (S.impianti||[]).forEach(x=>{
+    if(x.lat==null||x.lng==null||x.lat===''||x.lng==='') return;
+    const k=Object.keys(CENTRI).find(k=>String(x.comune||'').toLowerCase().includes(k));
+    if(k){ const c=CENTRI[k], d=Math.hypot(x.lat-c[0],(x.lng-c[1])*0.72)*111; if(d>20){ console.warn('[mappa] coordinate fuori comune ignorate',x.codice,x.lat,x.lng); return; } }
+    foglio[x.codice]={lat:+x.lat,lng:+x.lng,prec:'foglio'};
+  });
   GEO=Object.assign({},GEO_FILE,GEO_FIX,foglio);
 }
 fetch('impianti-coord.json?v=2').then(r=>r.json()).then(j=>{GEO_FILE=j||{}; rifaiGeo(); if(currentUser) renderLista();}).catch(()=>{});
