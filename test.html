@@ -440,7 +440,7 @@ body{background:#141414}
 .pin-wrap{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;z-index:0}
 .pin-wrap>div{position:relative;z-index:1}
 .pin-lbl{display:none;position:absolute;z-index:0;left:calc(var(--s) / 2);top:50%;transform:translateY(-50%);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;
-  font-size:12px;font-weight:600;color:#ededed;background:#242424;border:1px solid #383838;padding:4px 10px 4px calc(var(--s) / 2 + 7px);border-radius:14px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+  font-size:12px;font-weight:600;color:#ededed;background:#242424;border:1px solid #383838;padding:4px 10px 4px calc(var(--s) / 2 + 7px);border-radius:14px;pointer-events:auto;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45)}
 .pin-lbl b{font-weight:800;color:#fff;margin-right:2px}
 .pin-lbl.altro{color:#a8a8a8;background:#1e1e1e}
 .pin-lbl.mio{background:#16241f;border-color:rgba(127,224,192,.55);color:var(--accent)}
@@ -452,6 +452,30 @@ body{background:#141414}
 .lbl-urg{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e5534b;margin-left:6px;vertical-align:1px}
 .nomi .pin-lbl{display:block}
 .nomi-lunghi .pin-lbl{max-width:230px}
+
+/* puntino selezionato */
+.pin-wrap.sel .pin-lbl{display:block;background:#f0f0f0;color:#141414;border-color:#f0f0f0;max-width:230px}
+.pin-wrap.sel .pin-lbl b{color:#141414}
+.pin-wrap.sel>div:first-child{transform:scale(1.25);box-shadow:0 0 0 3px #141414,0 0 0 6px #f0f0f0}
+/* anteprima nel foglio */
+#bsPrev{display:none;padding:0 16px}
+.bs.prev #bsPrev{display:block}
+.bs.prev .bs-search,.bs.prev #bsTiles,.bs.prev #bsBanner,.bs.prev .bs-btns,.bs.prev .bs-list{display:none}
+.pv-top{display:flex;align-items:center;gap:8px}
+.pv-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.pv-cod{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+.pv-urg,.pv-rcee{font-size:10.5px;font-weight:800;letter-spacing:.8px;padding:3px 7px;border-radius:7px;background:rgba(229,83,75,.18);color:#ff8a82}
+.pv-rcee{background:rgba(255,255,255,.08);color:var(--text)}
+.pv-x{margin-left:auto;background:rgba(255,255,255,.08);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:14px;cursor:pointer}
+.pv-nome{font-size:20px;font-weight:700;line-height:1.2;margin-top:8px}
+.pv-meta{font-size:13px;color:var(--muted);margin-top:4px}
+.pv-nota{font-size:14px;line-height:1.4;margin-top:10px;background:rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.pv-stato{font-size:14px;font-weight:600;margin-top:10px}
+.pv-btns{display:flex;gap:8px;margin-top:12px}
+.pv-btn{flex:1;display:flex;align-items:center;justify-content:center;padding:14px 0;border-radius:15px;border:none;background:rgba(255,255,255,.08);color:var(--text);font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer}
+.pv-btn.ok{flex:1.5;background:var(--accent);color:var(--acc-txt)}
+.pv-links{display:flex;justify-content:space-between;margin-top:12px;font-size:13.5px;font-weight:600}
+.pv-links a{color:var(--muted);cursor:pointer}
 
 </style>
 </head>
@@ -494,6 +518,7 @@ body{background:#141414}
         <div class="bs-grab"></div>
         <div class="bs-search" id="bsSearch"><span>&#x1F50D;</span><input id="cerca" type="search" placeholder="Cerca impianto, codice, comune&#x2026;" autocomplete="off" oninput="onCerca()" onfocus="apriSheet()"><button class="x" onclick="pulisciCerca()">&#x2715;</button></div>
       </div>
+      <div id="bsPrev"></div>
       <div class="bs-tiles" id="bsTiles"></div>
       <div id="bsBanner"></div>
       <div class="bs-btns">
@@ -1505,7 +1530,7 @@ function rifaiGeo(){
 fetch('impianti-coord.json?v=2').then(r=>r.json()).then(j=>{GEO_FILE=j||{}; rifaiGeo(); if(currentUser) renderLista();}).catch(()=>{});
 
 // --- Mappa ---
-let CLUSTER=null, MAP=null, LAYER=null, ME=null, PUNTI=[], primoFit=true;
+let MARK={}, PREV=null, CLUSTER=null, MAP=null, LAYER=null, ME=null, PUNTI=[], primoFit=true;
 function initMappa(){
   if(MAP||!window.L) return;
   MAP=L.map('map',{zoomControl:false,attributionControl:true}).setView([43.93,12.78],10);
@@ -1521,7 +1546,7 @@ function initMappa(){
   // dal livello di quartiere (14) compaiono codice e nome; da vicino (16) il nome intero
   const nomi=()=>{ const z=MAP.getZoom(); $('map').classList.toggle('nomi',z>=14); $('map').classList.toggle('nomi-lunghi',z>=16); };
   MAP.on('zoomend',nomi); nomi();
-  MAP.on('click',()=>{ if(SU) chiudiSheet(); $('notePop').classList.remove('open'); });
+  MAP.on('click',()=>{ if(PREV) chiudiPrev(); else if(SU) chiudiSheet(); $('notePop').classList.remove('open'); });
 }
 // Nome corto per le etichette: "Scuola Elementare "Don Bosco"" -> "El. Don Bosco"
 function nomeBreve(d){
@@ -1547,9 +1572,10 @@ function disegnaMappa(visibili){
     else { html='<div class="pin-mine fare"></div>'; sz=30; z=1000; }
     { const imp=impDi(i), cod=/^K\d/i.test(i.codiceImpianto)?`<b>${escH(i.codiceImpianto)}</b> `:'';
       const cls=tipo==='libera'||tipo==='altro'?tipo:('mio '+tipo);
-      html=`<div class="pin-wrap" style="--s:${sz}px">${html}<span class="pin-lbl ${cls}">${cod}${escH(nomeBreve(imp?imp.descrizione:i.codiceImpianto))}${isUrgente(i)?'<i class="lbl-urg"></i>':''}</span></div>`; }
-    L.marker([lat,lng],{icon:L.divIcon({className:'',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:z,keyboard:false,urg:isUrgente(i)})
-      .on('click',()=>openPanel(i.id)).addTo(tipo==='libera'?CLUSTER:LAYER);
+      html=`<div class="pin-wrap ${PREV===i.id?'sel':''}" style="--s:${sz}px">${html}<span class="pin-lbl ${cls}">${cod}${escH(nomeBreve(imp?imp.descrizione:i.codiceImpianto))}${isUrgente(i)?'<i class="lbl-urg"></i>':''}</span></div>`; }
+    MARK[i.id]=[lat,lng];
+    L.marker([lat,lng],{icon:L.divIcon({className:'',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:PREV===i.id?3000:z,keyboard:false})
+      .on('click',()=>anteprima(i.id)).addTo(tipo==='libera'&&PREV!==i.id?CLUSTER:LAYER);
     PUNTI.push([lat,lng]);
   });
   if(primoFit && PUNTI.length){ primoFit=false; setTimeout(()=>adattaMappa(),60); }
@@ -1567,7 +1593,8 @@ function centraSuDiMe(){
 let SU=false, VIS=300;
 function misuraSheet(){
   const bs=$('bs'), list=$('mainScroll'); if(!bs||!list) return;
-  if(!SU){ VIS=list.offsetTop+8; }
+  if(PREV){ const pv=$('bsPrev'); VIS=pv.offsetTop+pv.offsetHeight+16; }
+  else if(!SU){ VIS=list.offsetTop+8; }
   posSheet();
 }
 function posSheet(){
@@ -1603,6 +1630,11 @@ function chiudiSheet(){ SU=false; $('mainScroll').scrollTop=0; const c=$('cerca'
       b.classList.remove('drag');
       const v=lastDy/Math.max(1,Date.now()-t0), max=b.offsetHeight-VIS;
       SU = Math.abs(v)>0.4 ? lastDy<0 : lastOff<max/2;
+      if(PREV){ // anteprima: su = dettaglio completo, giù = chiude l'anteprima
+        const id=PREV, su=SU; SU=false;
+        if(su) openPanel(id); else if(lastDy>30) chiudiPrev();
+        posSheet(); misuraSheet(); y0=null; drag=false; return;
+      }
       if(!SU) $('mainScroll').scrollTop=0;
       posSheet(); if(!SU) misuraSheet();
     }
@@ -1726,6 +1758,7 @@ function renderLista(){
   mie.forEach(i=>vis.push({i,tipo:isFatto(i)?'fatto':((i.dataPrevista&&i.dataPrevista<oggi)?'sosp':'fare')}));
   if(vista!=='mie') aperte.filter(i=>isPresa(i)&&!mio(i)&&(vista==='rcee'?isRcee(i):!isRcee(i))).filter(match).forEach(i=>vis.push({i,tipo:'altro'}));
   disegnaMappa(vis);
+  if(PREV) renderPrev();
   aggiornaNote();
   misuraSheet();
 }
@@ -1859,6 +1892,43 @@ function posSalva(){
 
 // i gruppi "già prese in carico" partono aperti: si vede subito chi le ha prese
 function togglePrese(key){ preseAperte[key]=(preseAperte[key]===false); renderLista(); }
+
+// --- Anteprima nel foglio quando si tocca un puntino o il suo nome ---
+function naviURL(i){
+  const imp=impDi(i), g=GEO[i.codiceImpianto];
+  const testo=((imp&&imp.indirizzo&&imp.indirizzo!=='altro')?imp.indirizzo:((imp&&imp.descrizione)||''))+', '+((imp&&imp.comune)||'');
+  const dest=(g&&(g.prec==='civico'||g.prec==='manuale'||g.prec==='foglio'))?`${g.lat},${g.lng}`:encodeURIComponent(testo);
+  return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
+}
+function anteprima(id){
+  PREV=id; SU=false; $('mainScroll').scrollTop=0;
+  $('bs').classList.add('prev'); $('notePop').classList.remove('open');
+  renderLista();
+  const ll=MARK[id];
+  if(ll&&MAP){ setTimeout(()=>{ const z=Math.max(MAP.getZoom(),15), p=MAP.project(ll,z); p.y+=Math.max(0,VIS/2-40); MAP.setView(MAP.unproject(p,z),z,{animate:true}); },40); }
+}
+function chiudiPrev(){ if(!PREV) return; PREV=null; $('bs').classList.remove('prev'); renderLista(); }
+function renderPrev(){
+  const i=S.interventi.find(x=>x.id===PREV);
+  if(!i){ PREV=null; $('bs').classList.remove('prev'); return; }
+  const imp=impDi(i), co=commessaDi(imp), k=km(i), oggi=isoOggi();
+  const altre=S.interventi.filter(x=>x.id!==i.id&&x.codiceImpianto===i.codiceImpianto&&x.stato==='Aperto'&&x.tipoVisita==='Straordinaria');
+  let stato, prim='';
+  if(i.stato==='Chiuso'){ stato='<span style="color:var(--muted)">✓ Chiusa</span>'; }
+  else if(!isPresa(i)){ stato='<span style="color:var(--yellow)">📦 Libera, nel contenitore</span>'; prim=`<button class="pv-btn ok" onclick="prendiInCarico('${i.id}')">✋ Prendi in carico</button>`; }
+  else if(mio(i)&&isFatto(i)){ stato=`<span style="color:var(--accent)">✓ Fatto alle ${oraHM(FATTI[i.id])}, da chiudere</span>`; prim=`<button class="pv-btn ok" onclick="openPanel('${i.id}');toggleChiudi()">Chiudi ora</button>`; }
+  else if(mio(i)){ stato='<span style="color:var(--accent)">👷 In carico a te</span>'+((i.dataPrevista&&i.dataPrevista<oggi)?' · <span style="color:var(--yellow)">in attesa</span>':''); prim=`<button class="pv-btn ok" onclick="segnaFatto('${i.id}')">✓ Fatto</button>`; }
+  else { const u=USERS[i.operaio]||{color:'#555',initial:'?'}; stato=`<span class="prese-av" style="background:${u.color};width:20px;height:20px;font-size:9px;border:none;display:inline-flex;vertical-align:-5px;margin-right:4px">${u.initial}</span><span style="color:var(--muted)">In carico a ${escH(i.operaio)}</span>`; }
+  const nota=notaBreve(i);
+  $('bsPrev').innerHTML=`
+    <div class="pv-top"><span class="pv-dot" style="background:${co.color}"></span><span class="pv-cod">${escH(i.codiceImpianto)} · ${escH(co.label)}</span>${isUrgente(i)?'<span class="pv-urg">URGENTE</span>':''}${isRcee(i)?'<span class="pv-rcee">RCEE</span>':''}<button class="pv-x" onclick="chiudiPrev()">✕</button></div>
+    <div class="pv-nome">${escH(imp?imp.descrizione:i.codiceImpianto)}</div>
+    <div class="pv-meta">${dataBreve(i)}${i.segnalazione?' · 📨 '+escH(i.segnalazione):''}${k!=null?' · '+kmTxt(k)+' km':''}</div>
+    ${nota?`<div class="pv-nota">${escH(nota)}</div>`:''}
+    <div class="pv-stato">${stato}</div>
+    <div class="pv-btns"><a class="pv-btn" href="${naviURL(i)}" target="_blank" rel="noopener">📍 Naviga</a>${prim}</div>
+    <div class="pv-links"><a onclick="openPanel('${i.id}')">Dettagli completi ›</a>${altre.length?`<a onclick="anteprima('${altre[0].id}')">Altre ${altre.length} in questo impianto ›</a>`:''}</div>`;
+}
 
 const _notaLetta=notaLetta; notaLetta=async function(id){ await _notaLetta(id); aggiornaNote(); };
 </script>
