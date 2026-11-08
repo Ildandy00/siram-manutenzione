@@ -15,6 +15,9 @@
   Commesse (03/11/2026): ognuna in una sezione con il suo colore (striscia a sinistra) e un'intestazione che resta in alto.
   Tutti gli impianti (04/11/2026): ogni circuito c'e' tutti i giorni. "acceso" puo' essere una lista di fasce ([] = spento),
   null (dati della centralina mancanti o incompleti quel giorno) o "nessun_segnale" (in Coster non c'e' un point che dica se e' acceso).
+  Impianto separato dal circuito (08/11/2026, richiesta di Davide): ogni impianto ha una riga sua (codice nel colore della
+  commessa e nome) che resta in alto finche' si scorrono i suoi circuiti; sotto, rientrati, solo i nomi dei circuiti.
+  Copia di prima: CosterDataClaude\_archivio\accensioni-coster_prima_impianto_separato_20261108.html
 -->
 <style>
   :root { --bg:#282828; --bg2:#444; --bg3:#4e4e4e; --bg4:#585858; --text:#eee; --muted:#999; --accent:#ccc;
@@ -52,8 +55,9 @@
   /* giorno */
   .g-riga { display:flex; height:20px; align-items:center; font-size:12px }
   .g-testa { display:flex; height:24px; align-items:center; font-size:11px; color:var(--muted); border-bottom:1px solid var(--line2); position:sticky; top:0; background:var(--bg2); z-index:2 }
-  .g-nome { width:250px; flex:none; padding-left:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-  .g-nome b { font-weight:600 } .g-nome span { color:#ccc } .g-nome.sotto span { margin-left:14px }
+  .g-nome { width:250px; flex:none; padding-left:26px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .g-testa .g-nome { padding-left:12px }
+  .g-nome span { color:#ddd; font-weight:500 } .g-nome span.muto { color:var(--muted); font-weight:400; font-style:italic }
   .g-tipo { width:62px; flex:none; font-size:11px }
   .g-ora { width:62px; flex:none }
   .g-t { width:64px; flex:none; font-weight:500 }
@@ -73,8 +77,8 @@
   .s-testa .s-g b { display:block; padding:3px 6px; font-weight:600 }
   .s-tick { position:absolute; left:34px; right:34px; bottom:2px; height:12px; font-size:10px; color:var(--muted) }
   .s-tick span { position:absolute }
-  .s-imp { height:19px; background:rgba(0,0,0,.18); border-top:1px solid var(--line2); font-size:12px; font-weight:600; padding:2px 12px; white-space:nowrap }
   .s-riga { display:flex; height:16px; line-height:16px }
+  .s-riga .s-nome { padding-left:26px; color:#ddd; font-weight:500 }
   .s-num { position:absolute; top:0; width:32px; font-size:11px; padding:0 3px }
   .s-num.d { right:0; text-align:right } .s-num.s { left:0 }
   .s-pista { position:absolute; left:34px; right:34px; top:0; bottom:0 }
@@ -84,6 +88,14 @@
   .c-testa { position:sticky; z-index:1; height:26px; display:flex; align-items:center; font-size:13px; white-space:nowrap;
              background:var(--bg3); background:color-mix(in srgb, var(--c) 26%, var(--bg2)); border-top:1px solid var(--line2) }
   .g-vista .c-testa { top:24px } .s-vista .c-testa { top:38px }
+  /* impianto (08/11/2026): una riga sua, che resta in alto (sotto la commessa) finche' si scorrono i suoi circuiti */
+  .imp { border-top:1px solid var(--line2) }
+  .imp-testa { position:sticky; z-index:1; height:24px; display:flex; align-items:center; gap:10px; padding:0 12px;
+               font-size:13px; white-space:nowrap; background:#3a3a3a; border-bottom:1px solid var(--line) }
+  .g-vista .imp-testa { top:50px } .s-vista .imp-testa { top:64px }
+  .imp-testa .mono { color:var(--c); font-size:12px; font-weight:500 }
+  .imp-testa b { font-weight:600 }
+  .imp > .g-riga:last-child, .imp > .s-riga:last-child { border-bottom:0 }
   .c-testa > span { position:sticky; left:0; padding:0 12px }
   .c-testa b { font-weight:700; margin-right:4px } .c-testa .mono { font-size:11px; color:#ddd } .c-testa em { font-style:normal; color:#ccc; font-size:12px }
   #gate { max-width:360px; margin:80px auto; background:var(--bg2); border-radius:16px; padding:24px }
@@ -211,14 +223,36 @@ function sezioni(gruppi) {
   return [...gruppi.values()].map(g => {
     const { nome, codice } = nomeCommessa(g.commessa);
     const n = g.impianti.size;
-    return `<section class="comm" style="--c:${colore(g.commessa)}" data-commessa="${esc(g.commessa)}"><div class="c-testa"><span><b>${esc(nome)}</b> ${codice ? `<span class="mono">${esc(codice)}</span> · ` : ''}<em>${n} impiant${n === 1 ? 'o' : 'i'}</em></span></div>${g.html}</section>`;
+    return `<section class="comm" style="--c:${colore(g.commessa)}" data-commessa="${esc(g.commessa)}"><div class="c-testa"><span><b>${esc(nome)}</b> ${codice ? `<span class="mono">${esc(codice)}</span> · ` : ''}<em>${n} impiant${n === 1 ? 'o' : 'i'}</em></span></div>${g.html}${g.aperto ? '</div>' : ''}</section>`;
   }).join('');
 }
 function gruppo(gruppi, c) {
-  if (!gruppi.has(c.commessa)) gruppi.set(c.commessa, { commessa: c.commessa, impianti: new Set(), html: '' });
+  if (!gruppi.has(c.commessa)) gruppi.set(c.commessa, { commessa: c.commessa, impianti: new Set(), html: '', aperto: false });
   const g = gruppi.get(c.commessa);
   g.impianti.add(c.impianto);
   return g;
+}
+// 08/11/2026: l'impianto ha una riga sua. "K001 - Palestra Carducci" -> codice K001 (colore della commessa) + nome;
+// senza " - " (es. "Municipio" di Corinaldo) solo il nome. I suoi circuiti stanno dentro lo stesso blocco .imp,
+// cosi' la riga dell'impianto resta in alto mentre si scorrono.
+// [[circuito, indice]] con i circuiti dello stesso impianto uno dopo l'altro. Un circuito che non c'e' piu' (visto solo nei
+// primi giorni della settimana) tiene la posizione di allora e puo' finire in mezzo a un altro impianto: senza questo
+// l'impianto comparirebbe due volte (Teatro, Goretti, Circolo Anni D'Argento la settimana del 02/11).
+function perImpianto(lista) {
+  const primo = new Map();
+  lista.forEach(([c], k) => { const key = c.commessa + '|' + c.impianto; if (!primo.has(key)) primo.set(key, k); });
+  return lista.map((x, k) => [x, primo.get(x[0].commessa + '|' + x[0].impianto), k])
+    .sort((a, b) => a[1] - b[1] || a[2] - b[2]).map(x => x[0]);
+}
+function apriImpianto(g, c) {
+  const testo = String(c.impianto || '');
+  // "K001 - Palestra Carducci"; anche "K068 Circoscrizione Trebbiantico" (codice K senza trattino)
+  const m = testo.includes(' - ') ? null : testo.match(/^([A-Z]{1,4}\d{2,4}(?:\/[A-Z]?\d{2,4})?)\s+(.+)$/);
+  const [primo, ...resto] = m ? [m[1], m[2]] : testo.split(' - ');
+  const codice = resto.length ? primo : '';
+  const nome = resto.length ? resto.join(' - ') : primo;
+  g.html += (g.aperto ? '</div>' : '') + `<div class="imp"><div class="imp-testa" title="${esc(c.impianto)}">${codice ? `<span class="mono">${esc(codice)}</span>` : ''}<b>${esc(nome)}</b></div>`;
+  g.aperto = true;
 }
 
 function passaFiltro(c) {
@@ -256,35 +290,34 @@ function disegnaGiorno() {
   const voci = delGiorno(S.giorno);
   const circuiti = dati().circuiti;
   const asse = Array.from({ length: 12 }, (_, i) => `<span class="mono" style="left:${i * 2 / 24 * 100}%">${due(i * 2)}</span>`).join('');
-  let h = `<div class="g-testa"><div class="g-nome">Impianto · circuito</div><div class="g-tipo"></div><div class="g-ora">Inizio</div><div class="g-ora">Fine</div><div class="g-t">T inizio</div><div class="g-t">T fine</div><div class="g-asse">${asse}</div></div>`;
-  const riga = (nome, sotto, tipo, cl, f, sep, fine, nota) => `<div class="g-riga${sep ? ' sep' : ''}${fine ? ' fine' : ''}">
-    <div class="g-nome${sotto ? ' sotto' : ''}" title="${esc(nome.title)}">${nome.html}</div><div class="g-tipo ${cl}">${tipo}</div>
+  let h = `<div class="g-testa"><div class="g-nome">Impianto / circuito</div><div class="g-tipo"></div><div class="g-ora">Inizio</div><div class="g-ora">Fine</div><div class="g-t">T inizio</div><div class="g-t">T fine</div><div class="g-asse">${asse}</div></div>`;
+  const riga = (nome, tipo, cl, f, fine, nota) => `<div class="g-riga${fine ? ' fine' : ''}">
+    <div class="g-nome" title="${esc(nome.title)}">${nome.html}</div><div class="g-tipo ${cl}">${tipo}</div>
     <div class="g-ora mono ${cl}">${f ? hh(f[0]) : (nota ? '' : '—')}</div><div class="g-ora mono ${cl}">${f ? (f[4] ? 'in corso' : hh(f[1])) : ''}</div>
     <div class="g-t mono">${f ? gradi(f[2]) : ''}</div><div class="g-t mono">${f ? gradi(f[3]) : ''}</div>
     <div class="g-tl ore">${f ? `<div class="bar ${cl}" style="left:${pct(f[0])}%;width:${pct(f[1]) - pct(f[0])}%;top:3px;height:14px"></div>` : (nota ? `<span class="nota">${esc(nota)}</span>` : '')}</div></div>`;
   let ult = null, n = 0;
   const gruppi = new Map();
-  circuiti.forEach((c, i) => {
+  perImpianto(circuiti.map((c, i) => [c, i]).filter(([c, i]) => voci[i] && passaFiltro(c))).forEach(([c, i]) => {
     const v = voci[i];
-    if (!v || !passaFiltro(c)) return;
     n++;
     const g = gruppo(gruppi, c);
-    const nuovo = c.impianto !== ult;
+    if (c.impianto !== ult) apriImpianto(g, c);
     ult = c.impianto;
     const vuota = { html: '', title: '' };
-    // impianto senza circuiti (nessun segnale): il nome intero, altrimenti resterebbe solo il codice
-    const nome = { html: (nuovo ? `<b>${esc(c.circuito ? breve(c) : c.impianto)}</b> ` : '') + `<span>${esc(c.circuito)}</span>`,
+    // impianto senza circuiti: il nome sta gia' nella riga dell'impianto
+    const nome = { html: c.circuito ? `<span>${esc(c.circuito)}</span>` : '<span class="muto">nessun circuito</span>',
                    title: c.impianto + (c.circuito ? ' · ' + c.circuito : '') };
     const nota = notaImpianto(v.acceso, S.giorno, false);
     if (!v.cliente.length && typeof v.acceso === 'string') {
-      // niente orario e niente segnale: una riga sola, col nome
-      g.html += riga(nome, !nuovo, 'Impianto', 'im', null, nuovo, true, nota);
+      // niente orario e niente segnale: una riga sola
+      g.html += riga(nome, 'Impianto', 'im', null, true, nota);
       return;
     }
     const cl = v.cliente.length ? v.cliente : [null];
     const im = fasce(v.acceso).length ? v.acceso : [null];
-    cl.forEach((f, j) => { g.html += riga(j ? vuota : nome, !nuovo, j ? '' : 'Cliente', 'cl', f, j === 0 && nuovo, false); });
-    im.forEach((f, j) => { g.html += riga(vuota, false, j ? '' : 'Impianto', 'im', f, false, j === im.length - 1, f ? '' : nota); });
+    cl.forEach((f, j) => { g.html += riga(j ? vuota : nome, j ? '' : 'Cliente', 'cl', f, false); });
+    im.forEach((f, j) => { g.html += riga(vuota, j ? '' : 'Impianto', 'im', f, j === im.length - 1, f ? '' : nota); });
   });
   $('tab').innerHTML = n ? `<div class="int g-vista">${h}${sezioni(gruppi)}</div>` : '<div class="empty">Nessun dato per questo giorno con questi filtri.</div>';
 }
@@ -303,18 +336,17 @@ function disegnaSettimana() {
   const titolo = (f, nome) => f ? `${nome} ${hh(f[0])}-${f[4] ? 'in corso' : hh(f[1])}${f[2] != null || f[3] != null ? '  ' + (gradi(f[2]) || '?') + ' → ' + (gradi(f[3]) || '?') : ''}` : '';
   let ult = null, n = 0;
   const gruppi = new Map();
-  dati().circuiti.forEach((c, i) => {
-    if (!passaFiltro(c) || !voci.some(v => v[i])) return;
+  perImpianto(dati().circuiti.map((c, i) => [c, i]).filter(([c, i]) => passaFiltro(c) && voci.some(v => v[i]))).forEach(([c, i]) => {
     n++;
     const g = gruppo(gruppi, c);
-    if (c.impianto !== ult) { ult = c.impianto; g.html += `<div class="s-imp">${esc(c.impianto)}</div>`; }
+    if (c.impianto !== ult) { ult = c.impianto; apriImpianto(g, c); }
     const quante = k => Math.max(0, ...voci.map(v => v[i] ? fasce(v[i][k]).length : 0));
     const linee = [];
     for (let j = 0; j < quante('cliente'); j++) linee.push(['cliente', j, 'cl', 'Cliente']);
     // la riga Impianto c'e' sempre, anche spento o senza segnale (04/11/2026)
     for (let j = 0; j < Math.max(1, quante('acceso')); j++) linee.push(['acceso', j, 'im', 'Impianto']);
     linee.forEach(([k, j, cl, nome], r) => {
-      g.html += `<div class="s-riga${r === linee.length - 1 ? ' fine' : ''}"><div class="s-nome" title="${esc(c.impianto + (c.circuito ? ' · ' + c.circuito : ''))}">${r === 0 ? esc(c.circuito) : ''}</div>${giorni.map((g, x) => {
+      g.html += `<div class="s-riga${r === linee.length - 1 ? ' fine' : ''}"><div class="s-nome" title="${esc(c.impianto + (c.circuito ? ' · ' + c.circuito : ''))}">${r === 0 ? (c.circuito ? esc(c.circuito) : '<i style="color:var(--muted)">nessun circuito</i>') : ''}</div>${giorni.map((g, x) => {
         const v = voci[x][i];
         const f = v ? fasce(v[k])[j] : null;
         const nota = v && k === 'acceso' && j === 0 ? notaImpianto(v.acceso, g, true) : '';
