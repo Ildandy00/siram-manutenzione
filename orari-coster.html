@@ -294,6 +294,25 @@
   @keyframes conf-lampo { 50% { opacity: .45; } }
   .conf-stato { display: block; font-size: 11px; margin-top: 3px; color: var(--muted); }
   .conf-mot { display: block; font-size: 11px; color: var(--muted); }
+  /* 08/11/2026 sera: legenda dei colori e colonna ottimizzatore (centraline YLC880) */
+  .conf-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); margin: 8px 0 2px; line-height: 1.5; }
+  .conf-leg .v { display: inline-flex; align-items: center; gap: 5px; }
+  .conf-leg i { display: inline-block; width: 16px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); flex: none; }
+  .conf-leg i.st { border-width: 2px; border-style: solid; background: transparent; }
+  .conf-leg .tit { color: var(--text); font-weight: 600; }
+  table.conf th.ott, table.conf td.ott { text-align: left; white-space: normal; min-width: 210px; max-width: 250px;
+    font-family: 'Outfit', sans-serif; font-size: 11px; }
+  .ott-t { display: flex; align-items: center; gap: 5px; font-weight: 600; }
+  .ott-st { display: inline-block; padding: 1px 7px; border-radius: 9px; font: 700 10px 'Outfit', sans-serif; letter-spacing: .4px; color: #fff; }
+  .ott-st.on { background: #2f9e44; }
+  .ott-st.off { background: #6b6b6b; }
+  .ott-st.nd { background: #8a6d3b; }
+  .ott-dub { color: #ffd479; font-weight: 700; cursor: help; }
+  .ott-p { display: grid; grid-template-columns: auto auto auto auto; gap: 0 6px; margin-top: 3px; font-family: 'DM Mono', monospace; font-size: 11px; }
+  .ott-p .ott-l { color: var(--muted); font-family: 'Outfit', sans-serif; }
+  .ott-p b { color: #ffd479; font-weight: 600; }
+  .ott-z { display: block; color: var(--muted); margin-top: 2px; }
+  .ott-alt { display: inline-flex; align-items: center; gap: 4px; margin: 1px 8px 1px 0; font-weight: 400; }
 
   /* Spegnimento */
   .speg-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
@@ -597,6 +616,22 @@
     <section class="card t-conf" id="confCard">
       <h2>Confronto con il Calendario Termico</h2>
       <div class="muted" id="confInfo" style="font-size:12px"></div>
+      <div class="conf-leg" id="confLegenda">
+        <span class="tit">Colonna centralina:</span>
+        <span class="v"><i style="background:#CDE8C9"></i>uguale al calendario (15' di tolleranza; spegnere fino a 30' prima della fine va bene)</span>
+        <span class="v"><i style="background:#F9D5A7"></i>piu' corta: una parte dell'orario del calendario resta scoperta</span>
+        <span class="v"><i style="background:#F4B6B6"></i>manca: il calendario chiede l'accensione, la centralina e' spenta (o comando manuale OFF)</span>
+        <span class="v"><i style="background:#FFF2B3"></i>piu' lunga, o accesa a calendario chiuso (o comando manuale ON)</span>
+        <span class="v"><i style="background:#E3E3E3"></i>da non contare: senza riga nel calendario, calendario senza orari, programma vuoto con altri programmi accesi</span>
+        <span class="v"><i style="background:#F2F2F2"></i>spenta come il calendario</span>
+        <span class="v"><i style="background:#4a4a4a"></i>colonna calendario scura: nessuna riga del calendario</span>
+        <span class="tit">Lavoro mandato:</span>
+        <span class="v"><i class="st" style="border-style:dashed;border-color:#5b7fb5"></i>in coda</span>
+        <span class="v"><i class="st" style="border-color:#2b6cb0"></i>in scrittura (lampeggia)</span>
+        <span class="v"><i class="st" style="border-color:#2f9e44"></i>scritto</span>
+        <span class="v"><i class="st" style="border-color:#c92a2a"></i>non scritto</span>
+        <span>Passa sopra una casella per la spiegazione.</span>
+      </div>
       <div class="conf-tools">
         <input type="search" id="confFiltro" placeholder="Cerca impianto o circuito">
         <select id="confCommessa"></select>
@@ -1775,12 +1810,90 @@
     if (confMeno(prog, cal, CONF_TOLL).length) return "PIU' LUNGO";
     return 'OK';
   }
-  function confColore(r, k, fasce) {
+  /** Esito e spiegazione di una casella della centralina (stesse regole del PC, CALENDARIO VUOTO compreso). */
+  function confStato(r, k, fasce) {
     const nota = r.note[k] || '';
-    let e = confEsito(r.cal[k], fasce, r.esito === 'VUOTO' && !fasce.length);
-    if (nota.includes('OFF man.')) e = r.cal[k] && r.cal[k].length ? 'MANCA' : 'SPENTO';
-    else if (nota.includes('ON man.')) e = "PIU' LUNGO";
-    return CONF_COLORE[e] || '#F2F2F2';
+    const cal = r.cal[k];
+    const txt = (f) => (f && f.length ? confFasce(f).replace(/\n/g, ' ') : '');
+    const calTxt = txt(cal);
+    const progTxt = txt(fasce) || 'spenta';
+    if (nota.includes('OFF man.')) {
+      return [cal && cal.length ? 'MANCA' : 'SPENTO', 'Comando manuale OFF in centralina: il programma non comanda, il circuito resta spento'];
+    }
+    if (nota.includes('ON man.')) return ["PIU' LUNGO", 'Comando manuale ON in centralina: il programma non comanda, il circuito resta acceso'];
+    let e = confEsito(cal, fasce, r.esito === 'VUOTO' && !fasce.length);
+    const calVuoto = Array.isArray(r.cal) && r.cal.every((x) => Array.isArray(x) && !x.length);
+    if (calVuoto && e === 'ACCESO A CALENDARIO CHIUSO') e = 'CALENDARIO VUOTO';
+    const pezzi = (a, b, coda) => confMeno(a, b, coda).map(([x, y]) => toHHMM(x) + '-' + (y >= 1439 ? '24:00' : toHHMM(y))).join(' ');
+    const t = {
+      'OK': `Uguale al calendario (${calTxt})`,
+      'CORTO': `Piu' corta del calendario: resta scoperto ${pezzi(cal || [], fasce, CONF_TOLL_FINE)} (calendario ${calTxt}, centralina ${progTxt})`,
+      "PIU' LUNGO": `Accesa anche fuori calendario: ${pezzi(fasce, cal || [], CONF_TOLL)} (calendario ${calTxt}, centralina ${progTxt})`,
+      'MANCA': `Il calendario chiede ${calTxt}, la centralina e' spenta`,
+      'ACCESO A CALENDARIO CHIUSO': `Calendario chiuso, centralina accesa ${progTxt}`,
+      'CALENDARIO VUOTO': `La riga del calendario non ha orari in questa settimana (centralina ${progTxt})`,
+      'NESSUN CALENDARIO': `Nessuna riga del calendario per questo circuito (centralina ${progTxt})`,
+      'VUOTO': 'Programma vuoto: circuito probabilmente non usato, gli altri programmi della centralina sono accesi',
+      'SPENTO': 'Spenta, come il calendario',
+    }[e] || e;
+    return [e, t];
+  }
+  function confColore(r, k, fasce) { return CONF_COLORE[confStato(r, k, fasce)[0]] || '#F2F2F2'; }
+
+  // ---- Ottimizzatori (08/11/2026 sera): solo le centraline che li hanno (YLC880), sola lettura
+  const OTT_CAMPI = [
+    ['FORZATURA', 'Forz.', 'Forzatura', ' °C', 1], ['DELTA_T_OFF', 'ΔT off', 'Delta T OFF', ' °C', 1],
+    ['MASSIMO_PRESPEGNIMENTO', 'Presp.', 'Massimo prespegnimento', ' h', 0], ['K_RAFFREDDAMENTO', 'K raffr.', 'Costante di raffreddamento', ' h', 0],
+    ['MASSIMO_ANTICIPO_BREVE', 'Ant. br.', 'Massimo anticipo breve', ' h', 0], ['MASSIMO_ANTICIPO_LUNGO', 'Ant. lu.', 'Massimo anticipo lungo', ' h', 0],
+    ['INERZIA_ACCENSIONE', 'Inerzia', 'Inerzia accensione manuale (min/°C)', '', 0], ['IA_AUTOMATICA', 'Auto', 'Inerzia accensione automatica', '', -1]];
+  function ottValore(v, dec) {
+    if (v == null) return '–';
+    if (dec < 0) return v ? 'ON' : 'OFF';
+    return (dec ? Number(v).toFixed(dec) : String(v)).replace('.', ',');
+  }
+  function ottStato(o) {
+    if (o.attivo == null) return el('span', { class: 'ott-st nd', text: 'NON LETTO' });
+    return el('span', { class: 'ott-st ' + (o.attivo ? 'on' : 'off'), text: o.attivo ? 'ATTIVO' : 'SPENTO' });
+  }
+  function ottLetto(o) { return o.letto ? `letto il ${o.letto.slice(8, 10)}/${o.letto.slice(5, 7)} alle ${o.letto.slice(11, 16)}` : ''; }
+  function cellaOtt(o) {
+    const td = el('td', { class: 'ott' });
+    if (o == null) return td;
+    if (o.nessuno) {
+      td.append(el('span', { class: 'ott-z', text: 'nessun ottimizzatore per questo circuito' }));
+      td.title = `La centralina ha degli ottimizzatori, ma nessuno risulta di questo programma (${ottLetto(o)}).`;
+      return td;
+    }
+    const serie = (S.catalog && S.catalog.confronto && S.catalog.confronto.ott_di_serie) || {};
+    const testa = el('div', { class: 'ott-t' }, [ottStato(o), el('span', { text: `Ottimizzatore ${o.indice}` })]);
+    if (!o.sicuro) testa.append(el('span', { class: 'ott-dub', text: '?', title: `Abbinato per ${o.metodo}: da verificare nel sinottico` }));
+    td.append(testa);
+    const g = el('div', { class: 'ott-p' });
+    for (const [k, corto, lungo, u, dec] of OTT_CAMPI) {
+      const v = o.valori ? o.valori[k] : null;
+      const cambiato = v != null && serie[k] != null && Number(v) !== Number(serie[k]);
+      g.append(el('span', { class: 'ott-l', text: corto, title: lungo }),
+        el(cambiato ? 'b' : 'span', { text: ottValore(v, dec) + (v != null && dec >= 0 ? u : ''),
+          title: lungo + (cambiato ? ` (di serie ${ottValore(serie[k], dec)}${dec >= 0 ? u : ''})` : '') }));
+    }
+    td.append(g);
+    const z = [o.tap != null ? `sonda ${String(o.tap).replace('.', ',')} °C` : '', o.zona,
+      o.letto ? `letto ${o.letto.slice(8, 10)}/${o.letto.slice(5, 7)}` : ''].filter(Boolean).join(' · ');
+    if (z) td.append(el('span', { class: 'ott-z', text: z, title: "La sonda ambiente che l'ottimizzatore legge, la zona a cui corrisponde e il giorno della lettura" }));
+    td.title = `Ottimizzatore ${o.indice}, ${ottLetto(o)}. `
+      + (o.sicuro ? 'Abbinato dal nome della zona della sua sonda.' : `Abbinato per ${o.metodo}: da verificare nel sinottico.`)
+      + ' In giallo i valori diversi da quelli di serie del sinottico.';
+    return td;
+  }
+  function cellaOttAltri(lista) {
+    const td = el('td', { class: 'ott' });
+    if (!lista || !lista.length) return td;
+    td.append(el('span', { class: 'ott-z', text: 'Ottimizzatori senza circuito:' }));
+    for (const o of lista) {
+      td.append(el('span', { class: 'ott-alt', title: `${ottLetto(o)}${o.tap != null ? ', sonda ' + String(o.tap).replace('.', ',') + ' °C' : ''}` },
+        [ottStato(o), `${o.indice}${o.zona ? ' · ' + o.zona : ''}`]));
+    }
+    return td;
   }
   /** Una riga per fascia diversa, con tutti i giorni che la usano. */
   function confRighe(settimana, temp) {
@@ -1859,8 +1972,8 @@
       : `Settimana tipo: per ogni giorno l'orario piu' frequente del calendario` + (dal ? ` dal ${dal} per ${c.settimane_tipo || 6} settimane` : ''))
       + `. Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
       + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. La colonna centralina si modifica: una fascia per riga`
-      + ` (07:30-13:30), vuoto o - = spento; poi Applica. Verde uguale · arancio corto · rosso manca · giallo piu' lungo`
-      + ` o acceso a calendario chiuso · grigio senza calendario.`;
+      + ` (07:30-13:30), vuoto o - = spento; poi Applica.`
+      + (c.righe.some((r) => r.ott) ? ` A destra lo stato degli ottimizzatori delle centraline YLC880.` : '');
     const sel = $('confCommessa');
     const prima = sel.value;
     const commesse = [...new Set(c.righe.map((r) => r.commessa))];
@@ -1886,9 +1999,12 @@
       h1.append(el('th', { colspan: '2', text: g }));
       h2.append(el('th', { text: 'calendario' }), el('th', { text: 'centralina' }));
     }
+    h1.append(el('th', { class: 'ott', text: 'Ottimizzatore' }));
+    h2.append(el('th', { class: 'ott', text: 'stato e parametri (YLC880)' }));
     thead.append(h1, h2);
     const tbody = el('tbody');
-    const nCol = 1 + 2 * giorni.length;
+    const nCol = 2 + 2 * giorni.length;
+    const altri = c.ott_non_abbinati || {};
     let commessa = null, impianto = null;
     for (const r of righe) {
       if (r.commessa !== commessa) {
@@ -1898,7 +2014,8 @@
       }
       if (r.impianto !== impianto) {
         impianto = r.impianto;
-        tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 1) })]));
+        tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 2) }),
+          cellaOttAltri(altri[impianto])]));
       }
       tbody.append(rigaConf(r, giorni));
     }
@@ -1917,7 +2034,8 @@
     const tr = el('tr', {}, [nome]);
     const aree = [];
     giorni.forEach((_, k) => {
-      tr.append(el('td', { class: 'cal', text: confFasce(r.cal[k]), style: r.cal[k] == null ? 'background:#4a4a4a' : '' }));
+      tr.append(el('td', { class: 'cal', text: confFasce(r.cal[k]), style: r.cal[k] == null ? 'background:#4a4a4a' : '',
+        title: r.cal[k] == null ? 'Nessuna riga del calendario per questo circuito' : `${giorni[k]}: orario del calendario` }));
       const td = el('td', { class: 'cen' });
       const ta = el('textarea', { class: 'cen-in', rows: '1', spellcheck: 'false', 'aria-label': `${r.circuito} ${giorni[k]} centralina` });
       ta.value = ed.testi[k];
@@ -1947,7 +2065,9 @@
     function aggiorna() {
       const { settimana, err } = leggiTutto();
       aree.forEach(({ ta, td }, k) => {
-        td.style.background = confColore(r, k, ta.classList.contains('err') ? [] : settimana[k]);
+        const [esitoK, spiega] = confStato(r, k, ta.classList.contains('err') ? [] : settimana[k]);
+        td.style.background = CONF_COLORE[esitoK] || '#F2F2F2';
+        td.title = ta.classList.contains('err') ? `${giorni[k]}: formato non valido` : `${giorni[k]}: ${spiega}`;
         ta.rows = Math.max(1, ta.value.split('\n').length);
       });
       const cambiato = aree.some(({ ta }, k) => ta.value.trim() !== originali[k].trim())
@@ -1972,6 +2092,7 @@
       aggiorna();
     });
     applica.addEventListener('click', () => applicaConf(r, sch, leggiTutto, tempIn, applica, aggiorna));
+    tr.append(cellaOtt(r.ott));
 
     if (sch) {
       nome.append(badge, el('div', { class: 'conf-az' }, [copia, applica, el('label', { class: 'conf-tl' }, [tempIn, ' °C'])]), errore, stato);
