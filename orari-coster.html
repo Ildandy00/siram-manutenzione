@@ -246,6 +246,26 @@
   #app[data-tab=prog] .t-stra, #app[data-tab=prog] .t-speg,
   #app[data-tab=stra] .t-prog, #app[data-tab=stra] .t-speg,
   #app[data-tab=speg] .t-prog, #app[data-tab=speg] .t-stra, #app[data-tab=speg] .t-ps { display: none !important; }
+  /* 08/11/2026: scheda Confronto (programmi in centralina contro Calendario Termico) */
+  #app[data-tab=conf] .t-prog:not(.t-conf), #app[data-tab=conf] .t-stra, #app[data-tab=conf] .t-speg, #app[data-tab=conf] .t-ps { display: none !important; }
+  #app[data-tab=prog] .t-conf:not(.t-prog), #app[data-tab=stra] .t-conf, #app[data-tab=speg] .t-conf { display: none !important; }
+  .conf-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+  .conf-tools input[type=search] { flex: 1 1 220px; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; }
+  .conf-tools select { flex: 0 1 220px; }
+  .conf-wrap { overflow: auto; max-height: 78vh; border: 1px solid var(--border); border-radius: 8px; }
+  table.conf { border-collapse: separate; border-spacing: 0; font-size: 12px; font-family: 'DM Mono', monospace; }
+  table.conf th, table.conf td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 3px 6px; vertical-align: top; white-space: pre; text-align: center; }
+  table.conf thead th { position: sticky; top: 0; background: #3d3d3d; z-index: 3; font-family: 'Outfit', sans-serif; font-weight: 600; }
+  table.conf thead tr.sub th { top: 25px; font-size: 10px; color: var(--muted); font-weight: 400; }
+  table.conf th.nome, table.conf td.nome { position: sticky; left: 0; z-index: 2; background: var(--bg2); text-align: left; white-space: normal; min-width: 170px; max-width: 230px; font-family: 'Outfit', sans-serif; }
+  table.conf thead th.nome { z-index: 4; background: #3d3d3d; }
+  table.conf tr.comm td { background: #505050; font-family: 'Outfit', sans-serif; font-weight: 700; text-align: left; letter-spacing: .5px; }
+  table.conf tr.imp td { background: #3f4a55; font-family: 'Outfit', sans-serif; font-weight: 600; text-align: left; }
+  table.conf td.circ { padding-left: 16px; }
+  table.conf td.cen { color: #1a1a1a; }
+  table.conf td.azione .btn { padding: 3px 9px; font-size: 11px; min-height: 0; margin-top: 4px; }
+  .conf-stato { display: block; font-size: 11px; margin-top: 3px; color: var(--muted); }
+  .conf-mot { display: block; font-size: 11px; color: var(--muted); }
 
   /* Spegnimento */
   .speg-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
@@ -349,6 +369,7 @@
       <button class="tab" role="tab" data-tab="prog" aria-selected="true">Programma orario</button>
       <button class="tab" role="tab" data-tab="stra" aria-selected="false">Straordinari <span class="cnt" id="cntStra" hidden></span></button>
       <button class="tab" role="tab" data-tab="speg" aria-selected="false">Spegnimento <span class="cnt" id="cntSpeg" hidden></span></button>
+      <button class="tab" role="tab" data-tab="conf" aria-selected="false">Confronto <span class="cnt" id="cntConf" hidden></span></button>
     </nav>
 
     <!-- SELEZIONE -->
@@ -544,8 +565,22 @@
       <div class="muted" id="spegEmpty">Nessuno spegnimento.</div>
     </section>
 
+    <!-- CONFRONTO (08/11/2026): programmi in centralina contro Calendario Termico, con "Applica calendario" -->
+    <section class="card t-conf" id="confCard">
+      <h2>Confronto con il Calendario Termico</h2>
+      <div class="muted" id="confInfo" style="font-size:12px"></div>
+      <div class="conf-tools">
+        <input type="search" id="confFiltro" placeholder="Cerca impianto o circuito">
+        <select id="confCommessa"></select>
+        <label class="chk"><input type="checkbox" id="confSoloDa" checked> solo da sistemare</label>
+      </div>
+      <div id="confErr" class="banner err" hidden></div>
+      <div class="conf-wrap"><table class="conf" id="confTab"></table></div>
+      <div class="muted" id="confVuoto" hidden></div>
+    </section>
+
     <!-- STORICO -->
-    <section class="card t-prog">
+    <section class="card t-prog t-conf">
       <h2>Ultime richieste <small>(si azzerano se il server si riavvia)</small></h2>
       <div class="muted" style="font-size:12px;margin-bottom:8px">Le modifiche vanno in coda: mentre il PC scrive puoi passare ad altri programmi e applicarli. L'esito compare qui.</div>
       <div id="histAlert" class="banner pre" hidden></div>
@@ -779,6 +814,7 @@
     catalogLoaded = true;
     fillCommesse();
     if ($('app').dataset.tab === 'speg') renderSpegForm();
+    renderConf();          // 08/11/2026: anche fuori dalla scheda, per il numerino "da sistemare"
   }
 
   function fillSelect(sel, items, placeholder, current) {
@@ -1300,6 +1336,8 @@
   async function loadHistory() {
     try {
       const { lavori } = await api('/jobs');
+      S.lavori = lavori;
+      aggiornaStatiConf();
       const ul = $('histList');
       ul.innerHTML = '';
       $('histEmpty').hidden = lavori.length > 0;
@@ -1628,11 +1666,159 @@
   // ============================================================
   const TAB_KEY = 'orari_coster_tab';
   function setTab(t) {
-    if (!['prog', 'stra', 'speg'].includes(t)) t = 'prog';
+    if (!['prog', 'stra', 'speg', 'conf'].includes(t)) t = 'prog';
     $('app').dataset.tab = t;
     document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
     storageSet(TAB_KEY, t);
     if (t === 'speg') { renderSpegForm(); loadSpeg(); }
+    if (t === 'conf') renderConf();
+  }
+
+  // ============================================================
+  // CONFRONTO CON IL CALENDARIO (08/11/2026)
+  // ============================================================
+  // Dati: catalogo.confronto (confronta_programmi_calendario.py sul PC; l'agente lo manda col catalogo).
+  // Per ogni circuito calendario e centralina dei 7 giorni; "Applica calendario" manda una normale modifica
+  // (stessa coda di "Applica programma"): le righe della proposta e le altre disattivate.
+  const CONF_DA_SISTEMARE = new Set(['MANCA', 'CORTO', 'ACCESO A CALENDARIO CHIUSO', "PIU' LUNGO"]);
+  const GG_BREVI = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  S.lavori = [];
+  S.confStati = {};       // schedule_id -> elemento dove scrivere lo stato del lavoro
+
+  function confFasce(f) {
+    if (f == null) return '';
+    return f.length ? f.map(([a, b]) => toHHMM(a) + '-' + toHHMM(b)).join('\n') : '-';
+  }
+  function scheduleById(id) {
+    return ((S.catalog && S.catalog.schedules) || []).find((s) => String(s.id) === String(id));
+  }
+  function ultimoLavoro(id) {
+    return S.lavori.find((j) => j.tipo === 'modifica' && String(j.schedule_id) === String(id));
+  }
+  function testoStatoConf(id) {
+    const j = ultimoLavoro(id);
+    if (!j) return '';
+    const st = STATE_LABEL[j.stato] || j.stato;
+    if (j.stato === 'completato') return 'Scritto ' + fmtTime(j.concluso || j.aggiornato) + ': il confronto si aggiorna dopo circa 15 minuti';
+    if (j.stato === 'nessuna_modifica') return 'Era gia\' cosi\' in centralina';
+    if (['errore', 'scaduto'].includes(j.stato)) return 'NON SCRITTO (' + st + '): dettagli in Ultime richieste';
+    return st + '…';
+  }
+  function aggiornaStatiConf() {
+    for (const [id, nodo] of Object.entries(S.confStati)) {
+      nodo.textContent = testoStatoConf(id);
+      const b = nodo.previousSibling;
+      if (b && b.tagName === 'BUTTON') {
+        const j = ultimoLavoro(id);
+        b.disabled = Boolean(j && !FINAL.has(j.stato));
+      }
+    }
+  }
+
+  function renderConf() {
+    const c = S.catalog && S.catalog.confronto;
+    const tab = $('confTab');
+    tab.innerHTML = '';
+    S.confStati = {};
+    if (!c || !Array.isArray(c.righe)) {
+      $('confInfo').textContent = '';
+      $('confVuoto').hidden = false;
+      $('confVuoto').textContent = 'Il confronto non e\' ancora arrivato dal PC (si fa ogni notte e dopo ogni "Applica").';
+      $('cntConf').hidden = true;
+      return;
+    }
+    const giorni = c.giorni.map((g) => new Date(g + 'T12:00:00'));
+    $('confInfo').textContent = `Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
+      + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. Per ogni giorno: calendario e, a fianco, centralina. `
+      + 'Verde uguale · arancio corto · rosso manca · giallo piu\' lungo o acceso a calendario chiuso · grigio senza calendario.';
+    // commesse per il filtro
+    const sel = $('confCommessa');
+    const prima = sel.value;
+    const commesse = [...new Set(c.righe.map((r) => r.commessa))];
+    sel.innerHTML = '';
+    sel.append(el('option', { value: '', text: 'Tutte le commesse' }));
+    for (const m of commesse) sel.append(el('option', { value: m, text: m.replace(/\s+-\s+M\d+$/, '') }));
+    sel.value = commesse.includes(prima) ? prima : '';
+    const daSistemare = c.righe.filter((r) => CONF_DA_SISTEMARE.has(r.esito)).length;
+    $('cntConf').hidden = !daSistemare;
+    $('cntConf').textContent = daSistemare;
+
+    const testo = $('confFiltro').value.trim().toLowerCase();
+    const solo = $('confSoloDa').checked;
+    const righe = c.righe.filter((r) => (!sel.value || r.commessa === sel.value)
+      && (!solo || CONF_DA_SISTEMARE.has(r.esito))
+      && (!testo || (r.impianto + ' ' + r.circuito + ' ' + r.codice).toLowerCase().includes(testo)));
+
+    const thead = el('thead');
+    const h1 = el('tr', {}, [el('th', { class: 'nome', text: 'Impianto / circuito' })]);
+    const h2 = el('tr', { class: 'sub' }, [el('th', { class: 'nome', text: '' })]);
+    for (const d of giorni) {
+      h1.append(el('th', { colspan: '2', text: `${GG_BREVI[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` }));
+      h2.append(el('th', { text: 'calendario' }), el('th', { text: 'centralina' }));
+    }
+    thead.append(h1, h2);
+    const tbody = el('tbody');
+    const nCol = 2 + 2 * giorni.length;
+    let commessa = null, impianto = null;
+    for (const r of righe) {
+      if (r.commessa !== commessa) {
+        commessa = r.commessa; impianto = null;
+        tbody.append(el('tr', { class: 'comm' }, [el('td', { class: 'nome', text: commessa.replace(/\s+-\s+M\d+$/, '').toUpperCase() }),
+          el('td', { colspan: String(nCol - 2) })]));
+      }
+      if (r.impianto !== impianto) {
+        impianto = r.impianto;
+        tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 2) })]));
+      }
+      // il pulsante sta sotto il nome, nella colonna che resta ferma quando si scorrono i giorni
+      const az = el('td', { class: 'nome circ azione' }, [el('div', { text: r.circuito })]);
+      const tr = el('tr', {}, [az]);
+      giorni.forEach((_, k) => {
+        tr.append(el('td', { class: 'cal', text: confFasce(r.cal[k]), style: r.cal[k] == null ? 'background:#4a4a4a' : '' }));
+        tr.append(el('td', { class: 'cen', text: r.note[k] || confFasce(r.prog[k]), style: 'background:' + r.colori[k] }));
+      });
+      if (r.proposta && r.schedule_id != null && scheduleById(r.schedule_id)) {
+        const b = el('button', { class: 'btn primary', text: 'Applica calendario', title: r.proposta_testo });
+        b.addEventListener('click', () => applicaCalendario(r, b));
+        const stato = el('span', { class: 'conf-stato' });
+        az.append(b, stato);
+        if (r.motivo) az.append(el('span', { class: 'conf-mot', text: r.motivo }));
+        S.confStati[r.schedule_id] = stato;
+      } else {
+        az.append(el('span', { class: 'conf-mot', text: r.motivo || '' }));
+      }
+      tbody.append(tr);
+    }
+    tab.append(thead, tbody);
+    $('confVuoto').hidden = righe.length > 0;
+    $('confVuoto').textContent = solo ? 'Niente da sistemare con questi filtri.' : 'Nessun circuito con questi filtri.';
+    aggiornaStatiConf();
+  }
+
+  async function applicaCalendario(r, btn) {
+    const sch = scheduleById(r.schedule_id);
+    if (!sch || !r.proposta) return;
+    const n = rowsOf(sch);
+    const elenco = r.proposta_testo.split('; ').join('\n');
+    const ok = window.confirm(`${r.impianto} · ${r.circuito}\n\nScrivo in centralina gli orari del calendario:\n${elenco}`
+      + (r.motivo ? `\n\n${r.motivo}` : '') + `\n\nLe altre righe del programma (fino alla ${n}a) vengono disattivate.`);
+    if (!ok) return;
+    const modifiche = [];
+    for (let i = 0; i < n; i++) {
+      const p = r.proposta[i];
+      modifiche.push(p ? { row: i, action: 'modify', days: p.days, start: p.start, end: p.end, temp: p.temp }
+        : { row: i, action: 'disable' });
+    }
+    btn.disabled = true;
+    $('confErr').hidden = true;
+    try {
+      await api('/jobs', { method: 'POST', body: { tipo: 'modifica', schedule_id: sch.id, modifiche } });
+      await loadHistory();
+    } catch (err) {
+      const m = handleErr(err, 'applica calendario');
+      if (m) { $('confErr').hidden = false; $('confErr').textContent = `${r.impianto} · ${r.circuito}: ${m}`; }
+      btn.disabled = false;
+    }
   }
 
   function renderTabCounts() {
@@ -2127,6 +2313,9 @@
   $('spegPrepara').addEventListener('click', spegPrepara);
   $('spegIndietro').addEventListener('click', () => { $('spegConferma').hidden = true; });
   $('spegInvia').addEventListener('click', spegInvia);
+  $('confFiltro').addEventListener('input', renderConf);
+  $('confCommessa').addEventListener('change', renderConf);
+  $('confSoloDa').addEventListener('change', renderConf);
 
   S.pin = pinGet();
   if (S.pin) start(); else askPin();
