@@ -263,7 +263,18 @@
   table.conf tr.imp td { background: #3f4a55; font-family: 'Outfit', sans-serif; font-weight: 600; text-align: left; }
   table.conf td.circ { padding-left: 16px; }
   table.conf td.cen { color: #1a1a1a; }
-  table.conf td.azione .btn { padding: 3px 9px; font-size: 11px; min-height: 0; margin-top: 4px; }
+  table.conf td.azione .btn { padding: 2px 7px; font-size: 11px; min-height: 0; line-height: 1.4; }
+  table.conf td.cen { padding: 2px; }
+  textarea.cen-in { width: 92px; min-height: 18px; padding: 1px 2px; border: 1px dashed rgba(0,0,0,.25); border-radius: 3px;
+    background: transparent; color: #1a1a1a; font: 12px 'DM Mono', monospace; text-align: center; resize: none; overflow: hidden; display: block; }
+  textarea.cen-in:focus { outline: 2px solid #2b6cb0; background: rgba(255,255,255,.55); }
+  textarea.cen-in.err { outline: 2px solid #c00; }
+  textarea.cen-in[readonly] { border-color: transparent; }
+  .conf-az { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+  .conf-tl { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: var(--muted); }
+  input.conf-temp { width: 42px; height: 22px; min-height: 0; padding: 1px 4px; font: 12px 'DM Mono', monospace; background: var(--bg3);
+    color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+  .conf-err { display: block; font-size: 11px; color: #f0a0a0; margin-top: 2px; }
   .conf-stato { display: block; font-size: 11px; margin-top: 3px; color: var(--muted); }
   .conf-mot { display: block; font-size: 11px; color: var(--muted); }
 
@@ -1678,16 +1689,93 @@
   // CONFRONTO CON IL CALENDARIO (08/11/2026)
   // ============================================================
   // Dati: catalogo.confronto (confronta_programmi_calendario.py sul PC; l'agente lo manda col catalogo).
-  // Per ogni circuito calendario e centralina dei 7 giorni; "Applica calendario" manda una normale modifica
-  // (stessa coda di "Applica programma"): le righe della proposta e le altre disattivate.
+  // Settimana tipo (Lun-Dom, niente date): per ogni circuito il calendario e, a fianco, la centralina.
+  // La colonna centralina si modifica (una fascia per riga o separate da spazio, "07:30-13:30"; vuoto o "-" = spento);
+  // "Copia calendario" la riempie dal calendario, "Applica" manda una normale modifica (stessa coda di
+  // "Applica programma"): una riga per fascia diversa con i giorni che la usano, le altre righe disattivate.
   const CONF_DA_SISTEMARE = new Set(['MANCA', 'CORTO', 'ACCESO A CALENDARIO CHIUSO', "PIU' LUNGO"]);
-  const GG_BREVI = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+  const CONF_COLORE = { 'MANCA': '#F4B6B6', 'CORTO': '#F9D5A7', 'ACCESO A CALENDARIO CHIUSO': '#FFF2B3', "PIU' LUNGO": '#FFF2B3',
+    'CALENDARIO VUOTO': '#E3E3E3', 'NESSUN CALENDARIO': '#E3E3E3', 'VUOTO': '#E3E3E3', 'OK': '#CDE8C9', 'SPENTO': '#F2F2F2' };
+  const CONF_TOLL = 15;          // minuti per lato
+  const CONF_TOLL_FINE = 30;     // spegnere fino a 30' prima della fine del calendario va bene
   S.lavori = [];
-  S.confStati = {};       // schedule_id -> elemento dove scrivere lo stato del lavoro
+  S.confStati = {};       // chiave circuito -> { stato, applica }
+  S.confEdit = {};        // chiave circuito -> { testi: [7], temp } (restano se si cambia filtro o arriva un catalogo)
 
+  function confChiave(r) { return `${r.impianto}|${r.circuito}|${r.schedule_id}`; }
   function confFasce(f) {
     if (f == null) return '';
-    return f.length ? f.map(([a, b]) => toHHMM(a) + '-' + toHHMM(b)).join('\n') : '-';
+    return f.length ? f.map(([a, b]) => toHHMM(Math.min(a, 1439)) + '-' + (b >= 1439 ? '24:00' : toHHMM(b))).join('\n') : '-';
+  }
+  /** "07:30-13:30 15:00-19:00" (anche a capo, virgole, punti al posto dei due punti) -> {fasce} o {err}. */
+  function confLeggi(testo) {
+    const t = String(testo || '').trim();
+    if (!t || t === '-') return { fasce: [] };
+    const fasce = [];
+    for (const pezzo of t.split(/[\s,;]+/).filter(Boolean)) {
+      if (pezzo === '-') continue;
+      const m = /^(\d{1,2})[:.](\d{2})-(\d{1,2})[:.](\d{2})$/.exec(pezzo);
+      if (!m) return { err: `"${pezzo}" non e' una fascia: scrivi 07:30-13:30` };
+      const a = +m[1] * 60 + +m[2];
+      let b = +m[3] * 60 + +m[4];
+      if (+m[1] > 23 || +m[2] > 59 || +m[4] > 59 || +m[3] > 24 || (+m[3] === 24 && +m[4] > 0)) return { err: `"${pezzo}": ora non valida` };
+      if (b >= 1440) b = 1439;
+      if (b <= a) return { err: `"${pezzo}": la fine deve venire dopo l'inizio` };
+      fasce.push([a, b]);
+    }
+    fasce.sort((x, y) => x[0] - y[0]);
+    const out = [];
+    for (const f of fasce) {
+      if (out.length && f[0] <= out[out.length - 1][1]) out[out.length - 1][1] = Math.max(out[out.length - 1][1], f[1]);
+      else out.push([f[0], f[1]]);
+    }
+    return { fasce: out };
+  }
+  function confMeno(a, b, coda) {
+    const out = [];
+    for (const [x0, y0] of a) {
+      let pezzi = [[x0, y0]];
+      for (const [s, e] of b) {
+        const nuovi = [];
+        for (const [x, y] of pezzi) {
+          if (e <= x || s >= y) { nuovi.push([x, y]); continue; }
+          if (s > x) nuovi.push([x, s]);
+          if (e < y) nuovi.push([e, y]);
+        }
+        pezzi = nuovi;
+      }
+      for (const [x, y] of pezzi) if (y - x > (y === y0 ? coda : CONF_TOLL)) out.push([x, y]);
+    }
+    return out;
+  }
+  /** Stesse regole del PC (confronta_programmi_calendario.confronta). cal null = nessun calendario. */
+  function confEsito(cal, prog, vuotoAltri) {
+    if (cal == null) return prog.length ? 'NESSUN CALENDARIO' : 'SPENTO';
+    if (!cal.length && !prog.length) return 'SPENTO';
+    if (cal.length && !prog.length) return vuotoAltri ? 'VUOTO' : 'MANCA';
+    if (prog.length && !cal.length) return 'ACCESO A CALENDARIO CHIUSO';
+    if (confMeno(cal, prog, CONF_TOLL_FINE).length) return 'CORTO';
+    if (confMeno(prog, cal, CONF_TOLL).length) return "PIU' LUNGO";
+    return 'OK';
+  }
+  function confColore(r, k, fasce) {
+    const nota = r.note[k] || '';
+    let e = confEsito(r.cal[k], fasce, r.esito === 'VUOTO' && !fasce.length);
+    if (nota.includes('OFF man.')) e = r.cal[k] && r.cal[k].length ? 'MANCA' : 'SPENTO';
+    else if (nota.includes('ON man.')) e = "PIU' LUNGO";
+    return CONF_COLORE[e] || '#F2F2F2';
+  }
+  /** Una riga per fascia diversa, con tutti i giorni che la usano. */
+  function confRighe(settimana, temp) {
+    const per = new Map();
+    settimana.forEach((fasce, k) => {
+      for (const [a, b] of fasce) {
+        const key = a + '-' + b;
+        per.set(key, { start: a, end: b, days: (per.has(key) ? per.get(key).days : 0) | (1 << k) });
+      }
+    });
+    return [...per.values()].map((x) => ({ ...x, temp }))
+      .sort((x, y) => ((x.days & -x.days) - (y.days & -y.days)) || (x.start - y.start));
   }
   function scheduleById(id) {
     return ((S.catalog && S.catalog.schedules) || []).find((s) => String(s.id) === String(id));
@@ -1705,13 +1793,11 @@
     return st + '…';
   }
   function aggiornaStatiConf() {
-    for (const [id, nodo] of Object.entries(S.confStati)) {
-      nodo.textContent = testoStatoConf(id);
-      const b = nodo.previousSibling;
-      if (b && b.tagName === 'BUTTON') {
-        const j = ultimoLavoro(id);
-        b.disabled = Boolean(j && !FINAL.has(j.stato));
-      }
+    for (const x of Object.values(S.confStati)) {
+      x.stato.textContent = testoStatoConf(x.id);
+      const j = ultimoLavoro(x.id);
+      x.inCorso = Boolean(j && !FINAL.has(j.stato));
+      x.aggiorna();
     }
   }
 
@@ -1727,11 +1813,12 @@
       $('cntConf').hidden = true;
       return;
     }
-    const giorni = c.giorni.map((g) => new Date(g + 'T12:00:00'));
-    $('confInfo').textContent = `Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
-      + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. Per ogni giorno: calendario e, a fianco, centralina. `
-      + 'Verde uguale · arancio corto · rosso manca · giallo piu\' lungo o acceso a calendario chiuso · grigio senza calendario.';
-    // commesse per il filtro
+    const dal = c.settimana_tipo_dal ? fmtShort(c.settimana_tipo_dal + ' 00:00').slice(0, 5) : '';
+    $('confInfo').textContent = `Settimana tipo: per ogni giorno l'orario piu' frequente del calendario`
+      + (dal ? ` dal ${dal} per ${c.settimane_tipo || 6} settimane` : '') + `. Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
+      + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. La colonna centralina si modifica: una fascia per riga`
+      + ` (07:30-13:30), vuoto o - = spento; poi Applica. Verde uguale · arancio corto · rosso manca · giallo piu' lungo`
+      + ` o acceso a calendario chiuso · grigio senza calendario.`;
     const sel = $('confCommessa');
     const prima = sel.value;
     const commesse = [...new Set(c.righe.map((r) => r.commessa))];
@@ -1746,48 +1833,32 @@
     const testo = $('confFiltro').value.trim().toLowerCase();
     const solo = $('confSoloDa').checked;
     const righe = c.righe.filter((r) => (!sel.value || r.commessa === sel.value)
-      && (!solo || CONF_DA_SISTEMARE.has(r.esito))
+      && (!solo || CONF_DA_SISTEMARE.has(r.esito) || S.confEdit[confChiave(r)])
       && (!testo || (r.impianto + ' ' + r.circuito + ' ' + r.codice).toLowerCase().includes(testo)));
 
+    const giorni = c.giorni || ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
     const thead = el('thead');
     const h1 = el('tr', {}, [el('th', { class: 'nome', text: 'Impianto / circuito' })]);
     const h2 = el('tr', { class: 'sub' }, [el('th', { class: 'nome', text: '' })]);
-    for (const d of giorni) {
-      h1.append(el('th', { colspan: '2', text: `${GG_BREVI[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}` }));
+    for (const g of giorni) {
+      h1.append(el('th', { colspan: '2', text: g }));
       h2.append(el('th', { text: 'calendario' }), el('th', { text: 'centralina' }));
     }
     thead.append(h1, h2);
     const tbody = el('tbody');
-    const nCol = 2 + 2 * giorni.length;
+    const nCol = 1 + 2 * giorni.length;
     let commessa = null, impianto = null;
     for (const r of righe) {
       if (r.commessa !== commessa) {
         commessa = r.commessa; impianto = null;
         tbody.append(el('tr', { class: 'comm' }, [el('td', { class: 'nome', text: commessa.replace(/\s+-\s+M\d+$/, '').toUpperCase() }),
-          el('td', { colspan: String(nCol - 2) })]));
+          el('td', { colspan: String(nCol - 1) })]));
       }
       if (r.impianto !== impianto) {
         impianto = r.impianto;
-        tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 2) })]));
+        tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 1) })]));
       }
-      // il pulsante sta sotto il nome, nella colonna che resta ferma quando si scorrono i giorni
-      const az = el('td', { class: 'nome circ azione' }, [el('div', { text: r.circuito })]);
-      const tr = el('tr', {}, [az]);
-      giorni.forEach((_, k) => {
-        tr.append(el('td', { class: 'cal', text: confFasce(r.cal[k]), style: r.cal[k] == null ? 'background:#4a4a4a' : '' }));
-        tr.append(el('td', { class: 'cen', text: r.note[k] || confFasce(r.prog[k]), style: 'background:' + r.colori[k] }));
-      });
-      if (r.proposta && r.schedule_id != null && scheduleById(r.schedule_id)) {
-        const b = el('button', { class: 'btn primary', text: 'Applica calendario', title: r.proposta_testo });
-        b.addEventListener('click', () => applicaCalendario(r, b));
-        const stato = el('span', { class: 'conf-stato' });
-        az.append(b, stato);
-        if (r.motivo) az.append(el('span', { class: 'conf-mot', text: r.motivo }));
-        S.confStati[r.schedule_id] = stato;
-      } else {
-        az.append(el('span', { class: 'conf-mot', text: r.motivo || '' }));
-      }
-      tbody.append(tr);
+      tbody.append(rigaConf(r, giorni));
     }
     tab.append(thead, tbody);
     $('confVuoto').hidden = righe.length > 0;
@@ -1795,29 +1866,108 @@
     aggiornaStatiConf();
   }
 
-  async function applicaCalendario(r, btn) {
-    const sch = scheduleById(r.schedule_id);
-    if (!sch || !r.proposta) return;
+  function rigaConf(r, giorni) {
+    const chiave = confChiave(r);
+    const originali = giorni.map((_, k) => confFasce(r.prog[k] || []));
+    const ed = S.confEdit[chiave] || { testi: originali.slice(), temp: r.temp == null ? '' : String(r.temp) };
+    const sch = r.schedule_id != null ? scheduleById(r.schedule_id) : null;
+    const nome = el('td', { class: 'nome circ azione' }, [el('div', { text: r.circuito })]);
+    const tr = el('tr', {}, [nome]);
+    const aree = [];
+    giorni.forEach((_, k) => {
+      tr.append(el('td', { class: 'cal', text: confFasce(r.cal[k]), style: r.cal[k] == null ? 'background:#4a4a4a' : '' }));
+      const td = el('td', { class: 'cen' });
+      const ta = el('textarea', { class: 'cen-in', rows: '1', spellcheck: 'false', 'aria-label': `${r.circuito} ${giorni[k]} centralina` });
+      ta.value = ed.testi[k];
+      td.append(ta);
+      tr.append(td);
+      aree.push({ ta, td });
+    });
+    const errore = el('span', { class: 'conf-err' });
+    const stato = el('span', { class: 'conf-stato' });
+    const tempIn = el('input', { class: 'conf-temp', type: 'text', inputmode: 'decimal', title: 'Temperatura delle righe (°C)', value: ed.temp });
+    const copia = el('button', { class: 'btn ghost', text: 'Copia calendario', title: 'Mette nelle caselle della centralina gli orari del calendario' });
+    const applica = el('button', { class: 'btn primary', text: 'Applica', title: 'Scrive in centralina gli orari delle caselle' });
+    const x = { id: r.schedule_id, stato, inCorso: false, aggiorna: null };
+
+    function leggiTutto() {
+      const settimana = [];
+      let err = '';
+      aree.forEach(({ ta }, k) => {
+        const p = confLeggi(ta.value);
+        ta.classList.toggle('err', Boolean(p.err));
+        if (p.err && !err) err = `${giorni[k]}: ${p.err}`;
+        settimana.push(p.fasce || []);
+      });
+      return { settimana, err };
+    }
+    function aggiorna() {
+      const { settimana, err } = leggiTutto();
+      aree.forEach(({ ta, td }, k) => {
+        td.style.background = confColore(r, k, ta.classList.contains('err') ? [] : settimana[k]);
+        ta.rows = Math.max(1, ta.value.split('\n').length);
+      });
+      const cambiato = aree.some(({ ta }, k) => ta.value.trim() !== originali[k].trim())
+        || tempIn.value.trim() !== (r.temp == null ? '' : String(r.temp));
+      if (cambiato) S.confEdit[chiave] = { testi: aree.map(({ ta }) => ta.value), temp: tempIn.value };
+      else delete S.confEdit[chiave];
+      let msg = err;
+      const temp = parseTemp(tempIn.value);
+      if (!msg && cambiato && (temp == null || Number.isNaN(temp) || temp < T_MIN || temp > T_MAX)) msg = 'Temperatura mancante o non valida.';
+      const nRighe = confRighe(settimana, temp).length;
+      if (!msg && sch && nRighe > rowsOf(sch)) msg = `Servono ${nRighe} righe, il programma ne ha ${rowsOf(sch)}.`;
+      errore.textContent = msg;
+      applica.disabled = !sch || !cambiato || Boolean(msg) || x.inCorso;
+      copia.disabled = !r.cal || !r.cal.some((f) => f && f.length);
+    }
+    x.aggiorna = aggiorna;
+    aree.forEach(({ ta }) => ta.addEventListener('input', aggiorna));
+    tempIn.addEventListener('input', aggiorna);
+    copia.addEventListener('click', () => {
+      aree.forEach(({ ta }, k) => { ta.value = confFasce(r.cal[k] || []); });
+      if (!tempIn.value && r.temp != null) tempIn.value = String(r.temp);
+      aggiorna();
+    });
+    applica.addEventListener('click', () => applicaConf(r, sch, leggiTutto, tempIn, applica, aggiorna));
+
+    if (sch) {
+      nome.append(el('div', { class: 'conf-az' }, [copia, applica, el('label', { class: 'conf-tl' }, [tempIn, ' °C'])]), errore, stato);
+      if (r.motivo && r.motivo.startsWith('attenzione')) nome.append(el('span', { class: 'conf-mot', text: r.motivo }));
+      S.confStati[chiave] = x;
+    } else {
+      aree.forEach(({ ta }) => { ta.readOnly = true; });
+      nome.append(el('span', { class: 'conf-mot', text: r.motivo || 'programma non in anagrafica: la pagina non lo puo\' scrivere' }));
+    }
+    aggiorna();
+    return tr;
+  }
+
+  async function applicaConf(r, sch, leggiTutto, tempIn, btn, aggiorna) {
+    const { settimana, err } = leggiTutto();
+    const temp = parseTemp(tempIn.value);
+    if (err || temp == null || Number.isNaN(temp)) return;
+    const righe = confRighe(settimana, temp);
     const n = rowsOf(sch);
-    const elenco = r.proposta_testo.split('; ').join('\n');
-    const ok = window.confirm(`${r.impianto} · ${r.circuito}\n\nScrivo in centralina gli orari del calendario:\n${elenco}`
-      + (r.motivo ? `\n\n${r.motivo}` : '') + `\n\nLe altre righe del programma (fino alla ${n}a) vengono disattivate.`);
+    if (righe.length > n) return;
+    const elenco = righe.length
+      ? righe.map((x) => `${maskText(x.days)} ${toHHMM(x.start)}-${x.end >= 1439 ? '24:00' : toHHMM(x.end)} ${String(temp).replace('.', ',')} °C`).join('\n')
+      : '(nessuna riga: il programma resta spento tutta la settimana)';
+    const ok = window.confirm(`${r.impianto} · ${r.circuito}\n\nScrivo in centralina:\n${elenco}\n\nLe altre righe del programma (fino alla ${n}a) vengono disattivate.`);
     if (!ok) return;
     const modifiche = [];
     for (let i = 0; i < n; i++) {
-      const p = r.proposta[i];
-      modifiche.push(p ? { row: i, action: 'modify', days: p.days, start: p.start, end: p.end, temp: p.temp }
-        : { row: i, action: 'disable' });
+      const p = righe[i];
+      modifiche.push(p ? { row: i, action: 'modify', days: p.days, start: p.start, end: p.end, temp: p.temp } : { row: i, action: 'disable' });
     }
     btn.disabled = true;
     $('confErr').hidden = true;
     try {
       await api('/jobs', { method: 'POST', body: { tipo: 'modifica', schedule_id: sch.id, modifiche } });
       await loadHistory();
-    } catch (err) {
-      const m = handleErr(err, 'applica calendario');
+    } catch (e) {
+      const m = handleErr(e, 'applica');
       if (m) { $('confErr').hidden = false; $('confErr').textContent = `${r.impianto} · ${r.circuito}: ${m}`; }
-      btn.disabled = false;
+      aggiorna();
     }
   }
 
