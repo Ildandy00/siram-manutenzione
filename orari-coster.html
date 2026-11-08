@@ -300,19 +300,39 @@
   .conf-leg i { display: inline-block; width: 16px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,.25); flex: none; }
   .conf-leg i.st { border-width: 2px; border-style: solid; background: transparent; }
   .conf-leg .tit { color: var(--text); font-weight: 600; }
-  table.conf th.ott, table.conf td.ott { text-align: left; white-space: normal; min-width: 210px; max-width: 250px;
+  table.conf th.ott, table.conf td.ott { text-align: left; white-space: normal; min-width: 268px; max-width: 300px;
     font-family: 'Outfit', sans-serif; font-size: 11px; }
-  .ott-t { display: flex; align-items: center; gap: 5px; font-weight: 600; }
+  .ott-t { display: flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
   .ott-st { display: inline-block; padding: 1px 7px; border-radius: 9px; font: 700 10px 'Outfit', sans-serif; letter-spacing: .4px; color: #fff; }
   .ott-st.on { background: #2f9e44; }
   .ott-st.off { background: #6b6b6b; }
   .ott-st.nd { background: #8a6d3b; }
   .ott-dub { color: #ffd479; font-weight: 700; cursor: help; }
   .ott-p { display: grid; grid-template-columns: auto auto auto auto; gap: 0 6px; margin-top: 3px; font-family: 'DM Mono', monospace; font-size: 11px; }
-  .ott-p .ott-l { color: var(--muted); font-family: 'Outfit', sans-serif; }
+  .ott-p .ott-l { color: var(--muted); font-family: 'Outfit', sans-serif; white-space: nowrap; }
   .ott-p b { color: #ffd479; font-weight: 600; }
   .ott-z { display: block; color: var(--muted); margin-top: 2px; }
-  .ott-alt { display: inline-flex; align-items: center; gap: 4px; margin: 1px 8px 1px 0; font-weight: 400; }
+  .ott-box { padding: 2px 0 4px 4px; border-left: 3px solid transparent; }
+  .ott-box + .ott-box { margin-top: 6px; border-top: 1px dashed var(--border); padding-top: 6px; }
+  .ott-box.job-coda { border-left: 3px dashed #5b7fb5; }
+  .ott-box.job-corso { border-left-color: #2b6cb0; }
+  .ott-box.job-ok { border-left-color: #2f9e44; }
+  .ott-box.job-err { border-left-color: #c92a2a; }
+  .ott-v { display: inline-flex; align-items: center; gap: 2px; }
+  .ott-u { color: var(--muted); font-size: 10px; }
+  input.ott-in { width: 38px; padding: 1px 3px; font: 11px 'DM Mono', monospace; background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px; text-align: right; min-height: 0; }
+  select.ott-in { padding: 0 2px; font: 11px 'DM Mono', monospace; background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 3px; min-height: 0; height: 19px; }
+  select.ott-sel { font: 700 10px 'Outfit', sans-serif; letter-spacing: .4px; color: #fff; border-radius: 9px; height: 19px; width: auto; }
+  select.ott-in:not(.ott-sel) { width: auto; }
+  select.ott-sel.on { background: #2f9e44; border-color: #2f9e44; }
+  select.ott-sel.off { background: #6b6b6b; border-color: #6b6b6b; }
+  .ott-in.diverso { color: #ffd479; }
+  .ott-in.mod { outline: 2px solid #ffd479; outline-offset: 0; }
+  .ott-in.err { outline: 2px solid #c00; }
+  .ott-in:disabled { opacity: .7; }
+  .ott-btn { padding: 2px 8px !important; font-size: 11px !important; min-height: 0 !important; }
 
   /* Spegnimento */
   .speg-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
@@ -1287,7 +1307,8 @@
     card.hidden = false;
 
     const e = job.etichetta || {};
-    $('jobTitle').textContent = (job.tipo === 'lettura' ? 'Lettura programma' : 'Modifica programma') + ' · ' + (STATE_LABEL[job.stato] || job.stato);
+    $('jobTitle').textContent = ({ lettura: 'Lettura programma', ottimizzatore: 'Parametri ottimizzatore' }[job.tipo] || 'Modifica programma')
+      + ' · ' + (STATE_LABEL[job.stato] || job.stato);
     $('jobSub').textContent = [e.impianto, e.schedule].filter(Boolean).join(' · ');
     const endTs = job.concluso || Date.now();
     $('jobTime').textContent = `Avviata ${fmtTime(job.creato)} · ${fmtElapsed(endTs - job.creato)}`;
@@ -1408,7 +1429,7 @@
       const esiti = [];
       for (const j of lavori) {
         const prima = S.histStates[j.id];
-        if (j.tipo === 'modifica' && prima && !FINAL.has(prima) && FINAL.has(j.stato)) esiti.push(j);
+        if (['modifica', 'ottimizzatore'].includes(j.tipo) && prima && !FINAL.has(prima) && FINAL.has(j.stato)) esiti.push(j);
         S.histStates[j.id] = j.stato;
       }
       if (esiti.length) {
@@ -1434,7 +1455,7 @@
           },
         }, [
           el('span', { class: 'when', text: fmtTime(j.creato) }),
-          el('span', { class: 'what', text: `${j.tipo === 'lettura' ? 'Lettura' : 'Modifica'} · ${e.impianto || ''} · ${e.schedule || ''}` }),
+          el('span', { class: 'what', text: `${{ lettura: 'Lettura', ottimizzatore: 'Ottimizzatore' }[j.tipo] || 'Modifica'} · ${e.impianto || ''} · ${e.schedule || ''}` }),
           el('span', { class: 'badge ' + badgeClass(j.stato), text: STATE_LABEL[j.stato] || j.stato }),
         ]));
       }
@@ -1840,23 +1861,180 @@
   }
   function confColore(r, k, fasce) { return CONF_COLORE[confStato(r, k, fasce)[0]] || '#F2F2F2'; }
 
-  // ---- Ottimizzatori (08/11/2026 sera): solo le centraline che li hanno (YLC880), sola lettura
+  // ---- Ottimizzatori (08/11/2026 sera): solo le centraline che li hanno (YLC880).
+  // Parametri modificabili come il pannello "Parametri ottimizzatore invernale" di Coster; "Applica" manda un lavoro
+  // "ottimizzatore" (stessa coda degli orari): l'agente rilegge, scrive solo i cambiati (abilitazione per ultima), verifica.
   const OTT_CAMPI = [
     ['FORZATURA', 'Forz.', 'Forzatura', ' °C', 1], ['DELTA_T_OFF', 'ΔT off', 'Delta T OFF', ' °C', 1],
     ['MASSIMO_PRESPEGNIMENTO', 'Presp.', 'Massimo prespegnimento', ' h', 0], ['K_RAFFREDDAMENTO', 'K raffr.', 'Costante di raffreddamento', ' h', 0],
     ['MASSIMO_ANTICIPO_BREVE', 'Ant. br.', 'Massimo anticipo breve', ' h', 0], ['MASSIMO_ANTICIPO_LUNGO', 'Ant. lu.', 'Massimo anticipo lungo', ' h', 0],
     ['INERZIA_ACCENSIONE', 'Inerzia', 'Inerzia accensione manuale (min/°C)', '', 0], ['IA_AUTOMATICA', 'Auto', 'Inerzia accensione automatica', '', -1]];
+  // stessi limiti di server e agente: [min, max, decimali]
+  const OTT_LIMITI = {
+    ABILITAZIONE: [0, 1, 0], FORZATURA: [0, 10, 1], DELTA_T_OFF: [0, 10, 1], MASSIMO_PRESPEGNIMENTO: [0, 24, 0],
+    MASSIMO_ANTICIPO_BREVE: [0, 24, 0], MASSIMO_ANTICIPO_LUNGO: [0, 48, 0], K_RAFFREDDAMENTO: [1, 500, 0],
+    INERZIA_ACCENSIONE: [0, 999, 0], IA_AUTOMATICA: [0, 1, 0] };
+  const OTT_NOMI = { ABILITAZIONE: 'Abilitazione', ...Object.fromEntries(OTT_CAMPI.map(([k, , lungo]) => [k, lungo])) };
+  S.ottEdit = {};     // chiave ottimizzatore -> { CAMPO: testo } (restano se si cambia filtro o arriva un catalogo)
+  S.ottStati = {};    // chiave ottimizzatore -> { aggiorna } per lo stato del lavoro
+
   function ottValore(v, dec) {
-    if (v == null) return '–';
+    if (v == null) return '';
     if (dec < 0) return v ? 'ON' : 'OFF';
     return (dec ? Number(v).toFixed(dec) : String(v)).replace('.', ',');
+  }
+  function ottTesto(k, v) {
+    const c = OTT_CAMPI.find((x) => x[0] === k);
+    if (k === 'ABILITAZIONE') return Number(v) ? 'attivo' : 'spento';
+    return ottValore(v, c[4]) + (c[4] >= 0 && v != null ? c[3] : '');
   }
   function ottStato(o) {
     if (o.attivo == null) return el('span', { class: 'ott-st nd', text: 'NON LETTO' });
     return el('span', { class: 'ott-st ' + (o.attivo ? 'on' : 'off'), text: o.attivo ? 'ATTIVO' : 'SPENTO' });
   }
   function ottLetto(o) { return o.letto ? `letto il ${o.letto.slice(8, 10)}/${o.letto.slice(5, 7)} alle ${o.letto.slice(11, 16)}` : ''; }
-  function cellaOtt(o) {
+  function ottChiave(o, impianto) { return `${impianto}|${o.schedule_id}|${o.indice}`; }
+  /** "1,5" -> {v: 1.5} o {err} secondo i limiti del parametro. */
+  function ottLeggi(k, testo) {
+    const [lo, hi, dec] = OTT_LIMITI[k];
+    const t = String(testo).trim().replace(',', '.');
+    if (t === '') return { err: `${OTT_NOMI[k]}: manca il valore` };
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < lo || n > hi) return { err: `${OTT_NOMI[k]}: da ${lo} a ${hi}` };
+    if (!dec && !Number.isInteger(n)) return { err: `${OTT_NOMI[k]}: numero intero` };
+    return { v: dec ? Math.round(n * 10) / 10 : n };
+  }
+  function ultimoLavoroOtt(o) {
+    return S.lavori.find((j) => j.tipo === 'ottimizzatore' && String(j.schedule_id) === String(o.schedule_id)
+      && String((j.etichetta || {}).schedule || '').endsWith('ottimizzatore ' + o.indice));
+  }
+
+  /** Blocco di un ottimizzatore: stato e parametri modificabili, Applica, stato del lavoro. */
+  function bloccoOtt(o, impianto, circuito) {
+    const box = el('div', { class: 'ott-box' });
+    const chiave = ottChiave(o, impianto);
+    const serie = (S.catalog && S.catalog.confronto && S.catalog.confronto.ott_di_serie) || {};
+    const val = o.valori || {};
+    const originali = { ABILITAZIONE: val.ABILITAZIONE == null ? '' : String(val.ABILITAZIONE) };
+    for (const [k, , , , dec] of OTT_CAMPI) originali[k] = dec < 0 ? (val[k] == null ? '' : String(val[k])) : ottValore(val[k], dec);
+    const ed = S.ottEdit[chiave] || { ...originali };
+    const scrivibile = o.schedule_id != null && o.attivo != null;
+    const campi = {};
+
+    const sel = (k, opz) => {
+      const s = el('select', { class: k === 'ABILITAZIONE' ? 'ott-in ott-sel' : 'ott-in', 'aria-label': `${circuito} ${OTT_NOMI[k]}`, title: OTT_NOMI[k] },
+        opz.map(([v, t]) => el('option', { value: v, text: t })));
+      s.value = ed[k];
+      return s;
+    };
+    campi.ABILITAZIONE = sel('ABILITAZIONE', [['0', 'SPENTO'], ['1', 'ATTIVO']]);
+    const testa = el('div', { class: 'ott-t' }, [campi.ABILITAZIONE, el('span', { text: `Ottimizzatore ${o.indice}` })]);
+    if (!o.sicuro && o.metodo) testa.append(el('span', { class: 'ott-dub', text: '?', title: `Abbinato per ${o.metodo}: da verificare nel sinottico` }));
+    box.append(testa);
+    const g = el('div', { class: 'ott-p' });
+    for (const [k, corto, lungo, u, dec] of OTT_CAMPI) {
+      campi[k] = dec < 0 ? sel(k, [['0', 'OFF'], ['1', 'ON']])
+        : el('input', { class: 'ott-in', type: 'text', inputmode: 'decimal', value: ed[k], 'aria-label': `${circuito} ${lungo}`,
+          title: lungo + (serie[k] != null ? ` (di serie ${ottValore(serie[k], dec)}${u})` : '') });
+      g.append(el('span', { class: 'ott-l', text: corto, title: lungo }), el('span', { class: 'ott-v' }, [campi[k], u ? el('span', { class: 'ott-u', text: u.trim() }) : null]));
+    }
+    box.append(g);
+    const z = [o.tap != null ? `sonda ${String(o.tap).replace('.', ',')} °C` : '', o.zona,
+      o.letto ? `letto ${o.letto.slice(8, 10)}/${o.letto.slice(5, 7)}` : ''].filter(Boolean).join(' · ');
+    if (z) box.append(el('span', { class: 'ott-z', text: z, title: "La sonda ambiente che l'ottimizzatore legge, la zona a cui corrisponde e il giorno della lettura" }));
+    const applica = el('button', { class: 'btn primary ott-btn', text: 'Applica', title: 'Scrive in centralina i parametri cambiati' });
+    const ripristina = el('button', { class: 'btn ghost ott-btn', text: 'Annulla', title: 'Rimette i valori letti dalla centralina' });
+    const errore = el('span', { class: 'conf-err' });
+    const badge = el('span', { class: 'conf-badge' });
+    const statoTxt = el('span', { class: 'conf-stato' });
+    if (scrivibile) box.append(el('div', { class: 'conf-az' }, [applica, ripristina]), errore, badge, statoTxt);
+    else {
+      Object.values(campi).forEach((c) => { c.disabled = true; });
+      box.append(el('span', { class: 'ott-z', text: o.attivo == null ? 'Parametri non letti: non si possono cambiare da qui.'
+        : 'Centralina senza programmi in anagrafica: non si puo\' scrivere da qui.' }));
+    }
+    const x = { inCorso: false, aggiorna: null };
+
+    function cambiati() {
+      const out = {};
+      let err = '';
+      for (const k of Object.keys(OTT_LIMITI)) {
+        const c = campi[k];
+        if (c.value === originali[k]) { c.classList.remove('mod', 'err'); continue; }
+        const p = ottLeggi(k, c.value);
+        c.classList.toggle('err', Boolean(p.err));
+        c.classList.toggle('mod', !p.err);
+        if (p.err) { if (!err) err = p.err; continue; }
+        const prima = k === 'ABILITAZIONE' || k === 'IA_AUTOMATICA' ? Number(originali[k]) : ottLeggi(k, originali[k]).v;
+        if (p.v !== prima) out[k] = p.v; else c.classList.remove('mod');
+      }
+      return { valori: out, err };
+    }
+    function aggiorna() {
+      const { valori, err } = cambiati();
+      for (const [k, , , , dec] of OTT_CAMPI) {
+        const p = dec < 0 ? { v: Number(campi[k].value) } : ottLeggi(k, campi[k].value);
+        campi[k].classList.toggle('diverso', p.v != null && serie[k] != null && Number(p.v) !== Number(serie[k]));
+      }
+      campi.ABILITAZIONE.className = 'ott-in ott-sel ' + (campi.ABILITAZIONE.value === '1' ? 'on' : 'off')
+        + (campi.ABILITAZIONE.value !== originali.ABILITAZIONE ? ' mod' : '');
+      const cambiato = Object.keys(OTT_LIMITI).some((k) => campi[k].value !== originali[k]);
+      if (cambiato) S.ottEdit[chiave] = Object.fromEntries(Object.keys(OTT_LIMITI).map((k) => [k, campi[k].value]));
+      else delete S.ottEdit[chiave];
+      errore.textContent = err;
+      applica.disabled = !scrivibile || Boolean(err) || !Object.keys(valori).length || x.inCorso;
+      ripristina.hidden = !cambiato;
+      const j = scrivibile ? ultimoLavoroOtt(o) : null;
+      x.inCorso = Boolean(j && !FINAL.has(j.stato));
+      const [cl, testo] = classeLavoro(j);
+      badge.className = 'conf-badge' + (cl ? ' ' + cl : '');
+      badge.textContent = testo;
+      box.classList.toggle('job-coda', cl === 'coda');
+      box.classList.toggle('job-corso', cl === 'corso');
+      box.classList.toggle('job-ok', cl === 'ok');
+      box.classList.toggle('job-err', cl === 'err');
+      statoTxt.textContent = !cl ? '' : (j.stato === 'completato' ? 'Scritto e verificato: i valori nuovi compaiono dopo la rilettura (circa 15 minuti)'
+        : ['errore', 'scaduto'].includes(j.stato) ? (j.messaggio || 'NON SCRITTO').split('\n')[0] : (STATE_LABEL[j.stato] || j.stato) + '…');
+      if (x.inCorso) applica.disabled = true;
+    }
+    x.aggiorna = aggiorna;
+    Object.values(campi).forEach((c) => c.addEventListener(c.tagName === 'SELECT' ? 'change' : 'input', aggiorna));
+    ripristina.addEventListener('click', () => {
+      for (const k of Object.keys(OTT_LIMITI)) campi[k].value = originali[k];
+      aggiorna();
+    });
+    applica.addEventListener('click', async () => {
+      const { valori, err } = cambiati();
+      if (err || !Object.keys(valori).length) return;
+      const elenco = OTT_ORDINE_PAG.filter((k) => k in valori)
+        .map((k) => `${OTT_NOMI[k]}: ${ottTesto(k, k === 'ABILITAZIONE' || k === 'IA_AUTOMATICA' ? Number(originali[k]) : ottLeggi(k, originali[k]).v)} → ${ottTesto(k, valori[k])}`)
+        .join('\n');
+      const ok = window.confirm(`${impianto} · ${circuito}\nOttimizzatore ${o.indice}\n\nScrivo in centralina:\n${elenco}`
+        + (o.sicuro || !o.metodo ? '' : `\n\nAttenzione: l'ottimizzatore e' abbinato a questo circuito per ${o.metodo}, non dal nome. Controlla nel sinottico che sia quello giusto.`));
+      if (!ok) return;
+      applica.disabled = true;
+      $('confErr').hidden = true;
+      try {
+        await api('/jobs', { method: 'POST', body: { tipo: 'ottimizzatore', schedule_id: o.schedule_id, ottimizzatore: { indice: o.indice, valori } } });
+        await loadHistory();
+      } catch (e) {
+        const m = handleErr(e, 'applica');
+        if (m) { $('confErr').hidden = false; $('confErr').textContent = `${impianto} · ${circuito} · ottimizzatore ${o.indice}: ${m}`; }
+        aggiorna();
+      }
+    });
+    if (scrivibile) S.ottStati[chiave] = x;
+    aggiorna();
+    box.title = `Ottimizzatore ${o.indice}, ${ottLetto(o)}. `
+      + (o.sicuro ? 'Abbinato dal nome della zona della sua sonda.' : o.metodo ? `Abbinato per ${o.metodo}: da verificare nel sinottico.` : '')
+      + ' In giallo i valori diversi da quelli di serie del sinottico.';
+    return box;
+  }
+  // stesso ordine dell'agente: l'abilitazione per ultima
+  const OTT_ORDINE_PAG = ['FORZATURA', 'DELTA_T_OFF', 'MASSIMO_PRESPEGNIMENTO', 'MASSIMO_ANTICIPO_BREVE', 'MASSIMO_ANTICIPO_LUNGO',
+    'K_RAFFREDDAMENTO', 'INERZIA_ACCENSIONE', 'IA_AUTOMATICA', 'ABILITAZIONE'];
+
+  function cellaOtt(o, r) {
     const td = el('td', { class: 'ott' });
     if (o == null) return td;
     if (o.nessuno) {
@@ -1864,36 +2042,19 @@
       td.title = `La centralina ha degli ottimizzatori, ma nessuno risulta di questo programma (${ottLetto(o)}).`;
       return td;
     }
-    const serie = (S.catalog && S.catalog.confronto && S.catalog.confronto.ott_di_serie) || {};
-    const testa = el('div', { class: 'ott-t' }, [ottStato(o), el('span', { text: `Ottimizzatore ${o.indice}` })]);
-    if (!o.sicuro) testa.append(el('span', { class: 'ott-dub', text: '?', title: `Abbinato per ${o.metodo}: da verificare nel sinottico` }));
-    td.append(testa);
-    const g = el('div', { class: 'ott-p' });
-    for (const [k, corto, lungo, u, dec] of OTT_CAMPI) {
-      const v = o.valori ? o.valori[k] : null;
-      const cambiato = v != null && serie[k] != null && Number(v) !== Number(serie[k]);
-      g.append(el('span', { class: 'ott-l', text: corto, title: lungo }),
-        el(cambiato ? 'b' : 'span', { text: ottValore(v, dec) + (v != null && dec >= 0 ? u : ''),
-          title: lungo + (cambiato ? ` (di serie ${ottValore(serie[k], dec)}${dec >= 0 ? u : ''})` : '') }));
-    }
-    td.append(g);
-    const z = [o.tap != null ? `sonda ${String(o.tap).replace('.', ',')} °C` : '', o.zona,
-      o.letto ? `letto ${o.letto.slice(8, 10)}/${o.letto.slice(5, 7)}` : ''].filter(Boolean).join(' · ');
-    if (z) td.append(el('span', { class: 'ott-z', text: z, title: "La sonda ambiente che l'ottimizzatore legge, la zona a cui corrisponde e il giorno della lettura" }));
-    td.title = `Ottimizzatore ${o.indice}, ${ottLetto(o)}. `
-      + (o.sicuro ? 'Abbinato dal nome della zona della sua sonda.' : `Abbinato per ${o.metodo}: da verificare nel sinottico.`)
-      + ' In giallo i valori diversi da quelli di serie del sinottico.';
+    td.append(bloccoOtt(o, r.impianto, r.circuito));
     return td;
   }
-  function cellaOttAltri(lista) {
+  function cellaOttAltri(lista, impianto) {
     const td = el('td', { class: 'ott' });
     if (!lista || !lista.length) return td;
     td.append(el('span', { class: 'ott-z', text: 'Ottimizzatori senza circuito:' }));
-    for (const o of lista) {
-      td.append(el('span', { class: 'ott-alt', title: `${ottLetto(o)}${o.tap != null ? ', sonda ' + String(o.tap).replace('.', ',') + ' °C' : ''}` },
-        [ottStato(o), `${o.indice}${o.zona ? ' · ' + o.zona : ''}`]));
-    }
+    for (const o of lista) td.append(bloccoOtt(o, impianto, o.zona || `ottimizzatore ${o.indice}`));
     return td;
+  }
+  function ottHaModifiche(r, altri) {
+    if (r.ott && !r.ott.nessuno && S.ottEdit[ottChiave(r.ott, r.impianto)]) return true;
+    return (altri || []).some((o) => S.ottEdit[ottChiave(o, r.impianto)]);
   }
   /** Una riga per fascia diversa, con tutti i giorni che la usano. */
   function confRighe(settimana, temp) {
@@ -1951,6 +2112,7 @@
       if (!cl) x.stato.textContent = '';
       x.aggiorna();
     }
+    for (const x of Object.values(S.ottStati || {})) x.aggiorna();
   }
 
   function renderConf() {
@@ -1958,6 +2120,7 @@
     const tab = $('confTab');
     tab.innerHTML = '';
     S.confStati = {};
+    S.ottStati = {};
     if (!c || !Array.isArray(c.righe)) {
       $('confInfo').textContent = '';
       $('confVuoto').hidden = false;
@@ -1973,7 +2136,8 @@
       + `. Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
       + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. La colonna centralina si modifica: una fascia per riga`
       + ` (07:30-13:30), vuoto o - = spento; poi Applica.`
-      + (c.righe.some((r) => r.ott) ? ` A destra lo stato degli ottimizzatori delle centraline YLC880.` : '');
+      + (c.righe.some((r) => r.ott) ? ` A destra gli ottimizzatori delle centraline YLC880: si cambiano i valori e Applica`
+        + ` (in giallo i valori diversi da quelli di serie, il bordo giallo segna quelli cambiati e non ancora scritti).` : '');
     const sel = $('confCommessa');
     const prima = sel.value;
     const commesse = [...new Set(c.righe.map((r) => r.commessa))];
@@ -1988,7 +2152,7 @@
     const testo = $('confFiltro').value.trim().toLowerCase();
     const solo = $('confSoloDa').checked;
     const righe = c.righe.filter((r) => (!sel.value || r.commessa === sel.value)
-      && (!solo || CONF_DA_SISTEMARE.has(r.esito) || S.confEdit[confChiave(r)])
+      && (!solo || CONF_DA_SISTEMARE.has(r.esito) || S.confEdit[confChiave(r)] || ottHaModifiche(r, (c.ott_non_abbinati || {})[r.impianto]))
       && (!testo || (r.impianto + ' ' + r.circuito + ' ' + r.codice).toLowerCase().includes(testo)));
 
     const giorni = c.giorni || ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -2015,7 +2179,7 @@
       if (r.impianto !== impianto) {
         impianto = r.impianto;
         tbody.append(el('tr', { class: 'imp' }, [el('td', { class: 'nome', text: impianto }), el('td', { colspan: String(nCol - 2) }),
-          cellaOttAltri(altri[impianto])]));
+          cellaOttAltri(altri[impianto], impianto)]));
       }
       tbody.append(rigaConf(r, giorni));
     }
@@ -2092,7 +2256,7 @@
       aggiorna();
     });
     applica.addEventListener('click', () => applicaConf(r, sch, leggiTutto, tempIn, applica, aggiorna));
-    tr.append(cellaOtt(r.ott));
+    tr.append(cellaOtt(r.ott, r));
 
     if (sch) {
       nome.append(badge, el('div', { class: 'conf-az' }, [copia, applica, el('label', { class: 'conf-tl' }, [tempIn, ' °C'])]), errore, stato);
