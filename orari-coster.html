@@ -275,6 +275,23 @@
   input.conf-temp { width: 42px; height: 22px; min-height: 0; padding: 1px 4px; font: 12px 'DM Mono', monospace; background: var(--bg3);
     color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
   .conf-err { display: block; font-size: 11px; color: #f0a0a0; margin-top: 2px; }
+  /* 08/11/2026: stato del lavoro sulla riga (in coda, in scrittura, scritto, non scritto) */
+  .conf-badge { display: none; margin-top: 4px; padding: 1px 7px; border-radius: 9px; font: 700 10px 'Outfit', sans-serif;
+    letter-spacing: .4px; color: #fff; width: fit-content; }
+  .conf-badge.coda, .conf-badge.corso, .conf-badge.ok, .conf-badge.err { display: inline-block; }
+  .conf-badge.coda { background: #5b7fb5; }
+  .conf-badge.corso { background: #2b6cb0; animation: conf-lampo 1s ease-in-out infinite; }
+  .conf-badge.ok { background: #2f9e44; }
+  .conf-badge.err { background: #c92a2a; }
+  table.conf td.nome.job-coda { box-shadow: inset 4px 0 0 #5b7fb5; }
+  table.conf td.nome.job-corso { box-shadow: inset 4px 0 0 #2b6cb0; }
+  table.conf td.nome.job-ok { box-shadow: inset 4px 0 0 #2f9e44; }
+  table.conf td.nome.job-err { box-shadow: inset 4px 0 0 #c92a2a; }
+  textarea.cen-in.job-coda { outline: 2px dashed #5b7fb5; }
+  textarea.cen-in.job-corso { outline: 2px solid #2b6cb0; animation: conf-lampo 1s ease-in-out infinite; }
+  textarea.cen-in.job-ok { outline: 2px solid #2f9e44; }
+  textarea.cen-in.job-err { outline: 2px solid #c92a2a; }
+  @keyframes conf-lampo { 50% { opacity: .45; } }
   .conf-stato { display: block; font-size: 11px; margin-top: 3px; color: var(--muted); }
   .conf-mot { display: block; font-size: 11px; color: var(--muted); }
 
@@ -1792,11 +1809,33 @@
     if (['errore', 'scaduto'].includes(j.stato)) return 'NON SCRITTO (' + st + '): dettagli in Ultime richieste';
     return st + '…';
   }
+  /** Stato da mostrare sulla riga: coda / corso / ok / err, oppure '' se non c'e' un lavoro o se il confronto e' gia'
+   *  stato rifatto dopo che il lavoro e' finito (allora parlano i colori del confronto). */
+  function classeLavoro(j) {
+    if (!j) return ['', ''];
+    if (j.stato === 'in_coda' || j.stato === 'preso') return ['coda', 'IN CODA'];
+    if (!FINAL.has(j.stato)) return ['corso', 'IN SCRITTURA'];
+    const c = S.catalog && S.catalog.confronto;
+    const quando = c && c.aggiornato ? new Date(c.aggiornato.replace(' ', 'T') + ':00').getTime() : 0;
+    if ((j.concluso || j.aggiornato || 0) < quando) return ['', ''];
+    if (j.stato === 'completato') return ['ok', 'SCRITTO ' + fmtTime(j.concluso || j.aggiornato).split(' ').pop()];
+    if (j.stato === 'nessuna_modifica') return ['ok', 'GIA\' COSI\''];
+    if (j.stato === 'annullato') return ['err', 'ANNULLATO'];
+    return ['err', 'NON SCRITTO'];
+  }
   function aggiornaStatiConf() {
     for (const x of Object.values(S.confStati)) {
       x.stato.textContent = testoStatoConf(x.id);
       const j = ultimoLavoro(x.id);
       x.inCorso = Boolean(j && !FINAL.has(j.stato));
+      const [cl, testo] = classeLavoro(j);
+      x.badge.className = 'conf-badge' + (cl ? ' ' + cl : '');
+      x.badge.textContent = testo;
+      for (const k of ['coda', 'corso', 'ok', 'err']) {
+        x.nome.classList.toggle('job-' + k, cl === k);
+        for (const { ta } of x.aree) ta.classList.toggle('job-' + k, cl === k);
+      }
+      if (!cl) x.stato.textContent = '';
       x.aggiorna();
     }
   }
@@ -1814,8 +1853,11 @@
       return;
     }
     const dal = c.settimana_tipo_dal ? fmtShort(c.settimana_tipo_dal + ' 00:00').slice(0, 5) : '';
-    $('confInfo').textContent = `Settimana tipo: per ogni giorno l'orario piu' frequente del calendario`
-      + (dal ? ` dal ${dal} per ${c.settimane_tipo || 6} settimane` : '') + `. Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
+    const al = c.settimana_tipo_dal ? fmtShort(new Date(new Date(c.settimana_tipo_dal + 'T12:00:00').getTime() + 6 * 864e5)
+      .toISOString().slice(0, 10)).slice(0, 5) : '';
+    $('confInfo').textContent = (c.settimane_tipo === 1 && dal ? `Settimana d'esempio dal ${dal} al ${al}: calendario di quei giorni`
+      : `Settimana tipo: per ogni giorno l'orario piu' frequente del calendario` + (dal ? ` dal ${dal} per ${c.settimane_tipo || 6} settimane` : ''))
+      + `. Centraline lette il ${c.censimento.slice(6, 8)}/${c.censimento.slice(4, 6)}`
       + ` (${c.lette}), confronto del ${fmtShort(c.aggiornato)}. La colonna centralina si modifica: una fascia per riga`
       + ` (07:30-13:30), vuoto o - = spento; poi Applica. Verde uguale · arancio corto · rosso manca · giallo piu' lungo`
       + ` o acceso a calendario chiuso · grigio senza calendario.`;
@@ -1888,7 +1930,8 @@
     const tempIn = el('input', { class: 'conf-temp', type: 'text', inputmode: 'decimal', title: 'Temperatura delle righe (°C)', value: ed.temp });
     const copia = el('button', { class: 'btn ghost', text: 'Copia calendario', title: 'Mette nelle caselle della centralina gli orari del calendario' });
     const applica = el('button', { class: 'btn primary', text: 'Applica', title: 'Scrive in centralina gli orari delle caselle' });
-    const x = { id: r.schedule_id, stato, inCorso: false, aggiorna: null };
+    const badge = el('span', { class: 'conf-badge' });
+    const x = { id: r.schedule_id, stato, inCorso: false, aggiorna: null, aree, nome, badge };
 
     function leggiTutto() {
       const settimana = [];
@@ -1931,7 +1974,7 @@
     applica.addEventListener('click', () => applicaConf(r, sch, leggiTutto, tempIn, applica, aggiorna));
 
     if (sch) {
-      nome.append(el('div', { class: 'conf-az' }, [copia, applica, el('label', { class: 'conf-tl' }, [tempIn, ' °C'])]), errore, stato);
+      nome.append(badge, el('div', { class: 'conf-az' }, [copia, applica, el('label', { class: 'conf-tl' }, [tempIn, ' °C'])]), errore, stato);
       if (r.motivo && r.motivo.startsWith('attenzione')) nome.append(el('span', { class: 'conf-mot', text: r.motivo }));
       S.confStati[chiave] = x;
     } else {
