@@ -213,6 +213,10 @@
   .stra-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
   @media (max-width: 760px) { .stra-form { grid-template-columns: 1fr 1fr; } .stra-form .span-all { grid-column: 1 / -1; } }
   .stra-form .span-all { grid-column: 1 / -1; }
+  /* 09/11/2026: programmi per accendere l'impianto */
+  .stra-altri { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+  .stra-altri label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  #schedNota .actions { margin-top: 8px; flex-wrap: wrap; gap: 6px; }
   .fasce { display: flex; flex-direction: column; gap: 6px; }
   .fascia { display: grid; grid-template-columns: 28px 140px 140px 100px 34px; gap: 8px; align-items: center; }
   .fascia .n { font-family: 'DM Mono', monospace; color: var(--muted); font-size: 12px; }
@@ -461,6 +465,7 @@
         <button id="btnLeggi" class="btn" disabled>Leggi programma attuale</button>
         <span id="letturaInfo" class="muted"></span>
       </div>
+      <div id="schedNota" class="banner warn" hidden style="margin-top:12px;margin-bottom:0"></div>
     </section>
 
     <!-- EDITOR -->
@@ -519,6 +524,10 @@
             <button id="straAddFascia" class="btn ghost" type="button">+ Fascia</button>
             <span id="straPrefill" class="muted" style="font-size:12px"></span>
           </div>
+        </div>
+        <div class="span-all" id="straAncheBox" hidden>
+          <label class="f">Scrivi lo stesso straordinario anche su (programmi che accendono questo impianto)</label>
+          <div id="straAnche" class="stra-altri"></div>
         </div>
       </div>
       <div id="straErr" class="banner err" hidden style="margin-top:12px"></div>
@@ -940,12 +949,39 @@
   function fillSchedules() {
     const list = S.impianto ? S.catalog.schedules.filter((s) => s.impianto_ref === S.impianto) : [];
     fillSelect($('selSchedule'),
-      list.map((s) => ({ value: s.id, label: `${s.nome} [${s.scheduler_id}]` })),
+      list.map((s) => ({ value: s.id, label: `${s.nome} [${s.scheduler_id}]` + (s.accendi === false && s.nota ? ' — non per accendere' : '') })),
       S.impianto ? (list.length ? '— Seleziona schedule —' : 'Nessuno schedule disponibile') : '— prima l\'impianto —',
       S.schedule ? S.schedule.id : null);
     const val = $('selSchedule').value;
     if (!val && S.schedule) setSchedule(null);
     $('btnLeggi').disabled = !S.schedule;
+    renderSchedNota();
+  }
+
+  // 09/11/2026 (Davide: "trovare il giusto scheduler quando ti chiedo di accendere l'impianto X"): ogni programma
+  // del catalogo ha accendi (true = serve ad accendere l'impianto, false = no, da tipologie_schedule.csv) e nota.
+  // 002 Ex Bianchini: P.T. e 1 P. non si usano, gli orari vanno su Ventil P.T e Ventil 1 P. (circuiti a destra).
+  function programmiPerAccendere(impiantoRef) {
+    return S.catalog.schedules.filter((s) => s.impianto_ref === impiantoRef && s.accendi === true);
+  }
+  function nomeBreve(s) { return String(s.nome || '').replace(/^Setpoint\s*/i, ''); }
+
+  function renderSchedNota() {
+    const box = $('schedNota');
+    const s = S.schedule;
+    box.innerHTML = '';
+    if (!s || !s.nota) { box.hidden = true; return; }
+    box.hidden = false;
+    box.className = 'banner ' + (s.accendi === false ? 'warn' : 'info');
+    box.append(el('div', { text: (s.accendi === false ? 'Non usare questo programma per accendere l\'impianto. ' : '') + s.nota }));
+    const giusti = s.accendi === false ? programmiPerAccendere(s.impianto_ref) : [];
+    if (giusti.length) {
+      box.append(el('div', { class: 'actions' }, [el('span', { class: 'muted', text: 'Per accendere usa:' })].concat(
+        giusti.map((g) => el('button', {
+          type: 'button', class: 'btn ghost', text: nomeBreve(g),
+          onclick: () => { $('selSchedule').value = String(g.id); onSchedule(); },
+        })))));
+    }
   }
 
   function onCommessa() {
@@ -978,10 +1014,12 @@
       $('straDal').value = ''; $('straAl').value = '';
       $('straPrefill').textContent = '';
       $('straErr').hidden = true; $('straOk').hidden = true;
+      S.straAnche = new Set();
       resetEdits();
       renderEditor();
       renderStraList();
     }
+    renderSchedNota();
   }
 
   // ============================================================
@@ -1522,6 +1560,22 @@
     }
     renderStraFasce();
     renderStraWarn();
+    renderStraAltri();
+  }
+
+  function renderStraAltri() {
+    const box = $('straAnche');
+    const altri = S.schedule ? programmiPerAccendere(S.schedule.impianto_ref).filter((s) => s.id !== S.schedule.id) : [];
+    if (!S.straAnche) S.straAnche = new Set();
+    for (const id of [...S.straAnche]) if (!altri.some((s) => s.id === id)) S.straAnche.delete(id);
+    $('straAncheBox').hidden = !altri.length;
+    box.innerHTML = '';
+    altri.forEach((s) => {
+      const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
+      cb.checked = S.straAnche.has(s.id);
+      cb.addEventListener('change', () => { if (cb.checked) S.straAnche.add(s.id); else S.straAnche.delete(s.id); });
+      box.append(el('label', {}, [cb, el('span', { text: nomeBreve(s) })]));
+    });
   }
 
   function renderStraFasce() {
@@ -1590,18 +1644,37 @@
     $('straErr').hidden = true; $('straOk').hidden = true;
     let body;
     try { body = collectStra(); } catch (e) { $('straErr').hidden = false; $('straErr').textContent = e.message; return; }
+    const sch = S.schedule;
+    if (sch.accendi === false && sch.nota
+        && !window.confirm(`${sch.nota}\n\nScrivere lo stesso lo straordinario su ${nomeBreve(sch)}?`)) return;
+    // 09/11/2026: lo stesso straordinario anche sugli altri programmi spuntati dello stesso impianto
+    const altri = programmiPerAccendere(sch.impianto_ref).filter((s) => s.id !== sch.id && S.straAnche && S.straAnche.has(s.id));
+    const tutti = [sch].concat(altri);
     $('straSubmit').disabled = true;
+    const ok = [], ko = [];
+    let giorni = 0;
     try {
-      const r = await api('/straordinari', { method: 'POST', body });
-      $('straOk').hidden = false;
-      $('straOk').textContent = r.ids.length > 1
-        ? `${r.ids.length} straordinari inviati al PC.`
-        : 'Straordinario inviato al PC: lo scriverà su Coster nei giorni prima.';
-      $('straNote').value = '';
+      for (const s of tutti) {
+        try {
+          const r = await api('/straordinari', { method: 'POST', body: { ...body, schedule_id: s.id } });
+          ok.push(nomeBreve(s));
+          giorni = Math.max(giorni, (r.ids || []).length);
+        } catch (err) {
+          const m = handleErr(err, 'stra');
+          if (err instanceof AuthErr) return;
+          ko.push(`${nomeBreve(s)}: ${m}`);
+        }
+      }
+      if (ok.length) {
+        $('straOk').hidden = false;
+        $('straOk').textContent = (tutti.length > 1 ? `Inviato al PC per ${ok.join(', ')}` : 'Straordinario inviato al PC')
+          + (giorni > 1 ? ` (${giorni} giorni)` : '') + ': lo scriverà su Coster nei giorni prima.';
+        $('straNote').value = '';
+        S.straAnche = new Set();
+        renderStraAltri();
+      }
+      if (ko.length) { $('straErr').hidden = false; $('straErr').textContent = (ok.length ? 'Non inviato per ' : '') + ko.join('; '); }
       await loadStra();
-    } catch (err) {
-      const m = handleErr(err, 'stra');
-      if (m) { $('straErr').hidden = false; $('straErr').textContent = m; }
     } finally {
       $('straSubmit').disabled = false;
     }
