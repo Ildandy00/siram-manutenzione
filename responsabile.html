@@ -66,7 +66,6 @@ body { display: flex; flex-direction: column; min-height: 100vh; overflow-x: hid
 /* ANALISI IMPIANTI (pagina analisi-coster.html incorporata) */
 #view-analisi { padding: 0; }
 #analisiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
-#comfortFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 #consumiFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 #accensioniFrame { display: block; width: 100%; height: calc(100vh - 56px); border: 0; background: var(--bg); }
 
@@ -215,20 +214,6 @@ textarea.fc { resize: vertical; min-height: 72px; }
 .rep-sett-btn .sett-data { color:var(--muted); font-size:11px; }
 .rep-sett-btn .sett-op { font-weight:700; font-size:13px; margin-top:2px; }
 .rep-sett-btn .sett-op.vuoto { color:var(--muted); font-weight:400; font-style:italic; }
-
-/* RDA/CAT */
-.rda-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px 18px; margin-bottom:12px; }
-.rda-card-head { display:flex; align-items:flex-start; gap:14px; }
-.rda-card-info { flex:1; min-width:0; }
-.rda-imp  { font-size:15px; font-weight:700; margin-bottom:3px; }
-.rda-meta { font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
-.rda-nota { font-size:13px; margin-top:8px; padding:8px 12px; background:var(--bg3); border-radius:8px; border-left:3px solid #7ab0d8; }
-.rda-tipo-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; background:rgba(100,180,220,.12); color:#7ab0d8; border:1px solid rgba(100,180,220,.25); margin-top:6px; }
-.rda-stato-select { background:var(--bg3); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; padding:6px 10px; cursor:pointer; }
-.stato-inviata      { color:#7ab0d8; }
-.stato-in-lavorazione { color:var(--yellow); }
-.stato-completata   { color:var(--green); }
-.stato-annullata    { color:var(--muted); }
 
 /* REPORT MANUTENZIONI */
 .report-filter.active { background:var(--bg4); color:var(--text); border-color:rgba(255,255,255,.2); }
@@ -529,9 +514,6 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
       <div class="nav-item" onclick="nav('pratiche')" id="nav-pratiche">
         📄 Pratiche <span class="nav-badge" id="badgePratiche" style="background:var(--yellow);color:#1a1a1a;display:none">0</span>
       </div>
-      <div class="nav-item" onclick="nav('rdacat')" id="nav-rdacat">
-        🛒 RDA / CAT <span class="nav-badge" id="badgeRda" style="background:#7ab0d8;color:#1a1a1a;display:none">0</span>
-      </div>
       <div class="nav-sec">Scadenze</div>
       <div class="nav-item" onclick="nav('rcee')" id="nav-rcee">📋 RCEE <span class="nav-badge" id="badgeRcee" style="background:var(--red);color:#fff;display:none">0</span></div>
       <div class="nav-sec">Monitoraggio</div>
@@ -539,7 +521,6 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
       <div class="nav-sec">Telegestione</div>
       <div class="nav-item" onclick="nav('orari')" id="nav-orari">🕒 Orari Coster</div>
       <div class="nav-item" onclick="nav('analisi')" id="nav-analisi">🌡️ Analisi impianti</div>
-      <div class="nav-item" onclick="nav('comfort')" id="nav-comfort">🎯 Comfort</div>
       <div class="nav-item" onclick="nav('consumi')" id="nav-consumi">🔥 Consumi</div>
       <div class="nav-item" onclick="nav('accensioni')" id="nav-accensioni">⏱ Accensioni</div>
       <div class="nav-sec">Anagrafica</div>
@@ -716,15 +697,6 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
         <div id="tblPratiche"></div>
       </div>
 
-      <!-- VIEW: RDA/CAT -->
-      <div class="view" id="view-rdacat">
-        <div class="sec-header">
-          <div class="sec-title">Richieste RDA / CAT</div>
-          <div id="rdaSummary" style="font-size:12px;color:var(--muted)"></div>
-        </div>
-        <div id="tblRdacat"></div>
-      </div>
-
       <!-- VIEW: AVANZAMENTO OPERAI -->
       <div class="view" id="view-avanzamento">
         <div class="sec-header">
@@ -758,11 +730,6 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
       <!-- VIEW: ANALISI IMPIANTI (analisi-coster.html incorporata, caricata al primo accesso) -->
       <div class="view" id="view-analisi">
         <iframe id="analisiFrame" title="Analisi impianti" src="about:blank"></iframe>
-      </div>
-
-      <!-- VIEW: COMFORT (comfort-coster.html incorporata, caricata al primo accesso) -->
-      <div class="view" id="view-comfort">
-        <iframe id="comfortFrame" title="Comfort" src="about:blank"></iframe>
       </div>
 
       <!-- VIEW: CONSUMI (consumi-coster.html incorporata, caricata al primo accesso) -->
@@ -1233,7 +1200,7 @@ const PROXY_URL = 'https://siram-proxy.onrender.com';
 // ============================================================
 //  STATO
 // ============================================================
-let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], pratiche:[], offerte:[], rdacat:[], reperibilita:null, note:[] };
+let S = { impianti:[], catalogo:[], interventi:[], checklist:[], assenze:[], pratiche:[], offerte:[], reperibilita:null, note:[] };
 let calAnno = new Date().getFullYear();
 let calMese = new Date().getMonth();
 let currentDetId      = null;
@@ -1317,15 +1284,6 @@ async function caricaDatiOra() {
 
     ricalcolaStatiPratiche();
 
-    try {
-      const dr = await apiGet('/rdacat');
-      S.rdacat = dr.richieste || [];
-      const nRda = S.rdacat.filter(r => r.stato==='Inviata').length;
-      const bRda = document.getElementById('badgeRda');
-      bRda.textContent = nRda; bRda.style.display = nRda > 0 ? '' : 'none';
-      document.getElementById('rdaSummary').textContent = nRda + ' nuove · ' + S.rdacat.filter(r=>r.stato==='In lavorazione').length + ' in lavorazione';
-    } catch(e) { mancanti.push('RDA'); }
-
     try { const rep = await apiGet('/reperibile'); S.reperibilita = rep; renderRepWidget(); } catch(e) { mancanti.push('reperibilità'); }
 
     // Scadenze RCEE (badge + tabella)
@@ -1370,12 +1328,10 @@ function nav(id) {
   if (id==='catalogo')   renderCatalogo();
   if (id==='report')     renderReport();
   if (id==='pratiche')   renderPratiche();
-  if (id==='rdacat')     renderRdacat();
   if (id==='avanzamento') renderAvanzamento();
   if (id==='rcee')       { if(rceeScadenze.length) renderRcee(); else caricaScadenzeRcee(); }
   if (id==='orari')      apriOrari();
   if (id==='analisi')    apriAnalisi();
-  if (id==='comfort')    apriComfort();
   if (id==='consumi')    apriConsumi();
   if (id==='accensioni') apriAccensioni();
 }
@@ -1400,17 +1356,6 @@ function apriAnalisi() {
   const f = document.getElementById('analisiFrame');
   if (!f.dataset.loaded) {
     f.src = '/analisi-coster.html';
-    f.dataset.loaded = '1';
-  }
-}
-
-// ============================================================
-//  COMFORT — pagina comfort-coster.html incorporata (24/10/2026)
-// ============================================================
-function apriComfort() {
-  const f = document.getElementById('comfortFrame');
-  if (!f.dataset.loaded) {
-    f.src = '/comfort-coster.html';
     f.dataset.loaded = '1';
   }
 }
@@ -2809,64 +2754,6 @@ function aproPraticaDaIntervento() {
   const esistente=i?praticaDiIntervento(i):null;
   closeModal('modalDettaglio');
   if(esistente) openPratica(esistente.id); else openModalNuovaPratica(currentDetId);
-}
-
-// ============================================================
-//  RDA/CAT
-// ============================================================
-const STATI_RDA=['Inviata','In lavorazione','Completata','Annullata'];
-
-function renderRdacat() {
-  const el=document.getElementById('tblRdacat');
-  if(!S.rdacat.length){el.innerHTML='<div class="empty">Nessuna richiesta RDA/CAT</div>';return;}
-  const ordine={Inviata:0,'In lavorazione':1,Completata:2,Annullata:3};
-  const lista=[...S.rdacat].sort((a,b)=>ordine[a.stato]-ordine[b.stato]||(b.creatoIl||'').localeCompare(a.creatoIl||''));
-  const tipoIcon={'Sostituzione apparecchiatura':'🔧','Supporto tecnico':'👨‍🔧','Materiali/Ricambi':'📦','Altro':'📋'};
-  el.innerHTML=lista.map(r=>{
-    const imp=S.impianti.find(x=>x.codice===r.codiceImpianto);
-    const interv=S.interventi.find(x=>x.id===r.idIntervento);
-    const statoClass='stato-'+r.stato.toLowerCase().replace(' ','-');
-    return `<div class="rda-card">
-      <div class="rda-card-head">
-        <div class="rda-card-info">
-          <div class="rda-imp">${imp?imp.descrizione:r.codiceImpianto} <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:8px">${r.codiceImpianto}</span></div>
-          <div class="rda-tipo-badge">${tipoIcon[r.tipologia]||'📋'} ${r.tipologia}</div>
-          <div class="rda-meta">
-            <span>👤 ${r.operaio}</span>
-            ${imp&&imp.comune?`<span>📍 ${imp.comune}</span>`:''}
-            ${interv?`<span>📅 ${interv.dataPrevista}</span>`:''}
-            <span style="color:var(--muted)">${r.creatoIl}</span>
-          </div>
-          ${r.nota?`<div class="rda-nota">💬 "${r.nota}"</div>`:''}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-          <span class="${statoClass}" style="font-size:13px;font-weight:700">${r.stato}</span>
-          <select class="rda-stato-select" onchange="aggiornaRda('${r.id}',this.value)">
-            ${STATI_RDA.map(s=>`<option value="${s}" ${s===r.stato?'selected':''}>${s}</option>`).join('')}
-          </select>
-          <div style="display:flex;gap:6px">
-            ${interv?`<button class="btn btn-ghost btn-sm" onclick="openDettaglio('${interv.id}')">Apri OdL</button>`:''}
-            <button class="btn btn-danger btn-sm" onclick="eliminaRda('${r.id}')">✕</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function aggiornaRda(id,stato) {
-  try {
-    await apiPost('/aggiorna-rdacat',{id,stato});
-    const r=S.rdacat.find(x=>x.id===id); if(r)r.stato=stato;
-    renderRdacat();
-    const nRda=S.rdacat.filter(r=>r.stato==='Inviata').length;
-    const badge=document.getElementById('badgeRda'); badge.textContent=nRda; badge.style.display=nRda>0?'':'none';
-    toast('Stato aggiornato','ok');
-  } catch(e){toast('Errore','err');}
-}
-async function eliminaRda(id) {
-  if(!confirm('Eliminare questa richiesta?'))return;
-  try { await apiPost('/elimina-rdacat',{id}); S.rdacat=S.rdacat.filter(r=>r.id!==id); renderRdacat(); toast('Eliminata','ok'); } catch(e){toast('Errore','err');}
 }
 
 // ============================================================
