@@ -213,6 +213,19 @@
   .stra-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
   @media (max-width: 760px) { .stra-form { grid-template-columns: 1fr 1fr; } .stra-form .span-all { grid-column: 1 / -1; } }
   .stra-form .span-all { grid-column: 1 / -1; }
+  /* 09/11/2026: richieste lette dalle mail */
+  .mail { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .mail.chiusa { opacity: .6; }
+  .mail-testa { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 12px; }
+  .mail-testa b { font-size: 14px; }
+  .mail-ries { margin: 6px 0; font-size: 13px; }
+  .mail-dubbi { font-size: 12px; color: var(--yellow); margin-bottom: 6px; }
+  .mail-req { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px; display: grid; gap: 6px; }
+  .mail-req .riga { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .mail-req .riga input[type=date] { width: 150px; } .mail-req .riga input[type=time] { width: 105px; }
+  .mail-req .riga input[type=number] { width: 80px; }
+  .mail-req .esito { font-size: 12px; }
+  .mail-stato { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); }
   /* 09/11/2026: programmi per accendere l'impianto */
   .stra-altri { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
   .stra-altri label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -493,6 +506,15 @@
         <span id="chgCount" class="muted"></span>
         <button id="btnApplica" class="btn primary" disabled>Applica programma</button>
       </div>
+    </section>
+
+    <!-- STRAORDINARI: richieste lette dalle mail (09/11/2026) -->
+    <section id="mailCard" class="card t-stra" hidden>
+      <h2>Richieste dalle mail <small id="mailSub"></small></h2>
+      <div class="muted" style="font-size:12px;margin-bottom:10px">Lette da Claude nelle mail del foglio "Mail accensioni".
+        Controlla impianto, giorno, orario e programmi: lo straordinario parte solo con "Manda all'impianto".
+        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche inviate e scartate</label></div>
+      <div id="mailLista"></div>
     </section>
 
     <!-- STRAORDINARI: nuovo -->
@@ -905,6 +927,7 @@
     S.catalogAt = data.aggiornato;
     catalogLoaded = true;
     fillCommesse();
+    renderMail();          // 09/11/2026: richieste dalle mail
     if ($('app').dataset.tab === 'speg') renderSpegForm();
     renderConf();          // 08/11/2026: anche fuori dalla scheda, per il numerino "da sistemare"
   }
@@ -1561,6 +1584,148 @@
     renderStraFasce();
     renderStraWarn();
     renderStraAltri();
+  }
+
+  // ============================================================
+  // RICHIESTE DALLE MAIL (09/11/2026, scripts/mail_accensioni.py sul PC + Claude)
+  // ============================================================
+  S.mailEdit = {};
+  function minToHHMM(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+  function mailProposte() {
+    const m = S.catalog && S.catalog.mail;
+    return m && Array.isArray(m.proposte) ? m.proposte : [];
+  }
+  function mailBozza(p, i) {
+    const k = p.id + '|' + i;
+    if (!S.mailEdit[k]) {
+      const q = p.richieste[i];
+      S.mailEdit[k] = {
+        ref: q.impianto_ref || '', giorno: q.giorno || '', dalle: q.dalle || '', alle: q.alle || '',
+        temp: q.temperatura ? String(q.temperatura) : '20', ids: new Set(q.schedule_ids || []), esito: '', errore: '',
+      };
+    }
+    return S.mailEdit[k];
+  }
+  function renderMail() {
+    const tutte = mailProposte();
+    const mostraTutte = $('mailTutte').checked;
+    const lista = tutte.filter((p) => mostraTutte || p.stato === 'nuova');
+    const nuove = tutte.filter((p) => p.stato === 'nuova').length;
+    $('mailCard').hidden = !tutte.length;
+    $('mailSub').textContent = nuove ? `${nuove} da vedere` : 'nessuna da vedere';
+    const box = $('mailLista');
+    box.innerHTML = '';
+    if (!lista.length) { box.append(el('div', { class: 'muted', text: 'Nessuna richiesta nuova.' })); return; }
+    const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
+    for (const p of lista) {
+      const card = el('div', { class: 'mail' + (p.stato === 'nuova' ? '' : ' chiusa'), 'data-id': p.id });
+      card.append(el('div', { class: 'mail-testa' }, [
+        el('b', { text: p.oggetto || '(senza oggetto)' }),
+        el('span', { class: 'muted', text: `${fmtShort(p.data)} · ${String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim()}` }),
+        p.link ? el('a', { href: p.link, target: '_blank', rel: 'noopener', text: 'Apri la mail' }) : null,
+        p.stato !== 'nuova' ? el('span', { class: 'mail-stato', text: p.stato }) : null,
+      ]));
+      card.append(el('div', { class: 'mail-ries', text: p.riassunto || '' }));
+      if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: 'Da controllare: ' + p.dubbi }));
+      p.richieste.forEach((q, i) => {
+        const b = mailBozza(p, i);
+        const req = el('div', { class: 'mail-req' });
+        const sel = el('select', { 'aria-label': 'Impianto' });
+        sel.append(el('option', { value: '', text: q.impianto_testo ? `— scegli (la mail dice: ${q.impianto_testo}) —` : '— scegli l\'impianto —' }));
+        for (const imp of impOrd) {
+          const o = el('option', { value: imp.ref, text: impiantoLabel(imp) });
+          if (imp.ref === b.ref) o.selected = true;
+          sel.append(o);
+        }
+        sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); renderMail(); });
+        const giorno = el('input', { type: 'date', value: b.giorno, 'aria-label': 'Giorno' });
+        giorno.addEventListener('input', () => { b.giorno = giorno.value; });
+        const dalle = el('input', { type: 'time', value: b.dalle, 'aria-label': 'Dalle' });
+        dalle.addEventListener('input', () => { b.dalle = dalle.value; });
+        const alle = el('input', { type: 'time', value: b.alle, 'aria-label': 'Alle' });
+        alle.addEventListener('input', () => { b.alle = alle.value; });
+        const temp = el('input', { type: 'number', step: '0.5', value: b.temp, 'aria-label': 'Temperatura' });
+        temp.addEventListener('input', () => { b.temp = temp.value; });
+        req.append(el('div', { class: 'riga' }, [sel]));
+        req.append(el('div', { class: 'riga' }, [giorno, el('span', { class: 'muted', text: 'dalle' }), dalle,
+          el('span', { class: 'muted', text: 'alle' }), alle, temp, el('span', { class: 'muted', text: '°C' })]));
+        const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
+        const pr = el('div', { class: 'stra-altri' });
+        for (const s of progs) {
+          const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
+          cb.checked = b.ids.has(s.id);
+          cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); });
+          pr.append(el('label', {}, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : '') })]));
+        }
+        if (b.ref && !progs.length) pr.append(el('span', { class: 'muted', text: 'Nessun programma per accendere in questo impianto.' }));
+        req.append(pr);
+        if (q.nota) req.append(el('div', { class: 'muted', style: 'font-size:12px', text: q.nota }));
+        const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, i, invia) });
+        invia.disabled = p.stato !== 'nuova' && p.stato !== 'inviata';
+        req.append(el('div', { class: 'riga' }, [invia,
+          b.esito ? el('span', { class: 'esito', style: 'color:var(--green)', text: b.esito }) : null,
+          b.errore ? el('span', { class: 'esito', style: 'color:#e0a0a0', text: b.errore }) : null]));
+        card.append(req);
+      });
+      if (!p.richieste.length) card.append(el('div', { class: 'muted', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
+      card.append(el('div', { class: 'actions', style: 'margin-top:8px' }, [
+        p.stato === 'scartata'
+          ? el('button', { type: 'button', class: 'btn ghost', text: 'Rimetti fra le nuove', onclick: () => mailStato(p, 'nuova') })
+          : el('button', { type: 'button', class: 'btn ghost', text: p.stato === 'inviata' ? 'Togli dall\'elenco' : 'Scarta', onclick: () => mailStato(p, 'scartata') }),
+      ]));
+      box.append(card);
+    }
+  }
+  async function mailStato(p, stato) {
+    try {
+      await api('/mail/' + encodeURIComponent(p.id) + '/stato', { method: 'POST', body: { stato } });
+      p.stato = stato;
+    } catch (err) {
+      const m = handleErr(err, 'mail');
+      if (m) window.alert(m);
+    }
+    renderMail();
+  }
+  async function mandaMail(p, i, btn) {
+    const b = mailBozza(p, i);
+    b.esito = ''; b.errore = '';
+    const start = toMin(b.dalle), end = toMin(b.alle), temp = parseTemp(b.temp);
+    const ids = [...b.ids];
+    let err = '';
+    if (!b.ref) err = 'Scegli l\'impianto.';
+    else if (!ids.length) err = 'Spunta almeno un programma.';
+    else if (!/^\d{4}-\d{2}-\d{2}$/.test(b.giorno)) err = 'Giorno mancante.';
+    else if (start == null || end == null || Number.isNaN(start) || Number.isNaN(end) || end <= start) err = 'Orario non valido (alle dopo dalle).';
+    else if (temp == null || Number.isNaN(temp) || temp < T_MIN || temp > T_MAX) err = 'Temperatura non valida.';
+    if (err) { b.errore = err; renderMail(); return; }
+    const progs = ids.map((id) => S.catalog.schedules.find((s) => s.id === id)).filter(Boolean);
+    const imp = S.catalog.impianti.find((x) => x.ref === b.ref) || {};
+    const gg = dateFromIso(b.giorno);
+    const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)} dalle ${minToHHMM(start)} alle ${minToHHMM(end)} a ${temp} °C\n`
+      + `Programmi: ${progs.map(nomeBreve).join(', ')}\n\nIl PC lo scrive su Coster nei giorni prima e rimette l'orario normale il giorno dopo.`;
+    if (!window.confirm('Mandare lo straordinario all\'impianto?\n\n' + testo)) return;
+    btn.disabled = true;
+    const ok = [], ko = [];
+    for (const s of progs) {
+      try {
+        await api('/straordinari', { method: 'POST', body: {
+          schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: [{ start, end, temp }],
+          note: `Da mail: ${String(p.oggetto || '').slice(0, 200)} [m:${p.id}]`,
+        } });
+        ok.push(nomeBreve(s));
+      } catch (e) {
+        const m = handleErr(e, 'mail');
+        if (e instanceof AuthErr) return;
+        ko.push(`${nomeBreve(s)}: ${m}`);
+      }
+    }
+    if (ok.length) {
+      b.esito = ('Inviato al PC per ' + ok.join(', ') + '.').replace(/\.\.$/, '.');
+      if (p.stato !== 'inviata') await mailStato(p, 'inviata');
+      await loadStra();
+    }
+    if (ko.length) b.errore = (ok.length ? 'Non inviato per ' : '') + ko.join('; ');
+    renderMail();
   }
 
   function renderStraAltri() {
@@ -2852,6 +3017,7 @@
   $('straSubmit').addEventListener('click', submitStra);
   $('straSoloQuesto').addEventListener('change', renderStraList);
   $('straAltri').addEventListener('click', () => { straMostraTutti = !straMostraTutti; renderStraList(); });
+  $('mailTutte').addEventListener('change', renderMail);
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('spegDal').addEventListener('change', () => {
     $('spegAl').min = $('spegDal').value || localIso(new Date());
