@@ -226,6 +226,9 @@
   .mail-stato { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); }
   .mail-stato.inviata { border-color: rgba(143,190,122,.5); color: var(--green); }
   .mail-ries { margin: 10px 0 0; font-size: 13px; color: #dcdcdc; }
+  .mail-file { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .mail-file b { font-weight: 500; color: var(--text); }
+  .mail-file .no { color: var(--yellow); }
   .mail-dubbi { margin-top: 8px; padding: 6px 10px; font-size: 12px; color: var(--yellow); background: rgba(200,180,100,.07);
                 border-left: 2px solid var(--yellow); border-radius: 0 6px 6px 0; }
   .mail-reqs { display: grid; gap: 10px; margin-top: 14px; }
@@ -1713,6 +1716,14 @@
         ]),
       ]));
       if (p.riassunto) card.append(el('div', { class: 'mail-ries', text: p.riassunto }));
+      // 10/11/2026: allegati (PDF, Excel) letti da Claude, e quelli che non ha potuto leggere
+      if ((p.file || []).length || (p.file_non_letti || []).length) {
+        card.append(el('div', { class: 'mail-file' }, [
+          (p.file || []).length ? el('span', {}, ['📎 Letti anche: ', el('b', { text: p.file.join(', ') })]) : null,
+          (p.file || []).length && (p.file_non_letti || []).length ? ' · ' : null,
+          (p.file_non_letti || []).length ? el('span', { class: 'no', text: 'Non letti: ' + p.file_non_letti.join('; ') }) : null,
+        ]));
+      }
       if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: p.dubbi }));
       const reqs = el('div', { class: 'mail-reqs' });
       p.richieste.forEach((q, i) => reqs.append(mailRichiesta(p, q, i, impOrd)));
