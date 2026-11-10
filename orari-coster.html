@@ -213,19 +213,77 @@
   .stra-form { display: grid; grid-template-columns: 170px 170px 1fr; gap: 12px; align-items: end; }
   @media (max-width: 760px) { .stra-form { grid-template-columns: 1fr 1fr; } .stra-form .span-all { grid-column: 1 / -1; } }
   .stra-form .span-all { grid-column: 1 / -1; }
-  /* 09/11/2026: richieste lette dalle mail */
-  .mail { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
-  .mail.chiusa { opacity: .6; }
-  .mail-testa { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 12px; }
-  .mail-testa b { font-size: 14px; }
-  .mail-ries { margin: 6px 0; font-size: 13px; }
-  .mail-dubbi { font-size: 12px; color: var(--yellow); margin-bottom: 6px; }
-  .mail-req { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 8px; display: grid; gap: 6px; }
-  .mail-req .riga { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .mail-req .riga input[type=date] { width: 150px; } .mail-req .riga input[type=time] { width: 105px; }
-  .mail-req .riga input[type=number] { width: 80px; }
+  /* 09/11/2026: richieste lette dalle mail. 10/11/2026: ogni mail e' una scheda, ogni richiesta un riquadro con la
+     data a sinistra; per ogni circuito l'orario previsto in centralina quel giorno contro lo straordinario richiesto. */
+  .mail { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; }
+  .mail.chiusa { opacity: .55; }
+  .mail-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; }
+  .mail-ogg { font-size: 15px; font-weight: 600; line-height: 1.3; }
+  .mail-da { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .mail-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .mail-meta a { color: var(--blue); text-decoration: none; }
+  .mail-meta a:hover { text-decoration: underline; }
+  .mail-stato { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); }
+  .mail-stato.inviata { border-color: rgba(143,190,122,.5); color: var(--green); }
+  .mail-ries { margin: 10px 0 0; font-size: 13px; color: #dcdcdc; }
+  .mail-dubbi { margin-top: 8px; padding: 6px 10px; font-size: 12px; color: var(--yellow); background: rgba(200,180,100,.07);
+                border-left: 2px solid var(--yellow); border-radius: 0 6px 6px 0; }
+  .mail-reqs { display: grid; gap: 10px; margin-top: 14px; }
+  .mail-req { display: grid; grid-template-columns: 64px 1fr; background: var(--bg2); border: 1px solid var(--border);
+              border-radius: 10px; overflow: hidden; }
+  .mail-data { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+               padding: 10px 4px; background: rgba(200,144,96,.10); border-right: 2px solid var(--orange); }
+  .mail-data .gs { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--orange); }
+  .mail-data .gn { font-size: 24px; font-weight: 700; line-height: 1; }
+  .mail-data .gm { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .mail-data.vuota .gn { font-size: 15px; color: var(--muted); }
+  .mail-corpo { padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+  .mail-riga { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .mail-riga .sep { color: var(--muted); }
+  .mail-req select { min-height: 34px; padding: 5px 10px; font-size: 13px; }
+  .mail-req input[type=time], .mail-req input[type=number], .mail-req input[type=date] {
+    min-height: 34px; padding: 4px 8px; font: 13px 'DM Mono', monospace; background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; }
+  .mail-req input[type=date] { width: 150px; } .mail-req input[type=time] { width: 96px; } .mail-req input[type=number] { width: 70px; }
+  .mail-circ { display: grid; gap: 6px; }
+  .mc-scala, .mc { display: grid; grid-template-columns: minmax(150px, 210px) 1fr minmax(150px, 210px); gap: 12px; align-items: center; }
+  .mc-scala { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .mc-scala .ore { position: relative; height: 12px; }
+  .mc-scala .ore span { position: absolute; transform: translateX(-50%); }
+  .mc-scala .ore span:first-child { transform: none; } .mc-scala .ore span:last-child { transform: translateX(-100%); }
+  .mc-legenda { display: flex; gap: 10px; flex-wrap: wrap; }
+  .mc-legenda i { display: inline-block; width: 12px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .mc label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; min-width: 0; }
+  .mc label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mc label.no span { color: var(--muted); }
+  .mc-barre { position: relative; height: 18px; border-radius: 4px; background:
+    linear-gradient(90deg, transparent calc(25% - .5px), rgba(255,255,255,.08) 0 calc(25% + .5px), transparent 0 calc(50% - .5px),
+      rgba(255,255,255,.08) 0 calc(50% + .5px), transparent 0 calc(75% - .5px), rgba(255,255,255,.08) 0 calc(75% + .5px), transparent 0),
+    rgba(255,255,255,.04); }
+  .mc-barre b { position: absolute; height: 6px; border-radius: 3px; }
+  .mc-barre b.prev { top: 2px; background: #8a8a8a; }
+  .mc-barre b.stra { bottom: 2px; background: var(--orange); }
+  .mc-prev { font: 12px 'DM Mono', monospace; color: var(--muted); line-height: 1.35; }
+  .mc-prev .t2 { font-family: 'Outfit', sans-serif; font-size: 12px; }
+  .mc-prev .ok { color: var(--green); font-family: 'Outfit', sans-serif; }
+  .mc-prev .gia { color: var(--yellow); font-family: 'Outfit', sans-serif; }
+  .mail-piede { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+  .mail-nota { font-size: 12px; color: var(--muted); flex: 1 1 240px; }
   .mail-req .esito { font-size: 12px; }
-  .mail-stato { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); }
+  .mail-meta .btn { min-height: 28px; padding: 3px 10px; font-size: 12px; }
+  @media (max-width: 640px) {
+    .mail { padding: 14px; }
+    .mail-meta { white-space: normal; flex-wrap: wrap; }
+    .mail-req { grid-template-columns: 1fr; }
+    .mail-data { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 6px; padding: 8px 12px;
+                 border-right: 0; border-bottom: 2px solid var(--orange); }
+    .mail-data .gn { font-size: 18px; }
+    .mail-req input[type=date] { width: 100%; }
+    .mail-req input[type=time] { width: 88px; }
+    .mc-scala { display: none; }
+    .mc { grid-template-columns: 1fr; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .mc:last-child { border-bottom: none; }
+  }
   /* 09/11/2026: programmi per accendere l'impianto */
   .stra-altri { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
   .stra-altri label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
@@ -1606,6 +1664,29 @@
     }
     return S.mailEdit[k];
   }
+  const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const GG3 = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+  function fasciaTxt(a, b) { return minToHHMM(a) + '–' + (b >= 1440 ? '24:00' : minToHHMM(b)); }
+  /** Orario previsto in centralina quel giorno: testo e confronto con lo straordinario [start, end]. */
+  function mailPrevisto(prev, start, end) {
+    if (!prev) return [el('span', { text: 'orario non letto' })];
+    const fasce = prev.fasce || [];
+    if (!fasce.length) return [el('span', { text: 'spento quel giorno' })];
+    const temp = fasce.find((f) => f[2] != null);
+    const out = [el('div', { text: fasce.map((f) => fasciaTxt(f[0], f[1])).join(' · ') })];
+    const riga2 = el('div', { class: 't2' }, [temp ? `${String(temp[2]).replace('.', ',')} °C` : null]);
+    if (start != null && end != null && end > start) {
+      let coperti = 0;
+      for (const f of fasce) coperti += Math.max(0, Math.min(end, f[1]) - Math.max(start, f[0]));
+      if (coperti >= end - start) riga2.append(temp ? ' · ' : '', el('span', { class: 'ok', text: 'già acceso in quell\'orario' }));
+      else if (coperti > 0) riga2.append(temp ? ' · ' : '', el('span', { class: 'gia', text: 'in parte già acceso' }));
+    }
+    out.push(riga2);
+    return out;
+  }
+  function barra(fasce, cls) {
+    return fasce.map((f) => el('b', { class: cls, style: `left:${(f[0] / 1440 * 100).toFixed(2)}%;width:${(Math.max(f[1] - f[0], 8) / 1440 * 100).toFixed(2)}%` }));
+  }
   function renderMail() {
     const tutte = mailProposte();
     const mostraTutte = $('mailTutte').checked;
@@ -1619,62 +1700,108 @@
     const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
     for (const p of lista) {
       const card = el('div', { class: 'mail' + (p.stato === 'nuova' ? '' : ' chiusa'), 'data-id': p.id });
+      const mittente = String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim();
       card.append(el('div', { class: 'mail-testa' }, [
-        el('b', { text: p.oggetto || '(senza oggetto)' }),
-        el('span', { class: 'muted', text: `${fmtShort(p.data)} · ${String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim()}` }),
-        p.link ? el('a', { href: p.link, target: '_blank', rel: 'noopener', text: 'Apri la mail' }) : null,
-        p.stato !== 'nuova' ? el('span', { class: 'mail-stato', text: p.stato }) : null,
+        el('div', {}, [el('div', { class: 'mail-ogg', text: p.oggetto || '(senza oggetto)' }), el('div', { class: 'mail-da', text: mittente })]),
+        el('div', { class: 'mail-meta' }, [
+          p.stato !== 'nuova' ? el('span', { class: 'mail-stato ' + p.stato, text: p.stato }) : null,
+          el('span', { text: fmtShort(p.data) }),
+          p.link ? el('a', { href: p.link, target: '_blank', rel: 'noopener', text: 'Apri la mail ↗' }) : null,
+          p.stato === 'scartata'
+            ? el('button', { type: 'button', class: 'btn ghost', text: 'Rimetti fra le nuove', onclick: () => mailStato(p, 'nuova') })
+            : el('button', { type: 'button', class: 'btn ghost', text: p.stato === 'inviata' ? 'Togli dall\'elenco' : 'Scarta', onclick: () => mailStato(p, 'scartata') }),
+        ]),
       ]));
-      card.append(el('div', { class: 'mail-ries', text: p.riassunto || '' }));
-      if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: 'Da controllare: ' + p.dubbi }));
-      p.richieste.forEach((q, i) => {
-        const b = mailBozza(p, i);
-        const req = el('div', { class: 'mail-req' });
-        const sel = el('select', { 'aria-label': 'Impianto' });
-        sel.append(el('option', { value: '', text: q.impianto_testo ? `— scegli (la mail dice: ${q.impianto_testo}) —` : '— scegli l\'impianto —' }));
-        for (const imp of impOrd) {
-          const o = el('option', { value: imp.ref, text: impiantoLabel(imp) });
-          if (imp.ref === b.ref) o.selected = true;
-          sel.append(o);
-        }
-        sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); renderMail(); });
-        const giorno = el('input', { type: 'date', value: b.giorno, 'aria-label': 'Giorno' });
-        giorno.addEventListener('input', () => { b.giorno = giorno.value; });
-        const dalle = el('input', { type: 'time', value: b.dalle, 'aria-label': 'Dalle' });
-        dalle.addEventListener('input', () => { b.dalle = dalle.value; });
-        const alle = el('input', { type: 'time', value: b.alle, 'aria-label': 'Alle' });
-        alle.addEventListener('input', () => { b.alle = alle.value; });
-        const temp = el('input', { type: 'number', step: '0.5', value: b.temp, 'aria-label': 'Temperatura' });
-        temp.addEventListener('input', () => { b.temp = temp.value; });
-        req.append(el('div', { class: 'riga' }, [sel]));
-        req.append(el('div', { class: 'riga' }, [giorno, el('span', { class: 'muted', text: 'dalle' }), dalle,
-          el('span', { class: 'muted', text: 'alle' }), alle, temp, el('span', { class: 'muted', text: '°C' })]));
-        const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
-        const pr = el('div', { class: 'stra-altri' });
-        for (const s of progs) {
-          const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
-          cb.checked = b.ids.has(s.id);
-          cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); });
-          pr.append(el('label', {}, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : '') })]));
-        }
-        if (b.ref && !progs.length) pr.append(el('span', { class: 'muted', text: 'Nessun programma per accendere in questo impianto.' }));
-        req.append(pr);
-        if (q.nota) req.append(el('div', { class: 'muted', style: 'font-size:12px', text: q.nota }));
-        const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, i, invia) });
-        invia.disabled = p.stato !== 'nuova' && p.stato !== 'inviata';
-        req.append(el('div', { class: 'riga' }, [invia,
-          b.esito ? el('span', { class: 'esito', style: 'color:var(--green)', text: b.esito }) : null,
-          b.errore ? el('span', { class: 'esito', style: 'color:#e0a0a0', text: b.errore }) : null]));
-        card.append(req);
-      });
-      if (!p.richieste.length) card.append(el('div', { class: 'muted', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
-      card.append(el('div', { class: 'actions', style: 'margin-top:8px' }, [
-        p.stato === 'scartata'
-          ? el('button', { type: 'button', class: 'btn ghost', text: 'Rimetti fra le nuove', onclick: () => mailStato(p, 'nuova') })
-          : el('button', { type: 'button', class: 'btn ghost', text: p.stato === 'inviata' ? 'Togli dall\'elenco' : 'Scarta', onclick: () => mailStato(p, 'scartata') }),
-      ]));
+      if (p.riassunto) card.append(el('div', { class: 'mail-ries', text: p.riassunto }));
+      if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: p.dubbi }));
+      const reqs = el('div', { class: 'mail-reqs' });
+      p.richieste.forEach((q, i) => reqs.append(mailRichiesta(p, q, i, impOrd)));
+      if (!p.richieste.length) reqs.append(el('div', { class: 'muted', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
+      card.append(reqs);
       box.append(card);
     }
+  }
+  /** Un riquadro per richiesta: data a sinistra; impianto, orario, circuiti con previsto e straordinario. */
+  function mailRichiesta(p, q, i, impOrd) {
+    const b = mailBozza(p, i);
+    const req = el('div', { class: 'mail-req' });
+    const gd = dateFromIso(b.giorno);
+    req.append(gd
+      ? el('div', { class: 'mail-data' }, [el('span', { class: 'gs', text: GG3[gd.getDay()] }), el('span', { class: 'gn', text: String(gd.getDate()) }),
+        el('span', { class: 'gm', text: MESI[gd.getMonth()] })])
+      : el('div', { class: 'mail-data vuota' }, [el('span', { class: 'gn', text: '?' }), el('span', { class: 'gm', text: 'giorno' })]));
+    const corpo = el('div', { class: 'mail-corpo' });
+    const sel = el('select', { 'aria-label': 'Impianto' });
+    sel.append(el('option', { value: '', text: q.impianto_testo ? `— scegli l'impianto (la mail dice: ${q.impianto_testo}) —` : '— scegli l\'impianto —' }));
+    for (const imp of impOrd) {
+      const o = el('option', { value: imp.ref, text: impiantoLabel(imp) });
+      if (imp.ref === b.ref) o.selected = true;
+      sel.append(o);
+    }
+    sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); renderMail(); });
+    const giorno = el('input', { type: 'date', value: b.giorno, 'aria-label': 'Giorno' });
+    giorno.addEventListener('change', () => { b.giorno = giorno.value; renderMail(); });
+    const dalle = el('input', { type: 'time', value: b.dalle, 'aria-label': 'Dalle' });
+    const alle = el('input', { type: 'time', value: b.alle, 'aria-label': 'Alle' });
+    const temp = el('input', { type: 'number', step: '0.5', value: b.temp, 'aria-label': 'Temperatura' });
+    temp.addEventListener('input', () => { b.temp = temp.value; });
+    corpo.append(el('div', { class: 'mail-riga' }, [sel]));
+    corpo.append(el('div', { class: 'mail-riga' }, [giorno, dalle, el('span', { class: 'sep', text: '→' }), alle, temp,
+      el('span', { class: 'sep', text: '°C' })]));
+    // circuiti: previsto in centralina quel giorno (grigio) contro lo straordinario (arancio)
+    const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
+    const circ = el('div', { class: 'mail-circ' });
+    const aggiorna = [];
+    const straFasce = () => {
+      const s = toMin(b.dalle), e = toMin(b.alle);
+      return s != null && e != null && !Number.isNaN(s) && !Number.isNaN(e) && e > s ? [[s, e]] : [];
+    };
+    if (progs.length) {
+      circ.append(el('div', { class: 'mc-scala' }, [
+        el('div', { class: 'mc-legenda' }, [el('span', {}, [el('i', { style: 'background:#8a8a8a' }), 'previsto']),
+          el('span', {}, [el('i', { style: 'background:var(--orange)' }), 'straordinario'])]),
+        el('div', { class: 'ore' }, [0, 6, 12, 18, 24].map((h) => el('span', { style: `left:${h / 24 * 100}%`, text: String(h) }))),
+        el('div', { text: 'in centralina quel giorno' }),
+      ]));
+    }
+    for (const s of progs) {
+      const prev = (q.previsto || {})[String(s.id)];
+      const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
+      cb.checked = b.ids.has(s.id);
+      cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); });
+      const barre = el('div', { class: 'mc-barre', title: 'grigio: orario in centralina quel giorno · arancio: straordinario' });
+      const testo = el('div', { class: 'mc-prev' });
+      const ridisegna = () => {
+        barre.innerHTML = '';
+        barre.append(...barra((prev && prev.fasce) || [], 'prev'), ...barra(straFasce(), 'stra'));
+        const sf = straFasce()[0];
+        testo.innerHTML = '';
+        testo.append(...mailPrevisto(prev, sf ? sf[0] : null, sf ? sf[1] : null));
+        const gia = S.stra.filter((x) => String(x.schedule_id) === String(s.id) && x.data === b.giorno
+          && ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato));
+        if (gia.length) testo.append(el('div', { class: 'gia', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
+      };
+      aggiorna.push(ridisegna);
+      ridisegna();
+      circ.append(el('div', { class: 'mc' }, [
+        el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : ''), title: nomeBreve(s) })]),
+        barre, testo,
+      ]));
+    }
+    if (b.ref && !progs.length) circ.append(el('span', { class: 'muted', text: 'Nessun programma per accendere in questo impianto.' }));
+    dalle.addEventListener('input', () => { b.dalle = dalle.value; aggiorna.forEach((f) => f()); });
+    alle.addEventListener('input', () => { b.alle = alle.value; aggiorna.forEach((f) => f()); });
+    corpo.append(circ);
+    const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, i, invia) });
+    invia.disabled = p.stato !== 'nuova' && p.stato !== 'inviata';
+    corpo.append(el('div', { class: 'mail-piede' }, [
+      el('div', { class: 'mail-nota' }, [q.nota ? el('div', { text: q.nota }) : null,
+        b.esito ? el('div', { class: 'esito', style: 'color:var(--green)', text: b.esito }) : null,
+        b.errore ? el('div', { class: 'esito', style: 'color:#e0a0a0', text: b.errore }) : null]),
+      invia,
+    ]));
+    req.append(corpo);
+    return req;
   }
   async function mailStato(p, stato) {
     try {
