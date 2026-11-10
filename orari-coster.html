@@ -249,24 +249,20 @@
     border: 1px solid var(--border); border-radius: 8px; }
   .mail-req input[type=date] { width: 150px; } .mail-req input[type=time] { width: 96px; } .mail-req input[type=number] { width: 70px; }
   .mail-circ { display: grid; gap: 6px; }
-  .mc-scala, .mc { display: grid; grid-template-columns: minmax(150px, 210px) 1fr minmax(150px, 210px); gap: 12px; align-items: center; }
-  .mc-scala { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
-  .mc-scala .ore { position: relative; height: 12px; }
-  .mc-scala .ore span { position: absolute; transform: translateX(-50%); }
-  .mc-scala .ore span:first-child { transform: none; } .mc-scala .ore span:last-child { transform: translateX(-100%); }
-  .mc-legenda { display: flex; gap: 10px; flex-wrap: wrap; }
-  .mc-legenda i { display: inline-block; width: 12px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  /* 10/11/2026 (Davide: "non mostrare le barre degli orari, solo l'orario ordinario gia' presente") */
+  .mc { display: grid; grid-template-columns: minmax(150px, 240px) 1fr; gap: 12px; align-items: baseline; }
   .mc label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; min-width: 0; }
   .mc label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mc label.no span { color: var(--muted); }
-  .mc-barre { position: relative; height: 18px; border-radius: 4px; background:
-    linear-gradient(90deg, transparent calc(25% - .5px), rgba(255,255,255,.08) 0 calc(25% + .5px), transparent 0 calc(50% - .5px),
-      rgba(255,255,255,.08) 0 calc(50% + .5px), transparent 0 calc(75% - .5px), rgba(255,255,255,.08) 0 calc(75% + .5px), transparent 0),
-    rgba(255,255,255,.04); }
-  .mc-barre b { position: absolute; height: 6px; border-radius: 3px; }
-  .mc-barre b.prev { top: 2px; background: #8a8a8a; }
-  .mc-barre b.stra { bottom: 2px; background: var(--orange); }
   .mc-prev { font: 12px 'DM Mono', monospace; color: var(--muted); line-height: 1.35; }
+  .mc-prev .et { font-family: 'Outfit', sans-serif; }
+  /* 10/11/2026: gia' nel gestionale o no (dagli straordinari del PC) */
+  .ins { font-size: 11px; font-weight: 600; letter-spacing: .3px; padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+         border: 1px solid currentColor; }
+  .ins.ok { color: var(--green); } .ins.parte { color: var(--yellow); } .ins.no { color: #e0a0a0; } .ins.vecchia { color: var(--muted); }
+  .mail-nasc { font-size: 11px; color: var(--muted); border: 1px dashed var(--border); border-radius: 999px; padding: 1px 8px; }
+  .req-ins { font-size: 12px; font-weight: 500; }
+  .req-ins.ok { color: var(--green); } .req-ins.parte { color: var(--yellow); } .req-ins.no { color: #e0a0a0; } .req-ins.vecchia { color: var(--muted); }
   .mc-prev .t2 { font-family: 'Outfit', sans-serif; font-size: 12px; }
   .mc-prev .ok { color: var(--green); font-family: 'Outfit', sans-serif; }
   .mc-prev .gia { color: var(--yellow); font-family: 'Outfit', sans-serif; }
@@ -283,7 +279,6 @@
     .mail-data .gn { font-size: 18px; }
     .mail-req input[type=date] { width: 100%; }
     .mail-req input[type=time] { width: 88px; }
-    .mc-scala { display: none; }
     .mc { grid-template-columns: 1fr; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
     .mc:last-child { border-bottom: none; }
   }
@@ -574,7 +569,8 @@
       <h2>Richieste dalle mail <small id="mailSub"></small></h2>
       <div class="muted" style="font-size:12px;margin-bottom:10px">Lette da Claude nelle mail del foglio "Mail accensioni".
         Controlla impianto, giorno, orario e programmi: lo straordinario parte solo con "Manda all'impianto".
-        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche inviate e scartate</label></div>
+        Il PC aggiunge lo straordinario all'orario ordinario di quel giorno: l'orario normale resta.
+        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche mandate, scartate, doppioni, passate e orari fissi</label></div>
       <div id="mailLista"></div>
     </section>
 
@@ -1672,11 +1668,11 @@
   function fasciaTxt(a, b) { return minToHHMM(a) + '–' + (b >= 1440 ? '24:00' : minToHHMM(b)); }
   /** Orario previsto in centralina quel giorno: testo e confronto con lo straordinario [start, end]. */
   function mailPrevisto(prev, start, end) {
-    if (!prev) return [el('span', { text: 'orario non letto' })];
+    if (!prev) return [el('span', { class: 'et', text: 'orario ordinario non letto' })];
     const fasce = prev.fasce || [];
-    if (!fasce.length) return [el('span', { text: 'spento quel giorno' })];
+    if (!fasce.length) return [el('span', { class: 'et', text: 'ordinario: spento quel giorno' })];
     const temp = fasce.find((f) => f[2] != null);
-    const out = [el('div', { text: fasce.map((f) => fasciaTxt(f[0], f[1])).join(' · ') })];
+    const out = [el('div', {}, [el('span', { class: 'et', text: 'ordinario ' }), fasce.map((f) => fasciaTxt(f[0], f[1])).join(' · ')])];
     const riga2 = el('div', { class: 't2' }, [temp ? `${String(temp[2]).replace('.', ',')} °C` : null]);
     if (start != null && end != null && end > start) {
       let coperti = 0;
@@ -1687,14 +1683,36 @@
     out.push(riga2);
     return out;
   }
-  function barra(fasce, cls) {
-    return fasce.map((f) => el('b', { class: cls, style: `left:${(f[0] / 1440 * 100).toFixed(2)}%;width:${(Math.max(f[1] - f[0], 8) / 1440 * 100).toFixed(2)}%` }));
+  /** 10/11/2026: fasce [inizio, fine] unite dove si toccano (come fa il PC quando scrive lo straordinario). */
+  function unisciFasce(fasce) {
+    const out = [];
+    for (const f of fasce.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])) {
+      if (out.length && f[0] <= out[out.length - 1][1]) out[out.length - 1][1] = Math.max(out[out.length - 1][1], f[1]);
+      else out.push([f[0], f[1]]);
+    }
+    return out;
+  }
+  // 10/11/2026 (Davide: "va etichettato quale mail e' stata inserita nel gestionale e cosa no"): dal PC, che guarda gli
+  // straordinari registrati (anche quelli fatti a mano) e l'orario ordinario
+  const INS_MAIL = {
+    inserita: ['ok', 'INSERITA NEL GESTIONALE'], ordinario: ['ok', 'GIÀ NELL\'ORARIO ORDINARIO'],
+    in_parte: ['parte', 'INSERITA IN PARTE'], no: ['no', 'NON INSERITA'], passata: ['vecchia', 'PASSATA, NON INSERITA'],
+  };
+  const INS_RICH = {
+    inserita: ['ok', '✓ inserita nel gestionale'], ordinario: ['ok', '✓ già nell\'orario ordinario'],
+    in_parte: ['parte', 'inserita in parte'], no: ['no', 'non inserita'], passata: ['vecchia', 'passata, non inserita'],
+  };
+  const NASCOSTA = { doppione: 'doppione', passata: 'giorni passati', 'orario fisso': 'orario fisso, non straordinario',
+    spegnimento: 'spegnimento', altro: 'non è un\'accensione' };
+  /** In vista: le nuove non nascoste e quelle gia' mandate con giorni ancora da inserire. */
+  function mailInVista(p) {
+    return (p.stato === 'nuova' && !p.nascosta) || (p.stato === 'inviata' && (p.da_fare || 0) > 0);
   }
   function renderMail() {
     const tutte = mailProposte();
     const mostraTutte = $('mailTutte').checked;
-    const lista = tutte.filter((p) => mostraTutte || p.stato === 'nuova');
-    const nuove = tutte.filter((p) => p.stato === 'nuova').length;
+    const lista = tutte.filter((p) => mostraTutte || mailInVista(p));
+    const nuove = tutte.filter(mailInVista).length;
     $('mailCard').hidden = !tutte.length;
     $('mailSub').textContent = nuove ? `${nuove} da vedere` : 'nessuna da vedere';
     const box = $('mailLista');
@@ -1702,12 +1720,15 @@
     if (!lista.length) { box.append(el('div', { class: 'muted', text: 'Nessuna richiesta nuova.' })); return; }
     const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
     for (const p of lista) {
-      const card = el('div', { class: 'mail' + (p.stato === 'nuova' ? '' : ' chiusa'), 'data-id': p.id });
+      const card = el('div', { class: 'mail' + (mailInVista(p) ? '' : ' chiusa'), 'data-id': p.id });
       const mittente = String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim();
+      const ins = INS_MAIL[p.inserimento];
       card.append(el('div', { class: 'mail-testa' }, [
         el('div', {}, [el('div', { class: 'mail-ogg', text: p.oggetto || '(senza oggetto)' }), el('div', { class: 'mail-da', text: mittente })]),
         el('div', { class: 'mail-meta' }, [
-          p.stato !== 'nuova' ? el('span', { class: 'mail-stato ' + p.stato, text: p.stato }) : null,
+          ins ? el('span', { class: 'ins ' + ins[0], text: ins[1] }) : null,
+          p.nascosta && mostraTutte ? el('span', { class: 'mail-nasc', text: NASCOSTA[p.nascosta] || p.nascosta }) : null,
+          p.stato !== 'nuova' ? el('span', { class: 'mail-stato ' + p.stato, text: p.stato === 'inviata' ? 'mandata' : p.stato }) : null,
           el('span', { text: fmtShort(p.data) }),
           p.link ? el('a', { href: p.link, target: '_blank', rel: 'noopener', text: 'Apri la mail ↗' }) : null,
           p.stato === 'scartata'
@@ -1759,7 +1780,7 @@
     corpo.append(el('div', { class: 'mail-riga' }, [sel]));
     corpo.append(el('div', { class: 'mail-riga' }, [giorno, dalle, el('span', { class: 'sep', text: '→' }), alle, temp,
       el('span', { class: 'sep', text: '°C' })]));
-    // circuiti: previsto in centralina quel giorno (grigio) contro lo straordinario (arancio)
+    // circuiti: l'orario ordinario in centralina quel giorno (10/11/2026: niente barre, solo il testo)
     const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
     const circ = el('div', { class: 'mail-circ' });
     const aggiorna = [];
@@ -1767,36 +1788,25 @@
       const s = toMin(b.dalle), e = toMin(b.alle);
       return s != null && e != null && !Number.isNaN(s) && !Number.isNaN(e) && e > s ? [[s, e]] : [];
     };
-    if (progs.length) {
-      circ.append(el('div', { class: 'mc-scala' }, [
-        el('div', { class: 'mc-legenda' }, [el('span', {}, [el('i', { style: 'background:#8a8a8a' }), 'previsto']),
-          el('span', {}, [el('i', { style: 'background:var(--orange)' }), 'straordinario'])]),
-        el('div', { class: 'ore' }, [0, 6, 12, 18, 24].map((h) => el('span', { style: `left:${h / 24 * 100}%`, text: String(h) }))),
-        el('div', { text: 'in centralina quel giorno' }),
-      ]));
-    }
     for (const s of progs) {
       const prev = (q.previsto || {})[String(s.id)];
       const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
       cb.checked = b.ids.has(s.id);
       cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); });
-      const barre = el('div', { class: 'mc-barre', title: 'grigio: orario in centralina quel giorno · arancio: straordinario' });
       const testo = el('div', { class: 'mc-prev' });
       const ridisegna = () => {
-        barre.innerHTML = '';
-        barre.append(...barra((prev && prev.fasce) || [], 'prev'), ...barra(straFasce(), 'stra'));
         const sf = straFasce()[0];
         testo.innerHTML = '';
         testo.append(...mailPrevisto(prev, sf ? sf[0] : null, sf ? sf[1] : null));
         const gia = S.stra.filter((x) => String(x.schedule_id) === String(s.id) && x.data === b.giorno
           && ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato));
-        if (gia.length) testo.append(el('div', { class: 'gia', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
+        if (gia.length) testo.append(el('div', { class: 'gia et', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
       };
       aggiorna.push(ridisegna);
       ridisegna();
       circ.append(el('div', { class: 'mc' }, [
         el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : ''), title: nomeBreve(s) })]),
-        barre, testo,
+        testo,
       ]));
     }
     if (b.ref && !progs.length) circ.append(el('span', { class: 'muted', text: 'Nessun programma per accendere in questo impianto.' }));
@@ -1805,8 +1815,10 @@
     corpo.append(circ);
     const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, i, invia) });
     invia.disabled = p.stato !== 'nuova' && p.stato !== 'inviata';
+    const ir = INS_RICH[q.inserita];
     corpo.append(el('div', { class: 'mail-piede' }, [
-      el('div', { class: 'mail-nota' }, [q.nota ? el('div', { text: q.nota }) : null,
+      el('div', { class: 'mail-nota' }, [ir ? el('div', { class: 'req-ins ' + ir[0], text: ir[1] + (q.inserita_fasce ? ` (${q.inserita_fasce})` : '') }) : null,
+        q.nota ? el('div', { text: q.nota }) : null,
         b.esito ? el('div', { class: 'esito', style: 'color:var(--green)', text: b.esito }) : null,
         b.errore ? el('div', { class: 'esito', style: 'color:#e0a0a0', text: b.errore }) : null]),
       invia,
@@ -1839,8 +1851,18 @@
     const progs = ids.map((id) => S.catalog.schedules.find((s) => s.id === id)).filter(Boolean);
     const imp = S.catalog.impianti.find((x) => x.ref === b.ref) || {};
     const gg = dateFromIso(b.giorno);
-    const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)} dalle ${minToHHMM(start)} alle ${minToHHMM(end)} a ${temp} °C\n`
-      + `Programmi: ${progs.map(nomeBreve).join(', ')}\n\nIl PC lo scrive su Coster nei giorni prima e rimette l'orario normale il giorno dopo.`;
+    // 10/11/2026: lo straordinario si AGGIUNGE all'orario ordinario di quel giorno ("[+ord]" nella nota: il PC unisce le
+    // fasce con quelle che legge in centralina quando scrive). Prima le sostituiva: l'11/11 Polizia e SUAP avrebbero
+    // scaldato solo 16:30-18:30.
+    const righe = progs.map((s) => {
+      const prev = ((p.richieste[i] || {}).previsto || {})[String(s.id)];
+      const ord = prev ? (prev.fasce || []).map((f) => [f[0], Math.min(f[1], 1439)]) : null;
+      if (!ord) return `${nomeBreve(s)}: orario ordinario non letto, il PC lo aggiunge a quello che trova in centralina`;
+      const giorno = unisciFasce(ord.concat([[start, end]])).map((f) => fasciaTxt(f[0], f[1])).join(', ');
+      return `${nomeBreve(s)}: ordinario ${ord.length ? ord.map((f) => fasciaTxt(f[0], f[1])).join(', ') : 'spento'} → quel giorno ${giorno}`;
+    });
+    const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: straordinario dalle ${minToHHMM(start)} alle ${minToHHMM(end)} a ${temp} °C\n\n`
+      + righe.join('\n') + `\n\nL'orario ordinario resta. Il PC lo scrive su Coster nei giorni prima e rimette l'orario normale il giorno dopo.`;
     if (!window.confirm('Mandare lo straordinario all\'impianto?\n\n' + testo)) return;
     btn.disabled = true;
     const ok = [], ko = [];
@@ -1848,7 +1870,7 @@
       try {
         await api('/straordinari', { method: 'POST', body: {
           schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: [{ start, end, temp }],
-          note: `Da mail: ${String(p.oggetto || '').slice(0, 200)} [m:${p.id}]`,
+          note: `[+ord] Da mail: ${String(p.oggetto || '').slice(0, 200)} [m:${p.id}]`,
         } });
         ok.push(nomeBreve(s));
       } catch (e) {
@@ -1859,6 +1881,12 @@
     }
     if (ok.length) {
       b.esito = ('Inviato al PC per ' + ok.join(', ') + '.').replace(/\.\.$/, '.');
+      // subito "inserita", senza aspettare il PC (che lo ricalcola dagli straordinari al prossimo giro)
+      p.richieste[i].inserita = 'inserita';
+      const oggiIso = new Date().toLocaleDateString('sv-SE');
+      p.da_fare = p.richieste.filter((r) => ['no', 'in_parte'].includes(r.inserita) && (r.giorno || '') >= oggiIso).length;
+      const v = p.richieste.map((r) => r.inserita).filter(Boolean);
+      p.inserimento = v.every((x) => x === 'inserita' || x === 'ordinario') ? 'inserita' : 'in_parte';
       if (p.stato !== 'inviata') await mailStato(p, 'inviata');
       await loadStra();
     }
