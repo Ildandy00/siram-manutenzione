@@ -582,6 +582,7 @@
         l'ottimizzatore Coster continua a funzionare. Il PC le scrive nei 6 giorni prima e ripristina
         il programma ordinario il giorno dopo, da solo.
       </div>
+      <div id="straMetodo" class="muted" style="font-size:12px;margin:-6px 0 12px" hidden></div>
       <div id="straWarn" class="banner warn" hidden></div>
       <div class="stra-form">
         <div>
@@ -1804,6 +1805,7 @@
       };
       aggiorna.push(ridisegna);
       ridisegna();
+      if (OTT_TXT[s.ott]) testo.append(el('div', { class: 'et ott', text: OTT_TXT[s.ott], title: 'Lo straordinario va nel ' + metodoTxt(s) }));
       circ.append(el('div', { class: 'mc' }, [
         el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : ''), title: nomeBreve(s) })]),
         testo,
@@ -1857,9 +1859,10 @@
     const righe = progs.map((s) => {
       const prev = ((p.richieste[i] || {}).previsto || {})[String(s.id)];
       const ord = prev ? (prev.fasce || []).map((f) => [f[0], Math.min(f[1], 1439)]) : null;
-      if (!ord) return `${nomeBreve(s)}: orario ordinario non letto, il PC lo aggiunge a quello che trova in centralina`;
+      const dove = `\n   nel ${metodoTxt(s)}`;
+      if (!ord) return `${nomeBreve(s)}: orario ordinario non letto, il PC lo aggiunge a quello che trova in centralina${dove}`;
       const giorno = unisciFasce(ord.concat([[start, end]])).map((f) => fasciaTxt(f[0], f[1])).join(', ');
-      return `${nomeBreve(s)}: ordinario ${ord.length ? ord.map((f) => fasciaTxt(f[0], f[1])).join(', ') : 'spento'} → quel giorno ${giorno}`;
+      return `${nomeBreve(s)}: ordinario ${ord.length ? ord.map((f) => fasciaTxt(f[0], f[1])).join(', ') : 'spento'} → quel giorno ${giorno}${dove}`;
     });
     const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: straordinario dalle ${minToHHMM(start)} alle ${minToHHMM(end)} a ${temp} °C\n\n`
       + righe.join('\n') + `\n\nL'orario ordinario resta. Il PC lo scrive su Coster nei giorni prima e rimette l'orario normale il giorno dopo.`;
@@ -2125,8 +2128,19 @@
     renderStraWarn();
   }
 
+  /** 11/11/2026 (Davide): con l'ottimizzatore attivo lo straordinario va nel programma settimanale, senza
+   *  ottimizzatore nel programma straordinarie della centralina. Lo decide il PC (stra_metodo nel catalogo). */
+  const OTT_TXT = { attivo: 'ottimizzatore attivo', spento: 'ottimizzatore spento', nessuno: 'senza ottimizzatore' };
+  function metodoTxt(s) {
+    if (!s) return '';
+    return (s.stra_metodo === 'centralina' ? 'programma straordinarie della centralina' : 'programma settimanale')
+      + (s.stra_motivo ? ` (${s.stra_motivo})` : '');
+  }
   function renderStraWarn() {
     const w = $('straWarn');
+    const m = $('straMetodo');
+    m.hidden = !S.schedule;
+    if (S.schedule) m.textContent = 'Lo straordinario va nel ' + metodoTxt(S.schedule) + '.';
     if (!S.schedule) { w.hidden = true; return; }
     const act = S.stra.filter((x) => String(x.schedule_id) === String(S.schedule.id) && x.stato === 'applicato');
     w.hidden = !act.length;
