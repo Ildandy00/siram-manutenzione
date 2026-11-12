@@ -488,6 +488,13 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
   user-select: none;
 }
 .toggle-ord-btn.nascosti { background: rgba(200,200,200,.1); color: var(--accent); border-color: rgba(200,200,200,.2); }
+.rep-box{background:var(--bg3);border-radius:8px;padding:10px 12px}
+.rep-testa{font-size:14px}
+.rep-muto{color:var(--muted);font-size:11px}
+.rep-tab{border-collapse:collapse;width:100%;font-size:12px;margin:0 0 8px}
+.rep-tab th{text-align:left;color:var(--muted);font-weight:500;padding:3px 6px;border-bottom:1px solid var(--border)}
+.rep-tab td{padding:3px 6px;border-bottom:1px solid var(--border);vertical-align:top}
+.rep-rosso{color:#f87171;font-weight:600}
 </style>
 </head>
 <body>
@@ -1098,6 +1105,7 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
     <div class="modal-body">
       <div id="detInfo" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:12px;color:var(--muted)"></div>
       <div id="detNote"></div>
+      <div id="detReport" style="display:none;margin-bottom:14px"></div>
       <div id="detPraticaBox" style="display:none;margin-bottom:14px"></div>
       <div class="fg" style="margin-bottom:14px">
         <label>👷 Assegna a</label>
@@ -2898,6 +2906,42 @@ function toggleChiusuraBox() {
   document.getElementById('detChiusuraBox').style.display = chiuso?'block':'none';
 }
 
+// 12/11/2026: report dell'agente segnalazioni (freddo, orari corti, blocco caldaia) dentro il dettaglio:
+// verdetto, tabelle e foto del sinottico di Coster. Lo manda il PC dell'ufficio al server (/segnalazioni).
+const REP_COLORE = { fondata:'#f87171', non_fondata:'#4ade80', dati_insufficienti:'#fbbf24' };
+const REP_TESTO = { fondata:'FONDATA', non_fondata:'NON FONDATA', dati_insufficienti:'DATI INSUFFICIENTI' };
+async function caricaReportSegnalazione(id) {
+  const box=document.getElementById('detReport');
+  if(!box) return;
+  box.style.display='none'; box.innerHTML='';
+  let r;
+  try {
+    const risp=await fetch(PROXY_URL+'/segnalazioni/report/'+encodeURIComponent(id));
+    if(!risp.ok) return;
+    r=await risp.json();
+  } catch(e) { return; }
+  if(currentDetId!==id || !r || !r.verdetto) return;      // nel frattempo e' stato aperto un altro intervento
+  const col=REP_COLORE[r.verdetto]||'#9aa';
+  const tab=(r.tabelle||[]).map(t=>`<div style="overflow-x:auto"><table class="rep-tab">
+      ${t.testa&&t.testa.length?`<tr>${t.testa.map(h=>`<th>${escH(h)}</th>`).join('')}</tr>`:''}
+      ${(t.righe||[]).map(riga=>`<tr>${riga.map((c,k)=>`<td${c.rosso?' class="rep-rosso"':''}>${(!t.testa||!t.testa.length)&&k===0?'<b>'+escH(c.t)+'</b>':escH(c.t)}</td>`).join('')}</tr>`).join('')}
+    </table></div>`).join('');
+  const img=(r.immagini||[]).map(im=>{
+    const u=PROXY_URL+'/segnalazioni/immagine/'+encodeURIComponent(id)+'/'+im.n;
+    return `<a href="${u}" target="_blank" rel="noopener" title="Apri la foto intera"><img src="${u}" alt="${escH(im.titolo||'Sinottico')}" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-top:8px;display:block"></a>`;
+  }).join('');
+  box.innerHTML=`<div class="rep-box" style="border-left:3px solid ${col}">
+      <div class="rep-testa"><span style="color:${col};font-weight:700">${REP_TESTO[r.verdetto]||escH(r.verdetto)}</span>
+        <span style="font-weight:600">· ${escH(r.causa||'')}</span>
+        <span class="rep-muto">· certezza ${escH(r.certezza||'')}${r.prova?' · PROVA':''}</span></div>
+      <div class="rep-muto" style="margin:2px 0 8px">Analisi automatica${r.giorno?' del '+escH(r.giorno):''} · dati delle ${escH(r.dati_del||'')}</div>
+      ${tab}
+      ${r.primo_controllo?`<div style="font-size:12px;margin-top:6px"><b>Primo controllo:</b> ${escH(r.primo_controllo)}</div>`:''}
+      ${img}
+    </div>`;
+  box.style.display='block';
+}
+
 function openDettaglio(id) {
   const iAtt=S.interventi.find(x=>x.id===id);
   if(isAttivita(iAtt)) return openModalAttivita(id);   // le attivita' hanno la loro finestra
@@ -2944,6 +2988,8 @@ function openDettaglio(id) {
            ${notaChiusura}
          </div>`
       : '');
+
+  caricaReportSegnalazione(id);
 
   const praticaCollegata=praticaDiIntervento(i);
   const praBox=document.getElementById('detPraticaBox');
