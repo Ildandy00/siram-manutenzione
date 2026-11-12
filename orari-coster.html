@@ -2187,7 +2187,7 @@
               : el('span', { class: 'rq-vuoto', text: 'spento quel giorno' }),
           el('span', { class: 'k', text: 'Diventa' }), cb.checked ? elDiventa(prev, scritteDi(s)) : el('span', { class: 'rq-vuoto', text: 'non toccato' }),
           el('span', { class: 'k', text: 'Dove' }), el('span', { class: 'rq-vuoto', text: metodoTxt(s) }));
-        if (gia.length) dv.append(el('span', { class: 'k', text: 'Attenzione' }), el('span', { class: 'rq-diff div', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
+        if (gia.length) dv.append(el('span', { class: 'k', text: 'Già presente' }), el('span', { class: 'rq-diff div', text: 'straordinario ' + gia.map((x) => x.fasce_testo).join(', ') + ': le fasce nuove si aggiungono a questo' }));
       };
       cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); agg.forEach((f) => f()); });
       agg.push(fa);
