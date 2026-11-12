@@ -283,6 +283,98 @@
     .mc:last-child { border-bottom: none; }
   }
   /* 09/11/2026: programmi per accendere l'impianto */
+
+  /* 12/11/2026 (Davide: "tema chiaro solo su straordinari"): la scheda Straordinari ha i suoi colori chiari; le altre schede
+     restano scure. Si cambia solo qui: tutto il resto usa le stesse variabili. */
+  #app[data-tab=stra] {
+    --bg: #f3f4f6; --bg2: #ffffff; --bg3: #f1f3f6; --bg4: #e6e9ee; --bg5: #d9dde3;
+    --border: #d5d9e0; --text: #14171c; --muted: #56606d; --accent: #14171c;
+    --green: #17703a; --yellow: #8a5a00; --red: #b3261e; --orange: #a04a00; --blue: #1552b0; --chg: #fff3d6;
+    --cli: #1552b0; --cli-bg: #e8f0fd; --cli-bd: #a9c4f0; --piu: #b00000; --piu-bg: #fdecec; --neu: #eceef2;
+    background: var(--bg); color: var(--text); color-scheme: light; border-radius: 14px; padding: 4px 14px 14px; margin: 0 -14px;
+  }
+  #app[data-tab=stra] .btn:hover:not(:disabled) { border-color: #8b93a1; }
+  #app[data-tab=stra] .btn.primary { background: #14171c; border-color: #14171c; color: #fff; }
+  #app[data-tab=stra] .btn.primary:hover:not(:disabled) { background: #2b313b; }
+  #app[data-tab=stra] .btn.confirm { color: #fff; }
+  #app[data-tab=stra] .btn-x:hover { border-color: #8b93a1; }
+  #app[data-tab=stra] .badge { background: var(--neu); color: var(--muted); }
+  #app[data-tab=stra] .badge.ok { background: #e3f4e8; color: var(--green); }
+  #app[data-tab=stra] .badge.err { background: #fdecec; color: var(--red); }
+  #app[data-tab=stra] .badge.run { background: var(--cli-bg); color: var(--blue); }
+  #app[data-tab=stra] .badge.wait { background: #fff3d6; color: var(--yellow); }
+  #app[data-tab=stra] .banner.err, #app[data-tab=stra] .stra-item .m.bad, #app[data-tab=stra] .ins.no, #app[data-tab=stra] .req-ins.no { color: var(--red); }
+  #app[data-tab=stra] .banner.err { background: #fdecec; border-color: #f0b8b4; }
+  #app[data-tab=stra] .banner.warn { background: #fff3d6; border-color: #ecd08a; }
+  #app[data-tab=stra] .banner.ok { background: #e3f4e8; border-color: #a9d8b7; }
+  #app[data-tab=stra] .banner.info { background: var(--cli-bg); border-color: var(--cli-bd); }
+  #app[data-tab=stra] .mail { background: transparent; border: 0; padding: 0; margin-bottom: 26px; }
+  #app[data-tab=stra] .mail-ries { color: var(--text); }
+  .mail-file, .mail-ries, .mail-dubbi { overflow-wrap: anywhere; }
+  #app[data-tab=stra] .mail-dubbi { background: #fff3d6; }
+  #app[data-tab=stra] .ins { background: var(--neu); }
+
+  /* richieste dalle mail: una riga per richiesta, il blocco con le impostazioni si apre sotto */
+  .rq-lista { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg2); }
+  .rq-r { display: grid; grid-template-columns: 84px minmax(0, 1.5fr) 128px minmax(0, 2fr) 236px; gap: 4px 14px; padding: 10px 14px; align-items: start; }
+  .rq-r + .rq-r, .rq-r + .rq-ap, .rq-ap + .rq-r { border-top: 1px solid var(--border); }
+  .rq-r.h { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: var(--bg3); padding-block: 7px; }
+  .rq-r:not(.h) { cursor: pointer; }
+  .rq-r:not(.h):hover, .rq-r.aperta { background: var(--bg3); }
+  .rq-data { font: 500 13px 'DM Mono', monospace; text-transform: uppercase; white-space: nowrap; }
+  .rq-chi b { font-weight: 600; } .rq-chi div { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .rq-f { font: 13px 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
+  .rq-f.cl { color: var(--cli); font-weight: 500; }
+  .rq-f .fa { white-space: nowrap; }
+  .rq-f .piu { color: var(--piu); background: var(--piu-bg); border-radius: 3px; padding: 0 2px; font-weight: 500; }
+  .rq-gia { color: var(--green); font: 500 12px 'Outfit', sans-serif; }
+  .rq-vuoto { color: var(--muted); font-size: 13px; }
+  .rq-c { display: grid; grid-template-columns: minmax(0, 104px) minmax(0, 1fr); gap: 0 8px; font-size: 12px; align-items: baseline; }
+  .rq-c > span:first-child { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rq-lato { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+  .rq-st { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; background: var(--neu); color: var(--muted); }
+  .rq-st.ok { background: #e3f4e8; color: var(--green); } .rq-st.parte { background: #fff3d6; color: var(--yellow); }
+  .rq-scritto { font-size: 12px; color: var(--muted); } .rq-scritto.div { color: var(--yellow); font-weight: 500; }
+  .rq-lab { display: none; }
+  .rq-ap { background: var(--bg3); padding: 12px; }
+  .rq-blocco { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .rq-cliente { display: flex; gap: 6px 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 14px; background: var(--cli-bg); border-bottom: 1px solid var(--cli-bd); }
+  .rq-et { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .rq-cliente .rq-et { color: var(--cli); }
+  .rq-ora { font: 500 19px 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
+  .rq-sez { padding: 12px 14px; display: grid; gap: 10px; }
+  .rq-campi { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .rq-campi select { min-height: 40px; max-width: 100%; flex: 1 1 260px; min-width: 0; }
+  .rq-blocco input[type=time], .rq-blocco input[type=date], .rq-blocco input[type=number] { min-height: 40px; padding: 6px 9px; font: 15px 'DM Mono', monospace; width: auto; }
+  .rq-blocco input[type=number] { width: 76px; }
+  .rq-blocco input[type=checkbox] { width: 18px; height: 18px; flex: none; }
+  .rq-diff { font-size: 13px; color: var(--muted); } .rq-diff.div { color: var(--yellow); font-weight: 500; }
+  .rq-circ { border: 1px solid var(--border); border-radius: 8px; }
+  .rq-ci { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 9px 12px; align-items: center; }
+  .rq-ci + .rq-ci { border-top: 1px solid var(--border); }
+  .rq-ci label { display: flex; gap: 9px; align-items: center; font-weight: 600; min-width: 0; cursor: pointer; flex-wrap: wrap; }
+  .rq-ci label.no { font-weight: 400; color: var(--muted); }
+  .rq-t { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+  .rq-kv { grid-column: 1 / -1; display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 2px 10px; padding-left: 27px; font-size: 13px; align-items: baseline; }
+  .rq-kv .k { color: var(--muted); }
+  .rq-ott { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--neu); color: var(--muted); white-space: nowrap; }
+  .rq-ott.attivo { background: #e3f4e8; color: var(--green); }
+  .rq-piede { display: flex; gap: 10px 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .rq-nota { font-size: 12px; color: var(--muted); flex: 1 1 260px; min-width: 0; }
+  .rq-piede .btn { min-height: 40px; }
+  @media (max-width: 760px) {
+    .rq-r.h { display: none; }
+    .rq-r { grid-template-columns: minmax(0, 1fr) auto; }
+    .rq-c { grid-template-columns: minmax(0, 92px) minmax(0, 1fr); }
+    .rq-r > .rq-data { grid-column: 1; } .rq-r > .rq-lato { grid-column: 2; grid-row: 1; }
+    .rq-r > .rq-chi, .rq-r > .rq-col { grid-column: 1 / -1; }
+    .rq-r > .rq-col { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; }
+    .rq-lab { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+    .rq-kv { padding-left: 0; }
+    .rq-ap { padding: 8px; }
+    .rq-piede .btn { width: 100%; }
+    #app[data-tab=stra] { margin: 0 -8px; padding: 4px 8px 12px; }
+  }
   .stra-altri { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
   .stra-altri label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   #schedNota .actions { margin-top: 8px; flex-wrap: wrap; gap: 6px; }
@@ -573,10 +665,10 @@
     <!-- STRAORDINARI: richieste lette dalle mail (09/11/2026) -->
     <section id="mailCard" class="card t-stra" hidden>
       <h2>Richieste dalle mail <small id="mailSub"></small></h2>
-      <div class="muted" style="font-size:12px;margin-bottom:10px">Lette da Claude nelle mail del foglio "Mail accensioni".
-        Controlla impianto, giorno, orario e programmi: lo straordinario parte solo con "Manda all'impianto".
-        Il PC aggiunge lo straordinario all'orario ordinario di quel giorno: l'orario normale resta.
-        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche mandate, scartate, doppioni, passate e orari fissi</label></div>
+      <div class="muted" style="font-size:12px;margin-bottom:10px">Tocca una richiesta per aprire le impostazioni. In azzurro
+        l'orario chiesto dal cliente, in rosso le ore che lo straordinario aggiunge all'orario del giorno: l'orario normale resta.
+        Parte solo con "Manda all'impianto".
+        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche mandate, scartate, doppioni, passate, orari fissi e richieste tolte</label></div>
       <div id="mailLista"></div>
     </section>
 
@@ -1667,7 +1759,7 @@
       const q = p.richieste[i];
       S.mailEdit[k] = {
         ref: q.impianto_ref || '', giorno: q.giorno || '', dalle: q.dalle || '', alle: q.alle || '',
-        temp: q.temperatura ? String(q.temperatura) : '20', ids: new Set(q.schedule_ids || []), esito: '', errore: '',
+        ids: new Set(q.schedule_ids || []), temps: {}, esito: '', errore: '',
       };
     }
     return S.mailEdit[k];
@@ -1717,17 +1809,90 @@
   function mailInVista(p) {
     return (p.stato === 'nuova' && !p.nascosta) || (p.stato === 'inviata' && (p.da_fare || 0) > 0);
   }
-  function renderMail() {
+  // ---- 12/11/2026: pagina nuova delle richieste dalle mail (bozzetto 3 approvato da Davide) ----
+  // Una riga per richiesta; toccandola si apre il blocco: in alto l'orario chiesto dal cliente (non si modifica), sotto le
+  // caselle di quello che si scrive, poi per ogni circuito ottimizzatore, gradi, orario previsto e come diventa il giorno.
+  // Le richieste dello stesso impianto e dello stesso giorno stanno in un blocco solo (uno straordinario con piu' fasce:
+  // prima la seconda veniva rifiutata dal server). I gradi sono per circuito (Celletta "Uta palestra" lavora a 55 C).
+  const MAIL_TOLTE_KEY = 'orari_mail_richieste_tolte';
+  function mailTolte() {
+    let v = [];
+    try { v = JSON.parse(localStorage.getItem(MAIL_TOLTE_KEY) || '[]'); } catch (e) { v = []; }
+    return new Set([...(Array.isArray(v) ? v : []), ...(S.mailTolteMem || [])]);
+  }
+  function mailTogli(k) {
+    S.mailTolteMem = S.mailTolteMem || new Set();
+    S.mailTolteMem.add(k);
+    try { localStorage.setItem(MAIL_TOLTE_KEY, JSON.stringify([...mailTolte()].slice(-400))); } catch (e) { /* vale fino al ricarico */ }
+  }
+  /** Richieste della stessa mail con lo stesso impianto e lo stesso giorno: un gruppo (indici in p.richieste). */
+  function mailGruppi(p) {
+    const out = [], per = new Map();
+    p.richieste.forEach((q, i) => {
+      const k = q.impianto_ref && q.giorno ? q.impianto_ref + '|' + q.giorno : null;
+      if (k && per.has(k)) { per.get(k).push(i); return; }
+      const g = [i];
+      if (k) per.set(k, g);
+      out.push(g);
+    });
+    return out;
+  }
+  /** Gradi proposti per un programma: quelli che il programma usa gia' (censimento), se no quelli della mail, se no 20. */
+  function tempProgramma(s, q) {
+    const prev = (q.previsto || {})[String(s.id)];
+    const f = prev && (prev.fasce || []).find((x) => x[2] != null);
+    let nota = f ? Number(f[2]) : null;
+    if (nota == null) {
+      const r = S.catalog.confronto && (S.catalog.confronto.righe || []).find((x) => String(x.schedule_id) === String(s.id));
+      if (r && r.temp != null) nota = Number(r.temp);
+    }
+    const cli = Number(q.temperatura) || 0;
+    if (nota != null && !Number.isNaN(nota) && (!cli || nota >= 30)) return nota;   // da 30 in su e' una mandata, non un ambiente
+    return cli || 20;
+  }
+  function fasceBuone(fasce) {
+    return fasce.filter((f) => f[0] != null && f[1] != null && !Number.isNaN(f[0]) && !Number.isNaN(f[1]) && f[1] > f[0]);
+  }
+  /** Orario del giorno con lo straordinario: quello previsto + le fasce nuove, con le ore che cambiano in rosso. */
+  function elDiventa(prev, nuove) {
+    const buone = fasceBuone(nuove);
+    if (!buone.length) return el('span', { class: 'rq-vuoto', text: 'orario non valido' });
+    const box = el('span', { class: 'rq-f' });
+    if (!prev) {
+      box.append(el('span', { class: 'piu', text: buone.map((f) => fasciaTxt(f[0], f[1])).join(' · ') }), ' ',
+        el('span', { class: 'rq-vuoto', text: '+ l\'ordinario (non letto)' }));
+      return box;
+    }
+    const c = prev.map((f) => [f[0], Math.min(f[1], 1440)]);
+    const coperta = (f) => c.reduce((n, p) => n + Math.max(0, Math.min(f[1], p[1]) - Math.max(f[0], p[0])), 0) >= f[1] - f[0];
+    if (c.length && buone.every(coperta)) {
+      box.append(c.map((f) => fasciaTxt(f[0], f[1])).join(' · ') + ' ', el('span', { class: 'rq-gia', text: 'già acceso' }));
+      return box;
+    }
+    unisciFasce(c.concat(buone)).forEach((f, i) => {
+      const ni = !c.some((p) => p[0] === f[0]), nf = !c.some((p) => p[1] === f[1]);
+      if (i) box.append(' · ');
+      box.append(el('span', { class: 'fa' }, [el('span', { class: ni ? 'piu' : '', text: minToHHMM(f[0]) }), '–',
+        el('span', { class: nf ? 'piu' : '', text: f[1] >= 1440 ? '24:00' : minToHHMM(f[1]) })]));
+    });
+    return box;
+  }
+  function renderMail(forza) {
+    const box = $('mailLista');
+    // non si ridisegna sotto le dita: se si sta scrivendo in una casella, si rimanda a quando se ne esce
+    const att = document.activeElement;
+    if (forza !== true && att && box.contains(att) && /^(INPUT|SELECT)$/.test(att.tagName) && att.type !== 'checkbox') { S.mailRinvia = true; return; }
+    S.mailRinvia = false;
     const tutte = mailProposte();
     const mostraTutte = $('mailTutte').checked;
     const lista = tutte.filter((p) => mostraTutte || mailInVista(p));
     const nuove = tutte.filter(mailInVista).length;
     $('mailCard').hidden = !tutte.length;
     $('mailSub').textContent = nuove ? `${nuove} da vedere` : 'nessuna da vedere';
-    const box = $('mailLista');
     box.innerHTML = '';
     if (!lista.length) { box.append(el('div', { class: 'muted', text: 'Nessuna richiesta nuova.' })); return; }
     const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
+    const tolte = mailTolte();
     for (const p of lista) {
       const card = el('div', { class: 'mail' + (mailInVista(p) ? '' : ' chiusa'), 'data-id': p.id });
       const mittente = String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim();
@@ -1746,7 +1911,6 @@
         ]),
       ]));
       if (p.riassunto) card.append(el('div', { class: 'mail-ries', text: p.riassunto }));
-      // 10/11/2026: allegati (PDF, Excel) letti da Claude, e quelli che non ha potuto leggere
       if ((p.file || []).length || (p.file_non_letti || []).length) {
         card.append(el('div', { class: 'mail-file' }, [
           (p.file || []).length ? el('span', {}, ['📎 Letti anche: ', el('b', { text: p.file.join(', ') })]) : null,
@@ -1755,86 +1919,160 @@
         ]));
       }
       if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: p.dubbi }));
-      const reqs = el('div', { class: 'mail-reqs' });
-      p.richieste.forEach((q, i) => reqs.append(mailRichiesta(p, q, i, impOrd)));
-      if (!p.richieste.length) reqs.append(el('div', { class: 'muted', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
-      card.append(reqs);
+      const gruppi = mailGruppi(p).filter((g) => mostraTutte || !g.every((i) => tolte.has(p.id + '|' + i)));
+      if (!p.richieste.length) card.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
+      else if (!gruppi.length) card.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Richieste tolte dall\'elenco.' }));
+      else {
+        const ls = el('div', { class: 'rq-lista' }, [el('div', { class: 'rq-r h' }, ['Giorno', 'Impianto', 'Cliente', 'Centralina: quel giorno diventa', ''].map((t) => el('span', { text: t })))]);
+        for (const g of gruppi) ls.append(...mailVoce(p, g, impOrd));
+        card.append(ls);
+      }
       box.append(card);
     }
   }
-  /** Un riquadro per richiesta: data a sinistra; impianto, orario, circuiti con previsto e straordinario. */
-  function mailRichiesta(p, q, i, impOrd) {
-    const b = mailBozza(p, i);
-    const req = el('div', { class: 'mail-req' });
+  /** La riga di una richiesta (o di un gruppo) e, se aperta, il blocco con le impostazioni. */
+  function mailVoce(p, idxs, impOrd) {
+    const q0 = p.richieste[idxs[0]];
+    const b = mailBozza(p, idxs[0]);
+    const bs = idxs.map((i) => mailBozza(p, i));
+    if (!b.gruppo) {      // i programmi proposti per le altre richieste del gruppo valgono per tutto il blocco
+      idxs.slice(1).forEach((i) => (p.richieste[i].schedule_ids || []).forEach((id) => b.ids.add(id)));
+      b.gruppo = true;
+    }
+    const chiave = p.id + '|' + idxs[0];
+    S.mailAperte = S.mailAperte || new Set();
+    const aperta = S.mailAperte.has(chiave);
+    const imp = b.ref ? S.catalog.impianti.find((x) => x.ref === b.ref) : null;
+    const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
+    progs.forEach((s) => { if (b.temps[s.id] == null) b.temps[s.id] = String(tempProgramma(s, q0)).replace(/\.0$/, ''); });
+    const prevDi = (s) => { const v = (q0.previsto || {})[String(s.id)]; return v && b.giorno === q0.giorno && b.ref === (q0.impianto_ref || b.ref) ? (v.fasce || []) : null; };
+    const scritte = () => bs.map((x) => [toMin(x.dalle), toMin(x.alle)]);
+    const cliente = idxs.map((i) => p.richieste[i]).map((q) => (q.dalle ? q.dalle : '…') + '–' + (q.alle || '…'));
     const gd = dateFromIso(b.giorno);
-    req.append(gd
-      ? el('div', { class: 'mail-data' }, [el('span', { class: 'gs', text: GG3[gd.getDay()] }), el('span', { class: 'gn', text: String(gd.getDate()) }),
-        el('span', { class: 'gm', text: MESI[gd.getMonth()] })])
-      : el('div', { class: 'mail-data vuota' }, [el('span', { class: 'gn', text: '?' }), el('span', { class: 'gm', text: 'giorno' })]));
-    const corpo = el('div', { class: 'mail-corpo' });
+    const st = idxs.map((i) => p.richieste[i].inserita || '');
+    const stato = st.every((x) => x === 'inserita') ? 'inserita' : st.every((x) => x === 'ordinario') ? 'ordinario'
+      : st.every((x) => x === 'inserita' || x === 'ordinario') ? 'inserita' : st.some((x) => x === 'inserita' || x === 'in_parte') ? 'in_parte' : st[0];
+    const ir = INS_RICH[stato];
+    const scritto = [...new Set(idxs.map((i) => p.richieste[i].inserita_fasce).filter(Boolean))].join(', ');
+    const diverso = scritto && scritto.replace(/\s/g, '') !== cliente.join(',').replace(/–/g, '-');
+
+    // ---- riga
+    const cCentr = el('div');
+    const riga = el('div', { class: 'rq-r' + (aperta ? ' aperta' : ''), 'data-k': chiave });
+    const tolta = idxs.every((i) => mailTolte().has(p.id + '|' + i));
+    const apri = el('button', { type: 'button', class: 'btn ghost', text: aperta ? 'Chiudi' : (b.ref ? 'Apri' : 'Scegli') });
+    const cambia = () => { if (aperta) S.mailAperte.delete(chiave); else S.mailAperte.add(chiave); renderMail(true); };
+    apri.addEventListener('click', (ev) => { ev.stopPropagation(); cambia(); });
+    riga.addEventListener('click', cambia);
+    const lato = [ir ? el('span', { class: 'rq-st ' + ir[0], text: ir[1].replace('✓ ', '') }) : null, apri];
+    if (!b.ref && !tolta) {
+      lato.push(el('button', { type: 'button', class: 'btn-x', text: '✕', title: 'Togli dall\'elenco', 'aria-label': 'Togli dall\'elenco',
+        onclick: (ev) => { ev.stopPropagation(); idxs.forEach((i) => mailTogli(p.id + '|' + i)); renderMail(true); } }));
+    }
+    riga.append(
+      el('div', { class: 'rq-data', text: gd ? `${GG3[gd.getDay()]} ${gd.getDate()} ${MESI[gd.getMonth()]}` : 'giorno ?' }),
+      el('div', { class: 'rq-chi' }, [el('b', { text: imp ? (imp.codice_k && String(imp.nome).startsWith(imp.codice_k) ? imp.nome : impiantoLabel(imp)) : 'Impianto non riconosciuto' }),
+        q0.impianto_testo ? el('div', { text: 'la mail dice: ' + q0.impianto_testo }) : null]),
+      el('div', { class: 'rq-col' }, [el('span', { class: 'rq-lab', text: 'Cliente' }), el('div', {}, [
+        el('div', { class: 'rq-f cl', text: cliente.join(' · ') }),
+        scritto ? el('div', { class: 'rq-scritto' + (diverso ? ' div' : ''), text: 'scritto ' + scritto + (diverso ? ' · diverso dal chiesto' : '') }) : null])]),
+      el('div', { class: 'rq-col' }, [el('span', { class: 'rq-lab', text: 'Centralina' }), cCentr]),
+      el('div', { class: 'rq-lato' }, lato),
+    );
+    const aggRiga = () => {
+      cCentr.innerHTML = '';
+      if (!b.ref) { cCentr.append(el('span', { class: 'rq-vuoto', text: 'non telegestito, oppure impianto da scegliere' })); return; }
+      const scelti = progs.filter((s) => b.ids.has(s.id));
+      if (!scelti.length) { cCentr.append(el('span', { class: 'rq-vuoto', text: 'nessun circuito scelto' })); return; }
+      scelti.forEach((s) => cCentr.append(el('div', { class: 'rq-c' }, [el('span', { text: nomeBreve(s), title: nomeBreve(s) }), elDiventa(prevDi(s), scritte())])));
+    };
+    aggRiga();
+    if (!aperta) return [riga];
+
+    // ---- blocco aperto
+    const agg = [aggRiga];
+    const blocco = el('div', { class: 'rq-blocco' });
+    blocco.append(el('div', { class: 'rq-cliente' }, [
+      el('span', { class: 'rq-et', text: 'Chiesto dal cliente' }),
+      el('span', { class: 'rq-ora', text: cliente.join(' · ') }),
+      el('span', { class: 'rq-vuoto', text: (q0.temperatura ? String(q0.temperatura).replace('.', ',') + ' °C' : 'temperatura non indicata') + ' · non si modifica' }),
+    ]));
     const sel = el('select', { 'aria-label': 'Impianto' });
-    sel.append(el('option', { value: '', text: q.impianto_testo ? `— scegli l'impianto (la mail dice: ${q.impianto_testo}) —` : '— scegli l\'impianto —' }));
-    for (const imp of impOrd) {
-      const o = el('option', { value: imp.ref, text: impiantoLabel(imp) });
-      if (imp.ref === b.ref) o.selected = true;
+    sel.append(el('option', { value: '', text: q0.impianto_testo ? `— scegli l'impianto (la mail dice: ${q0.impianto_testo}) —` : '— scegli l\'impianto —' }));
+    for (const x of impOrd) {
+      const o = el('option', { value: x.ref, text: impiantoLabel(x) });
+      if (x.ref === b.ref) o.selected = true;
       sel.append(o);
     }
-    sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); renderMail(); });
+    sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); b.temps = {}; renderMail(true); });
     const giorno = el('input', { type: 'date', value: b.giorno, 'aria-label': 'Giorno' });
-    giorno.addEventListener('change', () => { b.giorno = giorno.value; renderMail(); });
-    const dalle = el('input', { type: 'time', value: b.dalle, 'aria-label': 'Dalle' });
-    const alle = el('input', { type: 'time', value: b.alle, 'aria-label': 'Alle' });
-    const temp = el('input', { type: 'number', step: '0.5', value: b.temp, 'aria-label': 'Temperatura' });
-    temp.addEventListener('input', () => { b.temp = temp.value; });
-    corpo.append(el('div', { class: 'mail-riga' }, [sel]));
-    corpo.append(el('div', { class: 'mail-riga' }, [giorno, dalle, el('span', { class: 'sep', text: '→' }), alle, temp,
-      el('span', { class: 'sep', text: '°C' })]));
-    // circuiti: l'orario ordinario in centralina quel giorno (10/11/2026: niente barre, solo il testo)
-    const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
-    const circ = el('div', { class: 'mail-circ' });
-    const aggiorna = [];
-    const straFasce = () => {
-      const s = toMin(b.dalle), e = toMin(b.alle);
-      return s != null && e != null && !Number.isNaN(s) && !Number.isNaN(e) && e > s ? [[s, e]] : [];
-    };
+    giorno.addEventListener('change', () => { bs.forEach((x) => { x.giorno = giorno.value; }); renderMail(true); });
+    const campi = el('div', { class: 'rq-campi' });
+    const diff = el('div', { class: 'rq-diff' });
+    bs.forEach((x, n) => {
+      const d = el('input', { type: 'time', value: x.dalle, 'aria-label': 'Dalle' }), a = el('input', { type: 'time', value: x.alle, 'aria-label': 'Alle' });
+      d.addEventListener('input', () => { x.dalle = d.value; agg.forEach((f) => f()); });
+      a.addEventListener('input', () => { x.alle = a.value; agg.forEach((f) => f()); });
+      if (n) campi.append(el('span', { class: 'rq-vuoto', text: 'e' }));
+      campi.append(d, el('span', { class: 'rq-vuoto', text: '→' }), a);
+    });
+    agg.push(() => {
+      const parti = [];
+      bs.forEach((x, n) => {
+        const q = p.richieste[idxs[n]], s = toMin(x.dalle), e = toMin(x.alle), cs = toMin(q.dalle), ce = toMin(q.alle);
+        if (s != null && cs != null && !Number.isNaN(s) && !Number.isNaN(cs) && s !== cs) parti.push(`inizia ${Math.abs(s - cs)} min ${s < cs ? 'prima' : 'dopo'}`);
+        if (e != null && ce != null && !Number.isNaN(e) && !Number.isNaN(ce) && e !== ce) parti.push(`finisce ${Math.abs(e - ce)} min ${e < ce ? 'prima' : 'dopo'}`);
+      });
+      diff.className = 'rq-diff' + (parti.length ? ' div' : '');
+      diff.textContent = parti.length ? 'Diverso dal cliente: ' + parti.join(', ') + '.' : 'Come chiesto dal cliente.';
+    });
+    const sez = el('div', { class: 'rq-sez' }, [
+      el('span', { class: 'rq-et', text: 'Da scrivere in centralina' }),
+      el('div', { class: 'rq-campi' }, [sel, giorno]), campi, diff,
+    ]);
+    const circ = el('div', { class: 'rq-circ' });
     for (const s of progs) {
-      const prev = (q.previsto || {})[String(s.id)];
       const cb = el('input', { type: 'checkbox', 'data-id': String(s.id) });
       cb.checked = b.ids.has(s.id);
-      cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); });
-      const testo = el('div', { class: 'mc-prev' });
-      const ridisegna = () => {
-        const sf = straFasce()[0];
-        testo.innerHTML = '';
-        testo.append(...mailPrevisto(prev, sf ? sf[0] : null, sf ? sf[1] : null));
-        const gia = S.stra.filter((x) => String(x.schedule_id) === String(s.id) && x.data === b.giorno
-          && ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato));
-        if (gia.length) testo.append(el('div', { class: 'gia et', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
+      const ti = el('input', { type: 'number', step: '0.5', value: b.temps[s.id], 'aria-label': 'Temperatura ' + nomeBreve(s) });
+      ti.addEventListener('input', () => { b.temps[s.id] = ti.value; });
+      const dv = el('div', { class: 'rq-kv' });
+      const prev = prevDi(s);
+      const fa = () => {
+        dv.innerHTML = '';
+        const gia = S.stra.filter((x) => String(x.schedule_id) === String(s.id) && x.data === b.giorno && ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato));
+        dv.append(el('span', { class: 'k', text: 'Previsto' }),
+          prev == null ? el('span', { class: 'rq-vuoto', text: 'orario ordinario non letto per questo giorno' })
+            : prev.length ? el('span', { class: 'rq-f', text: prev.map((f) => fasciaTxt(f[0], f[1])).join(' · ') })
+              : el('span', { class: 'rq-vuoto', text: 'spento quel giorno' }),
+          el('span', { class: 'k', text: 'Diventa' }), cb.checked ? elDiventa(prev, scritte()) : el('span', { class: 'rq-vuoto', text: 'non toccato' }),
+          el('span', { class: 'k', text: 'Dove' }), el('span', { class: 'rq-vuoto', text: metodoTxt(s) }));
+        if (gia.length) dv.append(el('span', { class: 'k', text: 'Attenzione' }), el('span', { class: 'rq-diff div', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
       };
-      aggiorna.push(ridisegna);
-      ridisegna();
-      if (OTT_TXT[s.ott]) testo.append(el('div', { class: 'et ott', text: OTT_TXT[s.ott], title: 'Lo straordinario va nel ' + metodoTxt(s) }));
-      circ.append(el('div', { class: 'mc' }, [
-        el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : ''), title: nomeBreve(s) })]),
-        testo,
+      cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); agg.forEach((f) => f()); });
+      agg.push(fa);
+      circ.append(el('div', { class: 'rq-ci' }, [
+        el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : '') }),
+          OTT_TXT[s.ott] ? el('span', { class: 'rq-ott ' + s.ott, text: s.ott === 'attivo' ? 'ottimizzato' : s.ott === 'spento' ? 'non ottimizzato' : 'senza ottimizzatore' }) : null]),
+        el('div', { class: 'rq-t' }, [ti, '°C']),
+        dv,
       ]));
     }
-    if (b.ref && !progs.length) circ.append(el('span', { class: 'muted', text: 'Nessun programma per accendere in questo impianto.' }));
-    dalle.addEventListener('input', () => { b.dalle = dalle.value; aggiorna.forEach((f) => f()); });
-    alle.addEventListener('input', () => { b.alle = alle.value; aggiorna.forEach((f) => f()); });
-    corpo.append(circ);
-    const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, i, invia) });
-    invia.disabled = p.stato !== 'nuova' && p.stato !== 'inviata';
-    const ir = INS_RICH[q.inserita];
-    corpo.append(el('div', { class: 'mail-piede' }, [
-      el('div', { class: 'mail-nota' }, [ir ? el('div', { class: 'req-ins ' + ir[0], text: ir[1] + (q.inserita_fasce ? ` (${q.inserita_fasce})` : '') }) : null,
-        q.nota ? el('div', { text: q.nota }) : null,
-        b.esito ? el('div', { class: 'esito', style: 'color:var(--green)', text: b.esito }) : null,
-        b.errore ? el('div', { class: 'esito', style: 'color:#e0a0a0', text: b.errore }) : null]),
+    if (b.ref && !progs.length) circ.append(el('div', { class: 'rq-ci' }, [el('span', { class: 'rq-vuoto', text: 'Nessun programma per accendere in questo impianto.' })]));
+    if (b.ref) sez.append(circ);
+    const invia = el('button', { type: 'button', class: 'btn primary', text: 'Manda all\'impianto', onclick: () => mandaMail(p, idxs, invia) });
+    invia.disabled = !b.ref || (p.stato !== 'nuova' && p.stato !== 'inviata');
+    sez.append(el('div', { class: 'rq-piede' }, [
+      el('div', { class: 'rq-nota' }, [
+        ...idxs.map((i) => p.richieste[i].nota).filter(Boolean).map((t) => el('div', { text: t })),
+        !b.ref ? el('div', { text: 'Se l\'impianto non è telegestito non c\'è niente da mandare: toglilo dall\'elenco con la X.' }) : null,
+        b.esito ? el('div', { class: 'esito', style: 'color:var(--green);font-weight:600', text: b.esito }) : null,
+        b.errore ? el('div', { class: 'esito', style: 'color:var(--red);font-weight:600', text: b.errore }) : null]),
       invia,
     ]));
-    req.append(corpo);
-    return req;
+    blocco.append(sez);
+    agg.forEach((f) => f());
+    return [riga, el('div', { class: 'rq-ap' }, [blocco])];
   }
   async function mailStato(p, stato) {
     try {
@@ -1844,43 +2082,50 @@
       const m = handleErr(err, 'mail');
       if (m) window.alert(m);
     }
-    renderMail();
+    renderMail(true);
   }
-  async function mandaMail(p, i, btn) {
-    const b = mailBozza(p, i);
+  /** Manda all'impianto un blocco: uno straordinario per circuito spuntato, con tutte le fasce del giorno e i suoi gradi. */
+  async function mandaMail(p, idxs, btn) {
+    const b = mailBozza(p, idxs[0]);
+    const bs = idxs.map((i) => mailBozza(p, i));
     b.esito = ''; b.errore = '';
-    const start = toMin(b.dalle), end = toMin(b.alle), temp = parseTemp(b.temp);
+    const grezze = bs.map((x) => [toMin(x.dalle), toMin(x.alle)]);
     const ids = [...b.ids];
+    const progs = ids.map((id) => S.catalog.schedules.find((s) => s.id === id)).filter((s) => s && s.impianto_ref === b.ref);
     let err = '';
     if (!b.ref) err = 'Scegli l\'impianto.';
-    else if (!ids.length) err = 'Spunta almeno un programma.';
+    else if (!progs.length) err = 'Spunta almeno un circuito.';
     else if (!/^\d{4}-\d{2}-\d{2}$/.test(b.giorno)) err = 'Giorno mancante.';
-    else if (start == null || end == null || Number.isNaN(start) || Number.isNaN(end) || end <= start) err = 'Orario non valido (alle dopo dalle).';
-    else if (temp == null || Number.isNaN(temp) || temp < T_MIN || temp > T_MAX) err = 'Temperatura non valida.';
-    if (err) { b.errore = err; renderMail(); return; }
-    const progs = ids.map((id) => S.catalog.schedules.find((s) => s.id === id)).filter(Boolean);
+    else if (fasceBuone(grezze).length !== grezze.length) err = 'Orario non valido (alle dopo dalle).';
+    const temps = {};
+    for (const s of progs) {
+      const t = parseTemp(b.temps[s.id]);
+      if (!err && (t == null || Number.isNaN(t) || t < T_MIN || t > T_MAX)) err = `Temperatura non valida per ${nomeBreve(s)}.`;
+      temps[s.id] = t;
+    }
+    const fasce = unisciFasce(grezze.map((f) => [f[0], Math.min(f[1], 1439)]));
+    if (!err && fasce.length > 4) err = 'Al massimo 4 fasce in un giorno.';
+    if (err) { b.errore = err; renderMail(true); return; }
     const imp = S.catalog.impianti.find((x) => x.ref === b.ref) || {};
     const gg = dateFromIso(b.giorno);
-    // 10/11/2026: lo straordinario si AGGIUNGE all'orario ordinario di quel giorno ("[+ord]" nella nota: il PC unisce le
-    // fasce con quelle che legge in centralina quando scrive). Prima le sostituiva: l'11/11 Polizia e SUAP avrebbero
-    // scaldato solo 16:30-18:30.
+    const q0 = p.richieste[idxs[0]];
+    const stesso = b.giorno === q0.giorno && b.ref === (q0.impianto_ref || b.ref);
+    const orario = fasce.map((f) => fasciaTxt(f[0], f[1])).join(' e ');
     const righe = progs.map((s) => {
-      const prev = ((p.richieste[i] || {}).previsto || {})[String(s.id)];
+      const prev = stesso ? (q0.previsto || {})[String(s.id)] : null;
       const ord = prev ? (prev.fasce || []).map((f) => [f[0], Math.min(f[1], 1439)]) : null;
-      const dove = `\n   nel ${metodoTxt(s)}`;
-      if (!ord) return `${nomeBreve(s)}: orario ordinario non letto, il PC lo aggiunge a quello che trova in centralina${dove}`;
-      const giorno = unisciFasce(ord.concat([[start, end]])).map((f) => fasciaTxt(f[0], f[1])).join(', ');
-      return `${nomeBreve(s)}: ordinario ${ord.length ? ord.map((f) => fasciaTxt(f[0], f[1])).join(', ') : 'spento'} → quel giorno ${giorno}${dove}`;
+      const quel = ord ? `quel giorno ${unisciFasce(ord.concat(fasce)).map((f) => fasciaTxt(f[0], f[1])).join(', ')}` : 'sommato all\'ordinario che il PC trova in centralina';
+      return `${nomeBreve(s)} a ${String(temps[s.id]).replace('.', ',')} °C: ${quel}\n   nel ${metodoTxt(s)}`;
     });
-    const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: straordinario dalle ${minToHHMM(start)} alle ${minToHHMM(end)} a ${temp} °C\n\n`
-      + righe.join('\n') + `\n\nL'orario ordinario resta. Il PC lo scrive su Coster nei giorni prima e rimette l'orario normale il giorno dopo.`;
+    const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: straordinario ${orario}\n\n`
+      + righe.join('\n') + '\n\nL\'orario ordinario resta. Il PC rimette l\'orario normale il giorno dopo.';
     if (!window.confirm('Mandare lo straordinario all\'impianto?\n\n' + testo)) return;
     btn.disabled = true;
     const ok = [], ko = [];
     for (const s of progs) {
       try {
         await api('/straordinari', { method: 'POST', body: {
-          schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: [{ start, end, temp }],
+          schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: fasce.map((f) => ({ start: f[0], end: f[1], temp: temps[s.id] })),
           note: `[+ord] Da mail: ${String(p.oggetto || '').slice(0, 200)} [m:${p.id}]`,
         } });
         ok.push(nomeBreve(s));
@@ -1892,8 +2137,11 @@
     }
     if (ok.length) {
       b.esito = ('Inviato al PC per ' + ok.join(', ') + '.').replace(/\.\.$/, '.');
-      // subito "inserita", senza aspettare il PC (che lo ricalcola dagli straordinari al prossimo giro)
-      p.richieste[i].inserita = 'inserita';
+      // "inserita" subito solo se sono partiti tutti i circuiti; se uno e' stato rifiutato resta "in parte"
+      idxs.forEach((i) => {
+        p.richieste[i].inserita = ko.length ? 'in_parte' : 'inserita';
+        p.richieste[i].inserita_fasce = fasce.map((f) => minToHHMM(f[0]) + '-' + minToHHMM(f[1])).join(', ');
+      });
       const oggiIso = new Date().toLocaleDateString('sv-SE');
       p.da_fare = p.richieste.filter((r) => ['no', 'in_parte'].includes(r.inserita) && (r.giorno || '') >= oggiIso).length;
       const v = p.richieste.map((r) => r.inserita).filter(Boolean);
@@ -1902,7 +2150,7 @@
       await loadStra();
     }
     if (ko.length) b.errore = (ok.length ? 'Non inviato per ' : '') + ko.join('; ');
-    renderMail();
+    renderMail(true);
   }
 
   function renderStraAltri() {
@@ -3305,6 +3553,8 @@
   $('straSoloQuesto').addEventListener('change', renderStraList);
   $('straAltri').addEventListener('click', () => { straMostraTutti = !straMostraTutti; renderStraList(); });
   $('mailTutte').addEventListener('change', renderMail);
+  // 12/11/2026: l'elenco delle mail non si ridisegna mentre si scrive in una casella; lo fa quando se ne esce
+  $('mailLista').addEventListener('focusout', () => setTimeout(() => { if (S.mailRinvia && !$('mailLista').contains(document.activeElement)) renderMail(true); }, 150));
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   $('spegDal').addEventListener('change', () => {
     $('spegAl').min = $('spegDal').value || localIso(new Date());
