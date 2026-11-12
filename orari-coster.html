@@ -342,7 +342,14 @@
   .rq-et { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
   .rq-cliente .rq-et { color: var(--cli); }
   .rq-ora { font: 500 19px 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
-  .rq-sez { padding: 12px 14px; display: grid; gap: 10px; }
+  .rq-sez { padding: 12px 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .rq-due { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 9fr); }
+  .rq-due > .rq-sez + .rq-sez { border-left: 1px solid var(--border); }
+  .rq-tab select { min-height: 40px; max-width: 100%; min-width: 0; }
+  .rq-tab .rq-kv { padding-left: 0; }
+  .rq-tab .btn { min-height: 40px; justify-self: start; }
+  .rq-tab .btn.cli { color: var(--cli); border-color: var(--cli-bd); background: var(--bg2); }
+  .rq-tabst { font-size: 13px; } .rq-tabst.ok { color: var(--green); font-weight: 600; } .rq-tabst.err { color: var(--red); font-weight: 600; }
   .rq-campi { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .rq-campi select { min-height: 40px; max-width: 100%; flex: 1 1 260px; min-width: 0; }
   .rq-blocco input[type=time], .rq-blocco input[type=date], .rq-blocco input[type=number] { min-height: 40px; padding: 6px 9px; font: 15px 'DM Mono', monospace; width: auto; }
@@ -371,6 +378,9 @@
     .rq-r > .rq-col { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; }
     .rq-lab { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
     .rq-kv { padding-left: 0; }
+    .rq-due { grid-template-columns: minmax(0, 1fr); }
+    .rq-due > .rq-sez + .rq-sez { border-left: 0; border-top: 1px solid var(--border); }
+    .rq-tab .btn { width: 100%; }
     .rq-ap { padding: 8px; }
     .rq-piede .btn { width: 100%; }
     #app[data-tab=stra] { margin: 0 -8px; padding: 4px 8px 12px; }
@@ -1930,6 +1940,93 @@
       box.append(card);
     }
   }
+  /** 12/11/2026 (Davide: "va aggiornata anche la tabella di contabilita' con l'orario del cliente"): la parte del blocco
+   *  per il Calendario Termico. Ci va sempre l'orario CHIESTO DAL CLIENTE, non quello che si scrive in centralina. La
+   *  scrittura la fa il PC tramite la Web App del calendario (come lo script Gmail "Estrai Orario": allunga la fascia che
+   *  tocca o usa la prima libera, celle in rosso con la nota); qui si vede com'e' oggi e come diventa. */
+  function mailTabella(p, idxs, b) {
+    const q0 = p.richieste[idxs[0]];
+    const tb = q0.tabella || {};
+    const tutte = (S.catalog.mail && S.catalog.mail.calendario_righe) || [];
+    const stesso = b.ref === (q0.impianto_ref || '') && b.giorno === q0.giorno;
+    const mie = stesso && (tb.righe || []).length ? tb.righe : null;      // righe dell'impianto, con l'orario di quel giorno
+    const opz = mie || tutte;
+    const sez = el('div', { class: 'rq-sez rq-tab' }, [el('span', { class: 'rq-et', text: 'Tabella di contabilità' })]);
+    if (!opz.length) { sez.append(el('span', { class: 'rq-vuoto', text: 'Le righe del calendario non sono ancora arrivate dal PC.' })); return sez; }
+    const chiaveRighe = mie ? 'mie' : 'tutte';
+    if (b.tabRiga == null || b.tabDa !== chiaveRighe) { b.tabRiga = mie ? String(tb.scelta >= 0 ? tb.scelta : 0) : ''; b.tabDa = chiaveRighe; }
+    const cli = idxs.map((i) => [p.richieste[i].dalle || '', p.richieste[i].alle || '']);
+    const cliMin = cli.map((f) => [toMin(f[0]), toMin(f[1])]);
+    const completo = fasceBuone(cliMin).length === cliMin.length;
+    const scelta = () => (b.tabRiga === '' ? null : opz[Number(b.tabRiga)] || null);
+    const det = el('div', { class: 'rq-kv' });
+    const scritta = idxs.map((i) => p.richieste[i].tabella_scritta).find(Boolean) || null;
+    const inCorso = !!scritta && scritta.esito === 'in_corso';
+    const btn = el('button', { type: 'button', class: 'btn cli', text: scritta && scritta.esito === 'ok' ? 'Scrivi di nuovo su tabella' : 'Scrivi su tabella' });
+    const fa = () => {
+      const r = scelta();
+      det.innerHTML = '';
+      if (mie && r) {
+        const oggi = String(r.oggi || '').split('|').filter(Boolean).map((x) => x.split('-').map(toMin));
+        det.append(el('span', { class: 'k', text: 'Oggi' }), oggi.length ? el('span', { class: 'rq-f', text: oggi.map((f) => fasciaTxt(f[0], f[1])).join(' · ') })
+          : el('span', { class: 'rq-vuoto', text: 'nessun orario quel giorno' }),
+          el('span', { class: 'k', text: 'Diventa' }), completo ? elDiventa(oggi, cliMin) : el('span', { class: 'rq-vuoto', text: 'manca un orario del cliente' }));
+      } else if (r) {
+        det.append(el('span', { class: 'k', text: 'Diventa' }), el('span', { class: 'rq-vuoto', text: 'l\'orario del cliente, unito a quello che c\'è già quel giorno' }));
+      }
+      btn.disabled = !r || !completo || inCorso;
+    };
+    if (opz.length > 1 || !mie) {
+      const sel = el('select', { 'aria-label': 'Riga del calendario' });
+      if (!mie) sel.append(el('option', { value: '', text: '— scegli la riga del calendario —' }));
+      opz.forEach((r, n) => { const o = el('option', { value: String(n), text: `${r.codice} · ${r.nome}` }); if (String(n) === b.tabRiga) o.selected = true; sel.append(o); });
+      sel.addEventListener('change', () => { b.tabRiga = sel.value; fa(); });
+      sez.append(sel);
+    } else sez.append(el('div', {}, [el('b', { text: opz[0].codice }), ' · ' + opz[0].nome]));
+    sez.append(det);
+    if (mie && tb.letta) sez.append(el('span', { class: 'rq-vuoto', style: 'font-size:12px', text: 'tabella letta il ' + fmtShort(tb.letta) + ': il foglio fa i conti con quello che trova al momento' }));
+    if (scritta) {
+      sez.append(el('div', { class: 'rq-tabst ' + (scritta.esito === 'ok' ? 'ok' : scritta.esito === 'errore' ? 'err' : ''), text:
+        inCorso ? 'In scrittura: il PC la sta mandando al calendario…'
+          : scritta.esito === 'ok' ? `✓ In tabella${scritta.dopo ? ': ' + String(scritta.dopo).replace(/\|/g, ' · ').replace(/-/g, '–') : ''} (${scritta.codice}, ${fmtShort(scritta.quando)})`
+            : `Non scritto: ${scritta.testo || 'errore'}` }));
+      if (scritta.esito === 'ok' && scritta.testo) sez.append(el('span', { class: 'rq-vuoto', style: 'font-size:12px', text: scritta.testo }));
+    }
+    if (b.tabErrore) sez.append(el('div', { class: 'rq-tabst err', text: b.tabErrore }));
+    btn.addEventListener('click', async () => {
+      const r = scelta();
+      if (!r) return;
+      const gg = dateFromIso(b.giorno);
+      if (!window.confirm(`Scrivere nel Calendario Termico l'orario del cliente?\n\n${r.codice} · ${r.nome}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: ${cli.map((f) => f[0] + '–' + f[1]).join(' e ')}\n\nLe celle che cambiano diventano rosse, con la nota "Richiesto".`)) return;
+      btn.disabled = true;
+      b.tabErrore = '';
+      try {
+        await api('/mail/' + encodeURIComponent(p.id) + '/tabella', { method: 'POST', body: {
+          indici: idxs, codice: r.codice, nome: r.nome, data: b.giorno, fasce: cli, motivo: String(p.oggetto || '').slice(0, 200) } });
+        idxs.forEach((i) => { p.richieste[i].tabella_scritta = { esito: 'in_corso', codice: r.codice, nome: r.nome, data: b.giorno }; });
+        mailAspettaTabella(p.id, idxs, 0);
+      } catch (e) {
+        const m = handleErr(e, 'mail');
+        if (e instanceof AuthErr) return;
+        b.tabErrore = m || 'Non inviato.';
+      }
+      renderMail(true);
+    });
+    sez.append(btn);
+    fa();
+    return sez;
+  }
+  /** Dopo "Scrivi su tabella" si richiede il catalogo finche' il PC non ha risposto (al massimo un minuto). */
+  function mailAspettaTabella(id, idxs, giro) {
+    setTimeout(async () => {
+      try { await loadCatalog(); } catch (e) { /* si riprova */ }
+      const p = mailProposte().find((x) => x.id === id);
+      const fermo = !p || idxs.every((i) => ((p.richieste[i] || {}).tabella_scritta || {}).esito !== 'in_corso');
+      if (fermo) { renderMail(true); return; }
+      if (giro < 12) mailAspettaTabella(id, idxs, giro + 1);
+    }, 5000);
+  }
+
   /** La riga di una richiesta (o di un gruppo) e, se aperta, il blocco con le impostazioni. */
   function mailVoce(p, idxs, impOrd) {
     const q0 = p.richieste[idxs[0]];
@@ -1964,7 +2061,11 @@
     const cambia = () => { if (aperta) S.mailAperte.delete(chiave); else S.mailAperte.add(chiave); renderMail(true); };
     apri.addEventListener('click', (ev) => { ev.stopPropagation(); cambia(); });
     riga.addEventListener('click', cambia);
-    const lato = [ir ? el('span', { class: 'rq-st ' + ir[0], text: ir[1].replace('✓ ', '') }) : null, apri];
+    const ts = idxs.map((i) => (p.richieste[i].tabella_scritta || {}).esito || '');
+    const tabSt = ts.every((x) => x === 'ok') ? ['ok', 'in tabella'] : ts.some((x) => x === 'in_corso') ? ['', 'tabella: in scrittura']
+      : ts.some((x) => x === 'errore') ? ['parte', 'tabella: non scritta'] : null;
+    const lato = [tabSt ? el('span', { class: 'rq-st ' + tabSt[0], text: tabSt[1] }) : null,
+      ir ? el('span', { class: 'rq-st ' + ir[0], text: ir[1].replace('✓ ', '') }) : null, apri];
     if (!b.ref && !tolta) {
       lato.push(el('button', { type: 'button', class: 'btn-x', text: '✕', title: 'Togli dall\'elenco', 'aria-label': 'Togli dall\'elenco',
         onclick: (ev) => { ev.stopPropagation(); idxs.forEach((i) => mailTogli(p.id + '|' + i)); renderMail(true); } }));
@@ -2065,12 +2166,12 @@
     sez.append(el('div', { class: 'rq-piede' }, [
       el('div', { class: 'rq-nota' }, [
         ...idxs.map((i) => p.richieste[i].nota).filter(Boolean).map((t) => el('div', { text: t })),
-        !b.ref ? el('div', { text: 'Se l\'impianto non è telegestito non c\'è niente da mandare: toglilo dall\'elenco con la X.' }) : null,
+        !b.ref ? el('div', { text: 'Se l\'impianto non è telegestito non c\'è niente da mandare alla centralina: se ha una riga nel calendario scrivi solo la tabella, se no toglilo dall\'elenco con la X.' }) : null,
         b.esito ? el('div', { class: 'esito', style: 'color:var(--green);font-weight:600', text: b.esito }) : null,
         b.errore ? el('div', { class: 'esito', style: 'color:var(--red);font-weight:600', text: b.errore }) : null]),
       invia,
     ]));
-    blocco.append(sez);
+    blocco.append(el('div', { class: 'rq-due' }, [mailTabella(p, idxs, b), sez]));
     agg.forEach((f) => f());
     return [riga, el('div', { class: 'rq-ap' }, [blocco])];
   }
