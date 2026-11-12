@@ -290,7 +290,7 @@
   .fascia { display: grid; grid-template-columns: 28px 140px 140px 100px 34px; gap: 8px; align-items: center; }
   .fascia .n { font-family: 'DM Mono', monospace; color: var(--muted); font-size: 12px; }
   .fascia .x { padding: 0; min-height: 34px; height: 34px; width: 34px; }
-  @media (max-width: 560px) { .fascia { grid-template-columns: 22px 1fr 1fr 70px 34px; } }
+  @media (max-width: 560px) { .fascia { grid-template-columns: 22px 1fr 1fr 64px 34px; gap: 6px; } .fascia > * { min-width: 0; } .fascia input { padding-left: 6px; padding-right: 6px; } }
   .stra-list { list-style: none; margin: 0; padding: 0; }
   .stra-item {
     display: grid; grid-template-columns: 130px 1fr auto; gap: 12px; align-items: start;
@@ -303,6 +303,12 @@
   .stra-item .f { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--yellow); margin-top: 2px; }
   .stra-item .m { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .stra-item .m.bad { color: #e0a0a0; }
+  .stra-prima { margin-top: 6px; padding: 6px 10px; border-left: 2px solid var(--border); font-size: 12px; color: var(--muted); }
+  .stra-prima b { color: var(--text); font-weight: 600; }
+  .stra-prima .r { font-family: 'DM Mono', monospace; color: var(--text); }
+  .stra-prima .btn { margin-top: 6px; min-height: 36px; }
+  #straScritti ul { margin: 6px 0 0; padding-left: 18px; }
+  #straScritti li { margin-top: 3px; }
   .stra-item .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   @media (max-width: 560px) { .stra-item { grid-template-columns: 1fr; } .stra-item .side { align-items: flex-start; flex-direction: row; } }
   .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -578,8 +584,8 @@
     <section id="straCard" class="card t-stra" hidden>
       <h2>Nuovo straordinario <small id="straSub"></small></h2>
       <div class="banner info" style="margin-bottom:14px">
-        Le fasce <strong>sostituiscono gli orari ordinari</strong> dello schedule solo per i giorni scelti:
-        l'ottimizzatore Coster continua a funzionare. Il PC le scrive nei 6 giorni prima e ripristina
+        Le fasce si <strong>aggiungono all'orario ordinario</strong> dei giorni scelti: il PC legge l'ordinario in
+        centralina quando scrive, quindi qui bastano le ore in più. Le scrive nei 6 giorni prima e ripristina
         il programma ordinario il giorno dopo, da solo.
       </div>
       <div id="straMetodo" class="muted" style="font-size:12px;margin:-6px 0 12px" hidden></div>
@@ -598,12 +604,13 @@
           <input id="straNote" type="text" maxlength="300" placeholder="Es. evento, richiesta del Comune…">
         </div>
         <div class="span-all">
-          <label class="f">Fasce orarie del giorno</label>
+          <label class="f" id="straFasceLbl">Fasce da aggiungere all'orario ordinario</label>
           <div id="straFasce" class="fasce"></div>
           <div class="actions" style="margin-top:8px">
             <button id="straAddFascia" class="btn ghost" type="button">+ Fascia</button>
             <span id="straPrefill" class="muted" style="font-size:12px"></span>
           </div>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="straSostituisci"> Sostituisci l'orario ordinario del giorno (non sommare): vale solo quello che scrivo qui</label>
         </div>
         <div class="span-all" id="straAncheBox" hidden>
           <label class="f">Scrivi lo stesso straordinario anche su (programmi che accendono questo impianto)</label>
@@ -648,6 +655,7 @@
       <h2>Straordinari dei prossimi 7 giorni
         <small><label class="chk"><input type="checkbox" id="straSoloQuesto"> solo lo schedule selezionato</label></small>
       </h2>
+      <div id="straScritti" class="banner err" hidden></div>
       <ul class="stra-list" id="straList"></ul>
       <div class="muted" id="straEmpty">Nessuno straordinario nei prossimi 7 giorni.</div>
       <div class="row" style="margin-top:10px"><button id="straAltri" class="btn ghost" type="button" hidden></button></div>
@@ -1931,25 +1939,50 @@
     $('straAddFascia').disabled = S.straFasce.length >= 4;
   }
 
-  /** Precompila con gli orari ordinari del giorno scelto (se il programma è stato letto). */
+  /** 12/11/2026 (revisione degli straordinari): il modulo a mano SOMMA all'orario ordinario, come le richieste dalle mail
+   *  ("[+ord]" nella nota: l'ordinario lo legge il PC in centralina quando scrive). Prima sostituiva il giorno: il 09/11 il
+   *  Municipio ha perso 05:30-14:00. Con "Sostituisci" spuntato resta il comportamento di prima, precompilato dall'ultima
+   *  lettura (con la sua ora). Le fasce gia' scritte a mano non si toccano. */
   function prefillStra() {
     const d = dateFromIso($('straDal').value);
     if (!d) return;
     S.straPrefillKey = `${S.schedule && S.schedule.id}|${$('straDal').value}|${S.baselineAt || ''}`;
     $('straAl').min = $('straDal').value;
     if ($('straAl').value && $('straAl').value < $('straDal').value) $('straAl').value = '';
+    const sost = $('straSostituisci').checked;
+    const g = GG[d.getDay()];
+    $('straFasceLbl').textContent = sost ? 'Fasce orarie del giorno (sostituiscono l\'ordinario)' : 'Fasce da aggiungere all\'orario ordinario';
+    const intatte = !S.straFasce.some((f) => f.start || f.end) || JSON.stringify(S.straFasce) === S.straPrefillJson;
     if (!S.baseline) {
-      $('straPrefill').textContent = 'Leggi il programma attuale per precompilare con gli orari ordinari.';
+      if (intatte) { S.straFasce = [{ start: '', end: '', temp: '' }]; S.straPrefillJson = JSON.stringify(S.straFasce); }
+      $('straPrefill').textContent = sost
+        ? 'Leggi il programma attuale per precompilare con gli orari ordinari.'
+        : `Scrivi solo le ore in più: l'ordinario del ${g} lo legge il PC in centralina quando scrive.`;
+      renderStraFasce();
       return;
     }
     const bit = 1 << ((d.getDay() + 6) % 7);
     const rows = S.baseline.filter((r) => r.attiva && (r.days & bit)).sort((a, b) => a.start - b.start);
-    S.straFasce = rows.length
-      ? rows.slice(0, 4).map((r) => ({ start: r.da, end: r.a, temp: String(r.temp_c) }))
-      : [{ start: '', end: '', temp: '' }];
-    $('straPrefill').textContent = rows.length
-      ? `Precompilate con gli orari ordinari del ${GG[d.getDay()]}: modificale.`
-      : `Il ${GG[d.getDay()]} non ha orari ordinari: inserisci le fasce.`;
+    const letto = S.baselineAt ? ` (lettura delle ${S.baselineAt})` : '';
+    if (sost) {
+      if (intatte) {
+        S.straFasce = rows.length
+          ? rows.slice(0, 4).map((r) => ({ start: r.da, end: r.a, temp: String(r.temp_c) }))
+          : [{ start: '', end: '', temp: '' }];
+        S.straPrefillJson = JSON.stringify(S.straFasce);
+      }
+      $('straPrefill').textContent = rows.length
+        ? `Precompilate con gli orari ordinari del ${g}${letto}${rows.length > 4 ? `: ne ha ${rows.length}, qui ne entrano solo 4` : ''}: modificale.`
+        : `Il ${g} non ha orari ordinari${letto}: inserisci le fasce.`;
+    } else {
+      if (intatte) {
+        S.straFasce = [{ start: '', end: '', temp: rows.length ? String(rows[0].temp_c) : '' }];
+        S.straPrefillJson = JSON.stringify(S.straFasce);
+      }
+      $('straPrefill').textContent = rows.length
+        ? `Ordinario del ${g}: ${rows.map((r) => `${r.da}–${r.a} ${r.temp_c} °C`).join(' · ')}${letto}. Scrivi solo le ore in più.`
+        : `Il ${g} non ha orari ordinari${letto}: inserisci le fasce.`;
+    }
     renderStraFasce();
   }
 
@@ -1971,7 +2004,10 @@
       .sort((a, b) => a.start - b.start);
     if (!fasce.length) throw new Error('Inserisci almeno una fascia.');
     for (let i = 1; i < fasce.length; i++) if (fasce[i].start < fasce[i - 1].end) throw new Error('Le fasce si sovrappongono.');
-    return { schedule_id: S.schedule.id, data_dal: dal, data_al: al || null, fasce, note: $('straNote').value.trim() };
+    // 12/11/2026: senza "Sostituisci" la nota porta "[+ord]": il PC somma le fasce all'orario ordinario del giorno
+    const nota = $('straNote').value.trim();
+    return { schedule_id: S.schedule.id, data_dal: dal, data_al: al || null, fasce,
+      note: $('straSostituisci').checked ? nota : ('[+ord] ' + nota).trim() };
   }
 
   async function submitStra() {
@@ -1979,6 +2015,8 @@
     let body;
     try { body = collectStra(); } catch (e) { $('straErr').hidden = false; $('straErr').textContent = e.message; return; }
     const sch = S.schedule;
+    if ($('straSostituisci').checked
+        && !window.confirm('Le fasce SOSTITUISCONO l\'orario ordinario di quel giorno: resta acceso solo negli orari scritti qui.\n\nContinuare?')) return;
     if (sch.accendi === false && sch.nota
         && !window.confirm(`${sch.nota}\n\nScrivere lo stesso lo straordinario su ${nomeBreve(sch)}?`)) return;
     // 09/11/2026: lo stesso straordinario anche sugli altri programmi spuntati dello stesso impianto
@@ -2078,7 +2116,72 @@
     return x.stato === 'programmato' && (x.data || '') > (lim || straLimite());
   }
 
+  /** 12/11/2026: straordinari ancora scritti in centralina dopo il loro giorno (ripristino che non riesce: Villa del
+   *  Bianco, 08/11, 78 tentativi). Restano nel programma settimanale e si ripetono ogni settimana: riquadro in testa. */
+  function renderStraScritti() {
+    const box = $('straScritti');
+    const ora = Date.now();
+    const rimasti = S.stra.filter((x) => {
+      const da = x.stato === 'applicato' && x.finestre && x.finestre.ripristina_da;
+      if (!da) return false;
+      const t = new Date(String(da).replace(' ', 'T')).getTime();
+      return ora >= t && ((x.tentativi || 0) > 0 || ora - t > 2 * 3600000);
+    });
+    box.hidden = !rimasti.length;
+    box.innerHTML = '';
+    if (!rimasti.length) return;
+    const gruppi = new Map();
+    for (const x of rimasti) {
+      const e = x.etichetta || {};
+      const k = `${e.impianto || 'Schedule ' + x.schedule_id}|${x.data}|${x.fasce_testo || ''}`;
+      if (!gruppi.has(k)) gruppi.set(k, { imp: e.impianto || 'Schedule ' + x.schedule_id, x, prog: [], tent: 0 });
+      const g = gruppi.get(k);
+      g.prog.push(String(e.schedule || x.schedule_id).replace(/^Setpoint\s*/i, '').replace(/\s*\[[^\]]*\]\s*$/, ''));
+      g.tent = Math.max(g.tent, x.tentativi || 0);
+    }
+    box.append(el('strong', { text: `Ancora scritti in centralina dopo il loro giorno (${rimasti.length})` }),
+      el('div', { text: 'Il PC non è riuscito a toglierli: finché restano, si ripetono ogni settimana nello stesso giorno. Riprova da solo ogni ora.' }),
+      el('ul', {}, [...gruppi.values()].map((g) => el('li', { text:
+        `${g.imp} — ${g.x.giorno || ''} ${fmtShort(g.x.data)}, ${g.x.fasce_testo || ''}: ${g.prog.join(', ')}`
+        + (g.tent ? ` · ${g.tent} tentativi di ripristino` : '') }))));
+  }
+
+  const GG_RIGA = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  function straNota(nota) {
+    return String(nota || '').replace(/^\[\+ord\]\s*/, '').replace(/\s*\[m:[^\]]*\]/, '').trim();
+  }
+  /** Programma da aprire nella scheda "Programma orario" (commessa, impianto e schedule scelti da soli). */
+  function apriProgramma(scheduleId) {
+    const sch = S.catalog && S.catalog.schedules.find((s) => String(s.id) === String(scheduleId));
+    const imp = sch && S.catalog.impianti.find((p) => p.ref === sch.impianto_ref);
+    if (!sch || !imp) { alertBanner('Programma non più in elenco.'); return; }
+    $('selCommessa').value = imp.commessa_ref; onCommessa();
+    $('selImpianto').value = imp.ref; onImpianto();
+    $('selSchedule').value = String(sch.id); onSchedule();
+    setTab('prog');
+    window.scrollTo(0, 0);
+  }
+  /** 12/11/2026: "da controllare" dopo un ripristino a meta' (SUAP 10-12/11): le righe com'erano prima dello
+   *  straordinario e quelle che lo straordinario aveva aggiunto, per rimettere a posto il programma a mano. */
+  function straPrima(x) {
+    const rg = x.righe || {};
+    if (x.stato !== 'da_controllare' || rg.modo === 'centralina') return null;
+    const mod = rg.modificate || [], agg = rg.aggiunte || [];
+    if (!mod.length && !agg.length) return null;
+    const sch = S.catalog && S.catalog.schedules.find((s) => String(s.id) === String(x.schedule_id));
+    const off = sch && rowsOf(sch) === 15 ? 0 : 250;
+    const giorni = (m) => GG_RIGA.filter((_, i) => m & (1 << i)).join(' ') || 'nessun giorno';
+    const riga = (r, m) => el('div', { class: 'r', text:
+      `riga ${r.riga + 1} · ${giorni(m)} · ${minToHHMM(r.start)}–${minToHHMM(r.end)} · ${String((r.temp - off) / 10).replace('.', ',')} °C` });
+    const box = el('div', { class: 'stra-prima' });
+    if (mod.length) box.append(el('b', { text: 'Com\'erano prima dello straordinario' }), ...mod.map((r) => riga(r, r.days_prima)));
+    if (agg.length) box.append(el('b', { text: 'Aggiunte dallo straordinario (da spegnere se ci sono ancora)' }), ...agg.map((r) => riga(r, r.days)));
+    if (sch) box.append(el('button', { type: 'button', class: 'btn ghost', text: 'Apri il programma', onclick: () => apriProgramma(sch.id) }));
+    return box;
+  }
+
   function renderStraList() {
+    renderStraScritti();
     const only = $('straSoloQuesto').checked && S.schedule;
     let list = S.stra.slice();
     if (only) list = list.filter((x) => String(x.schedule_id) === String(S.schedule.id));
@@ -2117,10 +2220,13 @@
         el('div', {}, [
           el('div', { class: 't', text: [e.impianto, e.schedule].filter(Boolean).join(' · ') || `Schedule ${x.schedule_id}` }),
           el('div', { class: 'f', text: x.fasce_testo || '' }),
-          x.note ? el('div', { class: 'm', text: '📝 ' + x.note }) : null,
+          straNota(x.note) ? el('div', { class: 'm', text: '📝 ' + straNota(x.note) }) : null,
+          ['in_attesa_agente', 'programmato', 'applicato'].includes(x.stato) ? el('div', { class: 'm', text: /^\[\+ord\]/.test(x.note || '')
+            ? 'Sommato all\'orario ordinario del giorno.' : 'Sostituisce l\'orario ordinario del giorno.' }) : null,
           el('div', { class: 'm', text: straWindowsText(x) }),
           x.messaggio && !['in_attesa_agente'].includes(x.stato) ? el('div', { class: 'm' + (['scaduto', 'rifiutato', 'da_controllare'].includes(x.stato) || /non riuscit/i.test(x.messaggio) ? ' bad' : ''), text: x.messaggio }) : null,
           late ? el('div', { class: 'm bad', text: '⚠ ' + late }) : null,
+          straPrima(x),
         ]),
         el('div', { class: 'side' }, side),
       ]));
@@ -3193,6 +3299,7 @@
   $('btnAnnullaJob').addEventListener('click', cancelJob);
   $('btnChiudiJob').addEventListener('click', closeJob);
   $('straDal').addEventListener('change', prefillStra);
+  $('straSostituisci').addEventListener('change', () => { S.straPrefillJson = JSON.stringify(S.straFasce); prefillStra(); });
   $('straAddFascia').addEventListener('click', () => { if (S.straFasce.length < 4) { S.straFasce.push({ start: '', end: '', temp: '' }); renderStraFasce(); } });
   $('straSubmit').addEventListener('click', submitStra);
   $('straSoloQuesto').addEventListener('change', renderStraList);
