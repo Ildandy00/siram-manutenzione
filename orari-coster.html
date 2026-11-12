@@ -361,6 +361,9 @@
   .rq-ci + .rq-ci { border-top: 1px solid var(--border); }
   .rq-ci label { display: flex; gap: 9px; align-items: center; font-weight: 600; min-width: 0; cursor: pointer; flex-wrap: wrap; }
   .rq-ci label.no { font-weight: 400; color: var(--muted); }
+  .rq-od { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+  .rq-ci label.rq-odl { font-weight: 400; font-size: 13px; color: var(--muted); gap: 6px; }
+  .rq-anche { display: flex; gap: 7px; align-items: flex-start; font-size: 13px; cursor: pointer; }
   .rq-t { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
   .rq-kv { grid-column: 1 / -1; display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 2px 10px; padding-left: 27px; font-size: 13px; align-items: baseline; }
   .rq-kv .k { color: var(--muted); }
@@ -678,7 +681,7 @@
       <div class="muted" style="font-size:12px;margin-bottom:10px">Tocca una richiesta per aprire le impostazioni. In azzurro
         l'orario chiesto dal cliente, in rosso le ore che lo straordinario aggiunge all'orario del giorno: l'orario normale resta.
         Parte solo con "Manda all'impianto".
-        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche mandate, scartate, doppioni, passate, orari fissi e richieste tolte</label></div>
+        <label style="margin-left:10px"><input type="checkbox" id="mailTutte"> mostra anche scartate, doppioni, passate, orari fissi e richieste tolte</label></div>
       <div id="mailLista"></div>
     </section>
 
@@ -1769,7 +1772,7 @@
       const q = p.richieste[i];
       S.mailEdit[k] = {
         ref: q.impianto_ref || '', giorno: q.giorno || '', dalle: q.dalle || '', alle: q.alle || '',
-        ids: new Set(q.schedule_ids || []), temps: {}, esito: '', errore: '',
+        ids: new Set(q.schedule_ids || []), temps: {}, orari: {}, esito: '', errore: '',
       };
     }
     return S.mailEdit[k];
@@ -1817,7 +1820,26 @@
     spegnimento: 'spegnimento', altro: 'non è un\'accensione' };
   /** In vista: le nuove non nascoste e quelle gia' mandate con giorni ancora da inserire. */
   function mailInVista(p) {
-    return (p.stato === 'nuova' && !p.nascosta) || (p.stato === 'inviata' && (p.da_fare || 0) > 0);
+    return (p.stato === 'nuova' && !p.nascosta) || (p.stato === 'inviata' && (p.da_fare || 0) > 0) || mailFatta(p);
+  }
+  /** 12/11/2026 (Davide: "non vedo le richieste fatte"): una mail mandata tutta resta in elenco finche' non passa l'ultimo
+   *  giorno richiesto, cosi' si vede cosa e' stato scritto e si puo' ancora scrivere la tabella. Si toglie con "Togli dall'elenco". */
+  /** Appena mandata dalla pagina: resta "inserita" anche se il catalogo che arriva dal PC e' di prima dell'invio
+   *  (il PC rifa' i conti ogni 10 minuti). Dopo 20 minuti vale solo quello che dice il PC. */
+  function mailApplicaAppena(tutte) {
+    if (!S.mailAppena) return;
+    for (const [k, v] of S.mailAppena) {
+      if (Date.now() - v.t > 20 * 60000) { S.mailAppena.delete(k); continue; }
+      const [id, i] = k.split('|');
+      const p = tutte.find((x) => x.id === id), q = p && p.richieste[Number(i)];
+      if (!q || q.inserita === 'inserita' || q.inserita === 'ordinario') continue;
+      if (q.inserita === 'in_parte' && v.inserita === 'in_parte') continue;
+      q.inserita = v.inserita; q.inserita_fasce = v.fasce;
+    }
+  }
+  function mailFatta(p) {
+    const oggi = new Date().toLocaleDateString('sv-SE');
+    return p.stato === 'inviata' && !((p.da_fare || 0) > 0) && (p.richieste || []).some((r) => (r.giorno || '') >= oggi);
   }
   // ---- 12/11/2026: pagina nuova delle richieste dalle mail (bozzetto 3 approvato da Davide) ----
   // Una riga per richiesta; toccandola si apre il blocco: in alto l'orario chiesto dal cliente (non si modifica), sotto le
@@ -1894,17 +1916,19 @@
     if (forza !== true && att && box.contains(att) && /^(INPUT|SELECT)$/.test(att.tagName) && att.type !== 'checkbox') { S.mailRinvia = true; return; }
     S.mailRinvia = false;
     const tutte = mailProposte();
+    mailApplicaAppena(tutte);
     const mostraTutte = $('mailTutte').checked;
     const lista = tutte.filter((p) => mostraTutte || mailInVista(p));
-    const nuove = tutte.filter(mailInVista).length;
+    const nuove = tutte.filter((p) => mailInVista(p) && !mailFatta(p)).length;
+    const fatte = tutte.filter(mailFatta).length;
     $('mailCard').hidden = !tutte.length;
-    $('mailSub').textContent = nuove ? `${nuove} da vedere` : 'nessuna da vedere';
+    $('mailSub').textContent = (nuove ? `${nuove} da vedere` : 'nessuna da vedere') + (fatte ? ` · ${fatte} già ${fatte === 1 ? 'fatta' : 'fatte'}` : '');
     box.innerHTML = '';
     if (!lista.length) { box.append(el('div', { class: 'muted', text: 'Nessuna richiesta nuova.' })); return; }
     const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
     const tolte = mailTolte();
     for (const p of lista) {
-      const card = el('div', { class: 'mail' + (mailInVista(p) ? '' : ' chiusa'), 'data-id': p.id });
+      const card = el('div', { class: 'mail' + (mailInVista(p) ? '' : ' chiusa') + (mailFatta(p) ? ' fatta' : ''), 'data-id': p.id });
       const mittente = String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim();
       const ins = INS_MAIL[p.inserimento];
       card.append(el('div', { class: 'mail-testa' }, [
@@ -2001,10 +2025,7 @@
       btn.disabled = true;
       b.tabErrore = '';
       try {
-        await api('/mail/' + encodeURIComponent(p.id) + '/tabella', { method: 'POST', body: {
-          indici: idxs, codice: r.codice, nome: r.nome, data: b.giorno, fasce: cli, motivo: String(p.oggetto || '').slice(0, 200) } });
-        idxs.forEach((i) => { p.richieste[i].tabella_scritta = { esito: 'in_corso', codice: r.codice, nome: r.nome, data: b.giorno }; });
-        mailAspettaTabella(p.id, idxs, 0);
+        await mailScriviTabella(p, idxs, b, r, cli);
       } catch (e) {
         const m = handleErr(e, 'mail');
         if (e instanceof AuthErr) return;
@@ -2013,8 +2034,25 @@
       renderMail(true);
     });
     sez.append(btn);
+    // con "Manda all'impianto" parte anche la tabella (si puo' togliere la spunta); gia' scritta = non si riscrive da sola
+    const giaOk = !!scritta && scritta.esito === 'ok';
+    if (b.tabAnche == null) b.tabAnche = true;
+    b.tabPronta = () => { const r = scelta(); return r && completo && !inCorso && !giaOk ? { r, cli } : null; };
+    if (b.ref && !giaOk) {
+      const anche = el('input', { type: 'checkbox', 'data-anche': '1' });
+      anche.checked = b.tabAnche !== false;
+      anche.addEventListener('change', () => { b.tabAnche = anche.checked; });
+      sez.append(el('label', { class: 'rq-anche' }, [anche, el('span', { text: 'scrivila anche quando mando all\'impianto' })]));
+    }
     fa();
     return sez;
+  }
+  /** Mette in coda per il PC la scrittura nel calendario dell'orario del cliente (lancia l'errore del server). */
+  async function mailScriviTabella(p, idxs, b, r, cli) {
+    await api('/mail/' + encodeURIComponent(p.id) + '/tabella', { method: 'POST', body: {
+      indici: idxs, codice: r.codice, nome: r.nome, data: b.giorno, fasce: cli, motivo: String(p.oggetto || '').slice(0, 200) } });
+    idxs.forEach((i) => { p.richieste[i].tabella_scritta = { esito: 'in_corso', codice: r.codice, nome: r.nome, data: b.giorno }; });
+    mailAspettaTabella(p.id, idxs, 0);
   }
   /** Dopo "Scrivi su tabella" si richiede il catalogo finche' il PC non ha risposto (al massimo un minuto). */
   function mailAspettaTabella(id, idxs, giro) {
@@ -2043,7 +2081,8 @@
     const progs = b.ref ? S.catalog.schedules.filter((s) => s.impianto_ref === b.ref && (s.accendi === true || b.ids.has(s.id))) : [];
     progs.forEach((s) => { if (b.temps[s.id] == null) b.temps[s.id] = String(tempProgramma(s, q0)).replace(/\.0$/, ''); });
     const prevDi = (s) => { const v = (q0.previsto || {})[String(s.id)]; return v && b.giorno === q0.giorno && b.ref === (q0.impianto_ref || b.ref) ? (v.fasce || []) : null; };
-    const scritte = () => bs.map((x) => [toMin(x.dalle), toMin(x.alle)]);
+    // 12/11/2026 (Davide: "orari diversi sui vari circuiti"): b.orari[id] = fasce proprie del circuito; senza, valgono quelle comuni
+    const scritteDi = (s) => (b.orari[s.id] || bs).map((x) => [toMin(x.dalle), toMin(x.alle)]);
     const cliente = idxs.map((i) => p.richieste[i]).map((q) => (q.dalle ? q.dalle : '…') + '–' + (q.alle || '…'));
     const gd = dateFromIso(b.giorno);
     const st = idxs.map((i) => p.richieste[i].inserita || '');
@@ -2085,7 +2124,7 @@
       if (!b.ref) { cCentr.append(el('span', { class: 'rq-vuoto', text: 'non telegestito, oppure impianto da scegliere' })); return; }
       const scelti = progs.filter((s) => b.ids.has(s.id));
       if (!scelti.length) { cCentr.append(el('span', { class: 'rq-vuoto', text: 'nessun circuito scelto' })); return; }
-      scelti.forEach((s) => cCentr.append(el('div', { class: 'rq-c' }, [el('span', { text: nomeBreve(s), title: nomeBreve(s) }), elDiventa(prevDi(s), scritte())])));
+      scelti.forEach((s) => cCentr.append(el('div', { class: 'rq-c' }, [el('span', { text: nomeBreve(s), title: nomeBreve(s) }), elDiventa(prevDi(s), scritteDi(s))])));
     };
     aggRiga();
     if (!aperta) return [riga];
@@ -2105,7 +2144,7 @@
       if (x.ref === b.ref) o.selected = true;
       sel.append(o);
     }
-    sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); b.temps = {}; renderMail(true); });
+    sel.addEventListener('change', () => { b.ref = sel.value; b.ids = new Set(); b.temps = {}; b.orari = {}; renderMail(true); });
     const giorno = el('input', { type: 'date', value: b.giorno, 'aria-label': 'Giorno' });
     giorno.addEventListener('change', () => { bs.forEach((x) => { x.giorno = giorno.value; }); renderMail(true); });
     const campi = el('div', { class: 'rq-campi' });
@@ -2146,17 +2185,36 @@
           prev == null ? el('span', { class: 'rq-vuoto', text: 'orario ordinario non letto per questo giorno' })
             : prev.length ? el('span', { class: 'rq-f', text: prev.map((f) => fasciaTxt(f[0], f[1])).join(' · ') })
               : el('span', { class: 'rq-vuoto', text: 'spento quel giorno' }),
-          el('span', { class: 'k', text: 'Diventa' }), cb.checked ? elDiventa(prev, scritte()) : el('span', { class: 'rq-vuoto', text: 'non toccato' }),
+          el('span', { class: 'k', text: 'Diventa' }), cb.checked ? elDiventa(prev, scritteDi(s)) : el('span', { class: 'rq-vuoto', text: 'non toccato' }),
           el('span', { class: 'k', text: 'Dove' }), el('span', { class: 'rq-vuoto', text: metodoTxt(s) }));
         if (gia.length) dv.append(el('span', { class: 'k', text: 'Attenzione' }), el('span', { class: 'rq-diff div', text: 'straordinario già presente: ' + gia.map((x) => x.fasce_testo).join(', ') }));
       };
       cb.addEventListener('change', () => { if (cb.checked) b.ids.add(s.id); else b.ids.delete(s.id); agg.forEach((f) => f()); });
       agg.push(fa);
+      const od = el('input', { type: 'checkbox', 'data-od': String(s.id) });
+      od.checked = !!b.orari[s.id];
+      const oc = el('div', { class: 'rq-campi' });
+      const faOrari = () => {
+        oc.innerHTML = '';
+        (b.orari[s.id] || []).forEach((x, n) => {
+          const d = el('input', { type: 'time', value: x.dalle, 'aria-label': 'Dalle, ' + nomeBreve(s) }), a = el('input', { type: 'time', value: x.alle, 'aria-label': 'Alle, ' + nomeBreve(s) });
+          d.addEventListener('input', () => { x.dalle = d.value; agg.forEach((g) => g()); });
+          a.addEventListener('input', () => { x.alle = a.value; agg.forEach((g) => g()); });
+          if (n) oc.append(el('span', { class: 'rq-vuoto', text: 'e' }));
+          oc.append(d, el('span', { class: 'rq-vuoto', text: '→' }), a);
+        });
+      };
+      od.addEventListener('change', () => {
+        if (od.checked) b.orari[s.id] = bs.map((x) => ({ dalle: x.dalle, alle: x.alle })); else delete b.orari[s.id];
+        faOrari(); agg.forEach((g) => g());
+      });
+      faOrari();
       circ.append(el('div', { class: 'rq-ci' }, [
         el('label', { class: s.accendi === false ? 'no' : '' }, [cb, el('span', { text: nomeBreve(s) + (s.accendi === false ? ' (non per accendere)' : '') }),
           OTT_TXT[s.ott] ? el('span', { class: 'rq-ott ' + s.ott, text: s.ott === 'attivo' ? 'ottimizzato' : s.ott === 'spento' ? 'non ottimizzato' : 'senza ottimizzatore' }) : null]),
         el('div', { class: 'rq-t' }, [ti, '°C']),
         dv,
+        el('div', { class: 'rq-od' }, [el('label', { class: 'rq-odl' }, [od, el('span', { text: 'orario diverso per questo circuito' })]), oc]),
       ]));
     }
     if (b.ref && !progs.length) circ.append(el('div', { class: 'rq-ci' }, [el('span', { class: 'rq-vuoto', text: 'Nessun programma per accendere in questo impianto.' })]));
@@ -2190,46 +2248,54 @@
     const b = mailBozza(p, idxs[0]);
     const bs = idxs.map((i) => mailBozza(p, i));
     b.esito = ''; b.errore = '';
-    const grezze = bs.map((x) => [toMin(x.dalle), toMin(x.alle)]);
     const ids = [...b.ids];
     const progs = ids.map((id) => S.catalog.schedules.find((s) => s.id === id)).filter((s) => s && s.impianto_ref === b.ref);
     let err = '';
     if (!b.ref) err = 'Scegli l\'impianto.';
     else if (!progs.length) err = 'Spunta almeno un circuito.';
     else if (!/^\d{4}-\d{2}-\d{2}$/.test(b.giorno)) err = 'Giorno mancante.';
-    else if (fasceBuone(grezze).length !== grezze.length) err = 'Orario non valido (alle dopo dalle).';
-    const temps = {};
+    const temps = {}, fasceDi = {};
     for (const s of progs) {
+      const grezze = (b.orari[s.id] || bs).map((x) => [toMin(x.dalle), toMin(x.alle)]);
+      if (!err && fasceBuone(grezze).length !== grezze.length) err = b.orari[s.id] ? `Orario non valido per ${nomeBreve(s)} (alle dopo dalle).` : 'Orario non valido (alle dopo dalle).';
+      fasceDi[s.id] = err ? [] : unisciFasce(grezze.map((f) => [f[0], Math.min(f[1], 1439)]));
+      if (!err && fasceDi[s.id].length > 4) err = 'Al massimo 4 fasce in un giorno.';
       const t = parseTemp(b.temps[s.id]);
       if (!err && (t == null || Number.isNaN(t) || t < T_MIN || t > T_MAX)) err = `Temperatura non valida per ${nomeBreve(s)}.`;
       temps[s.id] = t;
     }
-    const fasce = unisciFasce(grezze.map((f) => [f[0], Math.min(f[1], 1439)]));
-    if (!err && fasce.length > 4) err = 'Al massimo 4 fasce in un giorno.';
     if (err) { b.errore = err; renderMail(true); return; }
     const imp = S.catalog.impianti.find((x) => x.ref === b.ref) || {};
     const gg = dateFromIso(b.giorno);
     const q0 = p.richieste[idxs[0]];
     const stesso = b.giorno === q0.giorno && b.ref === (q0.impianto_ref || b.ref);
-    const orario = fasce.map((f) => fasciaTxt(f[0], f[1])).join(' e ');
+    const orarioDi = (s) => fasceDi[s.id].map((f) => fasciaTxt(f[0], f[1])).join(' e ');
+    const uguali = progs.every((s) => orarioDi(s) === orarioDi(progs[0]));
+    const orario = uguali ? orarioDi(progs[0]) : 'con orari diversi per circuito';
+    const tab = b.tabAnche !== false && b.tabPronta ? b.tabPronta() : null;
     const righe = progs.map((s) => {
+      const fasce = fasceDi[s.id];
       const prev = stesso ? (q0.previsto || {})[String(s.id)] : null;
       const ord = prev ? (prev.fasce || []).map((f) => [f[0], Math.min(f[1], 1439)]) : null;
       const quel = ord ? `quel giorno ${unisciFasce(ord.concat(fasce)).map((f) => fasciaTxt(f[0], f[1])).join(', ')}` : 'sommato all\'ordinario che il PC trova in centralina';
-      return `${nomeBreve(s)} a ${String(temps[s.id]).replace('.', ',')} °C: ${quel}\n   nel ${metodoTxt(s)}`;
+      return `${nomeBreve(s)}${uguali ? '' : ' ' + orarioDi(s)} a ${String(temps[s.id]).replace('.', ',')} °C: ${quel}\n   nel ${metodoTxt(s)}`;
     });
     const testo = `${impiantoLabel(imp)}\n${gg ? GG[gg.getDay()] + ' ' : ''}${fmtShort(b.giorno)}: straordinario ${orario}\n\n`
-      + righe.join('\n') + '\n\nL\'orario ordinario resta. Il PC rimette l\'orario normale il giorno dopo.';
+      + righe.join('\n') + '\n\nL\'orario ordinario resta. Il PC rimette l\'orario normale il giorno dopo.'
+      + (tab ? `\n\nTabella di contabilità: ${tab.r.codice}, orario del cliente ${tab.cli.map((x) => x[0] + '–' + x[1]).join(' e ')}.`
+        : idxs.every((i) => (p.richieste[i].tabella_scritta || {}).esito === 'ok') ? '\n\nTabella di contabilità: già scritta.' : '\n\nLa tabella di contabilità NON viene scritta adesso.');
     if (!window.confirm('Mandare lo straordinario all\'impianto?\n\n' + testo)) return;
     btn.disabled = true;
-    const ok = [], ko = [];
+    const ok = [], ko = [], okIds = [];
+    let tabErr = '';
     for (const s of progs) {
       try {
         await api('/straordinari', { method: 'POST', body: {
-          schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: fasce.map((f) => ({ start: f[0], end: f[1], temp: temps[s.id] })),
+          schedule_id: s.id, data_dal: b.giorno, data_al: null, fasce: fasceDi[s.id].map((f) => ({ start: f[0], end: f[1], temp: temps[s.id] })),
           note: `[+ord] Da mail: ${String(p.oggetto || '').slice(0, 200)} [m:${p.id}]`,
         } });
         ok.push(nomeBreve(s));
+        okIds.push(s.id);
       } catch (e) {
         const m = handleErr(e, 'mail');
         if (e instanceof AuthErr) return;
@@ -2241,8 +2307,17 @@
       // "inserita" subito solo se sono partiti tutti i circuiti; se uno e' stato rifiutato resta "in parte"
       idxs.forEach((i) => {
         p.richieste[i].inserita = ko.length ? 'in_parte' : 'inserita';
-        p.richieste[i].inserita_fasce = fasce.map((f) => minToHHMM(f[0]) + '-' + minToHHMM(f[1])).join(', ');
+        p.richieste[i].inserita_fasce = [...new Set(okIds.map((id) => fasceDi[id].map((f) => minToHHMM(f[0]) + '-' + minToHHMM(f[1])).join(', ')))].join(' / ');
       });
+      S.mailAppena = S.mailAppena || new Map();
+      idxs.forEach((i) => S.mailAppena.set(p.id + '|' + i, { inserita: p.richieste[i].inserita, fasce: p.richieste[i].inserita_fasce, t: Date.now() }));
+      // 12/11/2026 (Davide: "quello chiesto dal cliente non viene scritto sulla tabella"): con lo straordinario parte anche la tabella
+      if (tab) {
+        try { await mailScriviTabella(p, idxs, b, tab.r, tab.cli); } catch (e) {
+          if (e instanceof AuthErr) return;
+          tabErr = 'Tabella non scritta: ' + (e.message || 'errore') + ' Usa "Scrivi su tabella".';
+        }
+      }
       const oggiIso = new Date().toLocaleDateString('sv-SE');
       p.da_fare = p.richieste.filter((r) => ['no', 'in_parte'].includes(r.inserita) && (r.giorno || '') >= oggiIso).length;
       const v = p.richieste.map((r) => r.inserita).filter(Boolean);
@@ -2251,6 +2326,7 @@
       await loadStra();
     }
     if (ko.length) b.errore = (ok.length ? 'Non inviato per ' : '') + ko.join('; ');
+    if (tabErr) b.errore = (b.errore ? b.errore + ' · ' : '') + tabErr;
     renderMail(true);
   }
 
