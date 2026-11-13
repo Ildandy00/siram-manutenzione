@@ -2920,23 +2920,20 @@ async function caricaReportSegnalazione(id) {
     if(!risp.ok) return;
     r=await risp.json();
   } catch(e) { return; }
-  if(currentDetId!==id || !r || !r.verdetto) return;      // nel frattempo e' stato aperto un altro intervento
-  const col=REP_COLORE[r.verdetto]||'#9aa';
-  const tab=(r.tabelle||[]).map(t=>`<div style="overflow-x:auto"><table class="rep-tab">
-      ${t.testa&&t.testa.length?`<tr>${t.testa.map(h=>`<th>${escH(h)}</th>`).join('')}</tr>`:''}
-      ${(t.righe||[]).map(riga=>`<tr>${riga.map((c,k)=>`<td${c.rosso?' class="rep-rosso"':''}>${(!t.testa||!t.testa.length)&&k===0?'<b>'+escH(c.t)+'</b>':escH(c.t)}</td>`).join('')}</tr>`).join('')}
+  if(currentDetId!==id || !r) return;      // nel frattempo e' stato aperto un altro intervento
+  // 13/11/2026 (Davide): niente verdetto ne' analisi. Solo gli orari (cliente e centralina) e le foto.
+  const tab=(r.tabelle||[]).filter(t=>t.titolo==='Orari').map(t=>`<div style="overflow-x:auto"><table class="rep-tab">
+      <tr>${(t.testa||[]).slice(0,3).map(h=>`<th>${escH(h)}</th>`).join('')}</tr>
+      ${(t.righe||[]).map(riga=>`<tr>${riga.slice(0,3).map(c=>`<td>${escH(c.t)}</td>`).join('')}</tr>`).join('')}
     </table></div>`).join('');
   const img=(r.immagini||[]).map(im=>{
     const u=PROXY_URL+'/segnalazioni/immagine/'+encodeURIComponent(id)+'/'+im.n;
     return `<a href="${u}" target="_blank" rel="noopener" title="Apri la foto intera"><img src="${u}" alt="${escH(im.titolo||'Sinottico')}" style="width:100%;height:auto;border-radius:6px;background:#fff;margin-top:8px;display:block"></a>`;
   }).join('');
-  box.innerHTML=`<div class="rep-box" style="border-left:3px solid ${col}">
-      <div class="rep-testa"><span style="color:${col};font-weight:700">${REP_TESTO[r.verdetto]||escH(r.verdetto)}</span>
-        <span style="font-weight:600">· ${escH(r.causa||'')}</span>
-        <span class="rep-muto">· certezza ${escH(r.certezza||'')}${r.prova?' · PROVA':''}</span></div>
-      <div class="rep-muto" style="margin:2px 0 8px">Analisi automatica${r.giorno?' del '+escH(r.giorno):''} · dati delle ${escH(r.dati_del||'')}</div>
+  if(!tab && !img) return;
+  box.innerHTML=`<div class="rep-box">
+      <div class="rep-muto" style="margin:0 0 8px">Orari${r.giorno?' del '+escH(r.giorno):''} · dati delle ${escH(r.dati_del||'')}</div>
       ${tab}
-      ${r.primo_controllo?`<div style="font-size:12px;margin-top:6px"><b>Primo controllo:</b> ${escH(r.primo_controllo)}</div>`:''}
       ${img}
     </div>`;
   box.style.display='block';
