@@ -1760,7 +1760,9 @@
   }
   function mailFatta(p) {
     const oggi = new Date().toLocaleDateString('sv-SE');
-    return p.stato === 'inviata' && !((p.da_fare || 0) > 0) && (p.richieste || []).some((r) => (r.giorno || '') >= oggi);
+    // 15/11/2026: una mail mandata col pulsante di Gmail resta in elenco anche se il giorno e' passato (Davide l'ha
+    // mandata e non la trovava: era gia' inserita e del giorno prima). Si toglie con "Togli dall'elenco".
+    return p.stato === 'inviata' && !((p.da_fare || 0) > 0) && (!!p.pulsante || (p.richieste || []).some((r) => (r.giorno || '') >= oggi));
   }
   // ---- 12/11/2026: pagina nuova delle richieste dalle mail (bozzetto 3 approvato da Davide) ----
   // Una riga per richiesta; toccandola si apre il blocco: in alto l'orario chiesto dal cliente (non si modifica), sotto le
