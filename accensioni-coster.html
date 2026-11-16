@@ -95,6 +95,10 @@
   .g-vista .imp-testa { top:50px } .s-vista .imp-testa { top:64px }
   .imp-testa .mono { color:var(--c); font-size:12px; font-weight:500 }
   .imp-testa b { font-weight:600 }
+  /* 16/11/2026: targa delle centraline che non sono YLC 880 (GPC642, GPT412); bordata se l'impianto ha anche una YLC */
+  .targa { flex:none; font:600 10px/1 'DM Mono', monospace; letter-spacing:.5px; padding:3px 5px; border-radius:4px;
+           background:#e6e6e6; color:#111; cursor:help }
+  .targa.mista { background:transparent; color:#e6e6e6; box-shadow:inset 0 0 0 1px #9a9a9a }
   .imp > .g-riga:last-child, .imp > .s-riga:last-child { border-bottom:0 }
   .c-testa > span { position:sticky; left:0; padding:0 12px }
   .c-testa b { font-weight:700; margin-right:4px } .c-testa .mono { font-size:11px; color:#ddd } .c-testa em { font-style:normal; color:#ccc; font-size:12px }
@@ -251,14 +255,16 @@ function apriImpianto(g, c) {
   const [primo, ...resto] = m ? [m[1], m[2]] : testo.split(' - ');
   const codice = resto.length ? primo : '';
   const nome = resto.length ? resto.join(' - ') : primo;
-  g.html += (g.aperto ? '</div>' : '') + `<div class="imp"><div class="imp-testa" title="${esc(c.impianto)}">${codice ? `<span class="mono">${esc(codice)}</span>` : ''}<b>${esc(nome)}</b></div>`;
+  // 16/11/2026: targa "GPC" / "GPT" davanti alle centraline che non sono YLC 880 (campo targa della fotografia)
+  const targa = c.targa ? `<span class="targa${c.targa.startsWith('YLC+') ? ' mista' : ''}" title="${esc(c.targa_info || c.targa)}">${esc(c.targa)}</span>` : '';
+  g.html += (g.aperto ? '</div>' : '') + `<div class="imp"><div class="imp-testa" title="${esc(c.impianto)}">${targa}${codice ? `<span class="mono">${esc(codice)}</span>` : ''}<b>${esc(nome)}</b></div>`;
   g.aperto = true;
 }
 
 function passaFiltro(c) {
   if (S.commessa && c.commessa !== S.commessa) return false;
   const q = S.cerca.trim().toLowerCase();
-  return !q || (c.codice + ' ' + c.impianto + ' ' + c.circuito).toLowerCase().includes(q);
+  return !q || (c.codice + ' ' + c.impianto + ' ' + c.circuito + ' ' + (c.targa || '')).toLowerCase().includes(q);
 }
 
 // {indice del circuito: {cliente, acceso}} di un giorno. acceso: fasce ([] = spento), null = dati incompleti, "nessun_segnale"
