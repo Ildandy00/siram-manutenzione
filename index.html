@@ -494,6 +494,35 @@ body{background:#141414}
 .sin-view-top button{background:rgba(255,255,255,.1);border:none;color:#fff;min-width:44px;height:44px;border-radius:12px;font-size:18px;cursor:pointer;font-family:'Outfit',sans-serif}
 .sin-view-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff}
 .sin-view-scroll img{display:block;width:100%;height:auto}
+/* 18/11/2026: modalita' letture sulla mappa (pulsante Letture) */
+#bsLett{display:none;padding:0 16px}
+.bs.lett #bsLett{display:block}
+.bs.lett .bs-search,.bs.lett #bsTiles,.bs.lett #bsBanner,.bs.lett .bs-btns,.bs.lett .bs-list,.bs.lett #bsPrev{display:none}
+.lt-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lt-top b{font-size:18px}
+.lt-top span{font-size:12.5px;color:var(--muted);font-weight:600}
+.lt-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
+.lt-bar i{display:block;height:100%;background:var(--accent)}
+.lt-sub{font-size:13px;color:var(--muted);margin-top:6px}
+.lt-chips{display:flex;gap:7px;margin-top:12px}
+.lt-chip{flex:1;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;padding:9px 0;border-radius:12px;border:1.5px solid transparent;background:rgba(255,255,255,.07);color:var(--muted);cursor:pointer}
+.lt-chip.on{background:rgba(242,200,107,.14);border-color:rgba(242,200,107,.55);color:var(--yellow)}
+.lt-vic{display:flex;align-items:center;gap:10px;margin-top:12px;background:rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;cursor:pointer;font-size:14px}
+.lt-vic .g{flex:1;min-width:0}
+.lt-vic .g small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.lt-btns{display:flex;gap:8px;margin-top:12px}
+.lt-btns button{flex:1;padding:14px 0;border-radius:15px;border:1.5px solid var(--glass-line);background:none;color:var(--text);font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:700;cursor:pointer}
+.lt-btns button.ok{background:var(--yellow);border-color:var(--yellow);color:#2a1f00}
+.pin-clu.lett{background:var(--yellow);color:#2a1f00;box-shadow:0 0 0 4px rgba(255,214,102,.22)}
+.pin-lett{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;box-shadow:0 0 0 3px #141414}
+.pin-lett.dafare{background:var(--yellow);color:#2a1f00}
+.pin-lett.parz{background:conic-gradient(var(--accent) 0 var(--p),var(--yellow) var(--p) 100%)}
+.pin-lett.fatto{background:var(--accent);color:var(--acc-txt);opacity:.75}
+.pin-lbl.lett{background:#2a2414;border-color:rgba(242,200,107,.55);color:#f6dc9a}
+.pin-lbl.lett b{color:#f6dc9a}
+.pin-lbl.lettok{color:var(--accent);border-color:rgba(127,224,192,.4);background:#16241f}
+.pin-lbl.lettok b{color:var(--accent)}
+#lettureSlot .let-fascia.attivo{background:var(--yellow);color:#2a1f00;border-color:var(--yellow)}
 </style>
 </head>
 <body>
@@ -537,6 +566,7 @@ body{background:#141414}
         <div class="bs-search" id="bsSearch"><span>&#x1F50D;</span><input id="cerca" type="search" placeholder="Cerca impianto, codice, comune&#x2026;" autocomplete="off" oninput="onCerca()" onfocus="apriSheet()"><button class="x" onclick="pulisciCerca()">&#x2715;</button></div>
       </div>
       <div id="bsPrev"></div>
+      <div id="bsLett"></div>
       <div class="bs-tiles" id="bsTiles"></div>
       <div id="bsBanner"></div>
       <div class="bs-btns">
@@ -1548,7 +1578,7 @@ function initMappa(){
   LAYER=L.layerGroup().addTo(MAP);
   // le richieste libere vicine si raggruppano in una bolla col numero
   CLUSTER = L.markerClusterGroup ? L.markerClusterGroup({maxClusterRadius:32,disableClusteringAtZoom:14,showCoverageOnHover:false,spiderfyOnMaxZoom:true,
-    iconCreateFunction:c=>{const n=c.getChildCount(); return L.divIcon({className:'',html:`<div class="pin-clu">${n}</div>`,iconSize:[34,34],iconAnchor:[17,17]});}}).addTo(MAP) : LAYER;
+    iconCreateFunction:c=>{const n=c.getChildCount(); return L.divIcon({className:'',html:`<div class="pin-clu${(typeof MODO!=='undefined'&&MODO==='letture')?' lett':''}">${n}</div>`,iconSize:[34,34],iconAnchor:[17,17]});}}).addTo(MAP) : LAYER;
   // dal livello di quartiere (14) compaiono codice e nome; da vicino (16) il nome intero
   const nomi=()=>{ const z=MAP.getZoom(); $('map').classList.toggle('nomi',z>=14); $('map').classList.toggle('nomi-lunghi',z>=16); };
   MAP.on('zoomend',nomi); nomi();
@@ -1604,7 +1634,8 @@ function centraSuDiMe(){
 let SU=false, VIS=300;
 function misuraSheet(){
   const bs=$('bs'), list=$('mainScroll'); if(!bs||!list) return;
-  if(PREV){ const pv=$('bsPrev'); VIS=pv.offsetTop+pv.offsetHeight+16; }
+  if(MODO==='letture'){ const lt=$('bsLett'); VIS=lt.offsetTop+lt.offsetHeight+16; }
+  else if(PREV){ const pv=$('bsPrev'); VIS=pv.offsetTop+pv.offsetHeight+16; }
   else if(!SU){ VIS=list.offsetTop+8; }
   posSheet();
 }
@@ -1641,6 +1672,7 @@ function chiudiSheet(){ SU=false; $('mainScroll').scrollTop=0; const c=$('cerca'
       b.classList.remove('drag');
       const v=lastDy/Math.max(1,Date.now()-t0), max=b.offsetHeight-VIS;
       SU = Math.abs(v)>0.4 ? lastDy<0 : lastOff<max/2;
+      if(MODO==='letture'){ SU=false; posSheet(); misuraSheet(); y0=null; drag=false; return; }
       if(PREV){ // anteprima: su = dettaglio completo, giù = chiude l'anteprima
         const id=PREV, su=SU; SU=false;
         if(su) openPanel(id); else if(lastDy>30) chiudiPrev();
@@ -1707,6 +1739,7 @@ function box(righe){ return `<div class="ls-box">${righe}</div>`; }
 function renderLista(){
   if(!currentUser) return;
   rifaiGeo();
+  if(MODO==='letture'){ renderLetture(); aggiornaNote(); misuraSheet(); return; }
   const oggi=isoOggi();
   const q=(($('cerca')||{}).value||'').trim().toLowerCase();
   const match=i=>{ if(!q) return true; const imp=impDi(i); return ((imp?imp.descrizione+' '+imp.comune+' '+imp.indirizzo:'')+' '+i.codiceImpianto+' '+(i.note||'')).toLowerCase().includes(q); };
@@ -2006,6 +2039,68 @@ function zoomSin(d){
   const f=$('sinViewImg').offsetWidth/prima; sc.scrollLeft=cx*f-sc.clientWidth/2; sc.scrollTop=cy*f-sc.clientHeight/2;
 }
 function chiudiSin(){ $('sinView').classList.remove('open'); $('sinViewImg').src=''; }
+
+// --- 18/11/2026: letture contatori sulla mappa ---
+// Il pulsante "Letture" (nei giorni di lettura) passa la mappa dalle richieste agli impianti con i contatori:
+// giallo = da leggere, mezzo verde = letto in parte, verde = fatto. Toccando un puntino si apre la pagina
+// delle letture di quell'impianto; "Lista" apre l'elenco di sempre.
+var MODO='richieste', LETT_FILTRO='dafare', LETT_FIT=false;
+async function lettureSuMappa(){
+  if(MODO==='letture'){ esciLetture(); return; }
+  if(!window.LETTURE) return;
+  const cfg=await LETTURE.configFresca();
+  if(cfg && cfg.ok!==false && cfg.apertoOggi===false){ toast('Letture chiuse · prossima finestra il '+(cfg.prossimaFinestra||'—'),'err'); return; }
+  MODO='letture'; LETT_FIT=true;
+  if(PREV){ PREV=null; $('bs').classList.remove('prev'); }
+  SU=false; $('mainScroll').scrollTop=0; $('bs').classList.add('lett'); $('notePop').classList.remove('open');
+  const f=$('fabLetture'); if(f) f.classList.add('attivo');
+  if(!LETTURE.caricato()){ $('bsLett').innerHTML='<div class="loading-ctr" style="padding:24px 0"><div class="spinner"></div>Caricamento contatori...</div>'; misuraSheet(); await LETTURE.carica(); }
+  renderLista();
+}
+function esciLetture(){
+  MODO='richieste'; $('bs').classList.remove('lett');
+  const f=$('fabLetture'); if(f) f.classList.remove('attivo');
+  renderLista(); setTimeout(()=>adattaMappa(),60);
+}
+window.lettureSuMappa=lettureSuMappa;
+window.onLettureAggiornate=()=>{ if(MODO==='letture') renderLista(); };
+function filtroLett(f){ LETT_FILTRO=f; LETT_FIT=true; renderLista(); }
+function renderLetture(){
+  const tutti=LETTURE.elenco(), cfg=LETTURE.cfg()||{};
+  const fatti=tutti.filter(x=>x.tot>0&&x.letti>=x.tot), daFare=tutti.filter(x=>x.letti<x.tot);
+  const vis=LETT_FILTRO==='dafare'?daFare:(LETT_FILTRO==='fatti'?fatti:tutti);
+  // mappa
+  if(MAP){
+    LAYER.clearLayers(); if(CLUSTER&&CLUSTER!==LAYER) CLUSTER.clearLayers(); PUNTI=[];
+    vis.forEach(x=>{
+      const g=GEO[x.codice]; if(!g) return;
+      const ok=x.letti>=x.tot, parz=!ok&&x.letti>0, sz=20;
+      const dot=ok?'<div class="pin-lett fatto">✓</div>':(parz?`<div class="pin-lett parz" style="--p:${Math.round(x.letti/x.tot*100)}%"></div>`:'<div class="pin-lett dafare"></div>');
+      const cod=/^K\d/i.test(x.codice)?`<b>${escH(x.codice)}</b> `:'';
+      const html=`<div class="pin-wrap" style="--s:${sz}px">${dot}<span class="pin-lbl ${ok?'lettok':'lett'}">${cod}${escH(nomeBreve(x.descrizione))}<span class="lbl-n">${x.letti}/${x.tot}</span></span></div>`;
+      L.marker([g.lat,g.lng],{icon:L.divIcon({className:'',html,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]}),zIndexOffset:ok?0:1000,keyboard:false})
+        .on('click',()=>LETTURE.apriImpianto(x.codice)).addTo(ok||!CLUSTER?LAYER:CLUSTER);   // da leggere: si raggruppano da lontano
+      PUNTI.push([g.lat,g.lng]);
+    });
+    if(LETT_FIT && PUNTI.length){ LETT_FIT=false; setTimeout(()=>adattaMappa(),60); }
+  }
+  // impianto da leggere piu' vicino
+  let vicino=null;
+  if(POS) daFare.forEach(x=>{ const g=GEO[x.codice]; if(!g) return; const k=km({codiceImpianto:x.codice}); if(k!=null&&(!vicino||k<vicino.k)) vicino={x,k}; });
+  const senzaPos=vis.filter(x=>!GEO[x.codice]).length;
+  const perc=tutti.length?Math.round(fatti.length/tutti.length*100):0;
+  $('bsLett').innerHTML=`
+    <div class="lt-top"><b>🔢 Letture contatori</b><span>${escH(cfg.meseCorrente||'')}</span></div>
+    <div class="lt-bar"><i style="width:${perc}%"></i></div>
+    <div class="lt-sub">${fatti.length} di ${tutti.length} impianti fatti${senzaPos?` · ${senzaPos} senza posizione (vedi Lista)`:''}</div>
+    <div class="lt-chips">
+      <button class="lt-chip ${LETT_FILTRO==='dafare'?'on':''}" onclick="filtroLett('dafare')">Da leggere ${daFare.length}</button>
+      <button class="lt-chip ${LETT_FILTRO==='fatti'?'on':''}" onclick="filtroLett('fatti')">Fatti ${fatti.length}</button>
+      <button class="lt-chip ${LETT_FILTRO==='tutti'?'on':''}" onclick="filtroLett('tutti')">Tutti</button>
+    </div>
+    ${vicino?`<div class="lt-vic" onclick="LETTURE.apriImpianto('${escH(vicino.x.codice)}')"><span style="font-size:18px">📍</span><div class="g"><b>${escH(vicino.x.codice)} ${escH(nomeBreve(vicino.x.descrizione))}</b><small>il più vicino da leggere · ${kmTxt(vicino.k)} km · ${vicino.x.letti}/${vicino.x.tot} contatori</small></div><span style="color:var(--muted);font-size:18px">›</span></div>`:''}
+    <div class="lt-btns"><button onclick="LETTURE.apriLista()">☰ Lista</button><button onclick="esciLetture()">✕ Torna alle richieste</button></div>`;
+}
 
 const _notaLetta=notaLetta; notaLetta=async function(id){ await _notaLetta(id); aggiornaNote(); };
 </script>

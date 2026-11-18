@@ -518,6 +518,7 @@
 
       renderLista();
       aggiornaFab();
+      notifica();
       avviso(r.aggiornata ? 'Lettura aggiornata ✓' : 'Lettura salvata ✓', 'ok');
     } catch (e) {
       es.className = 'let-ct-esito warn';
@@ -540,6 +541,7 @@
     document.getElementById('lettCtPanel').classList.remove('open');
     L.impiantoSel = null;
     renderLista();
+    notifica();
   }
 
   function bannerFinestra() {
@@ -569,6 +571,7 @@
       bannerFinestra();
       renderLista();
       aggiornaFab();
+      notifica();
     } catch (e) {
       document.getElementById('lettLista').innerHTML =
         '<div class="loading-ctr" style="color:var(--red)">Errore caricamento.<br>Controlla la rete.</div>';
@@ -628,6 +631,27 @@
     );
   }
 
+  // -- Interfaccia per la mappa dell'app (18/11/2026) -------------------------
+  function notifica() {
+    try { if (typeof window.onLettureAggiornate === 'function') window.onLettureAggiornate(); } catch (e) { /* niente */ }
+  }
+  async function configFresca() {
+    try {
+      const c = await apiGetL('/config-letture');
+      if (c && c.ok) { L.cfg = Object.assign(L.cfg || {}, c); aggiornaFab(); return L.cfg; }
+    } catch (e) { /* offline */ }
+    return L.cfg;
+  }
+  window.LETTURE = {
+    apriLista: apriLetture,                 // l'elenco di sempre
+    apriImpianto: function (cod) { posizione(); apriContatori(cod); },
+    carica: carica,
+    configFresca: configFresca,
+    elenco: function () { return L.caricato ? elencoImpianti() : []; },
+    caricato: function () { return !!L.caricato; },
+    cfg: function () { return L.cfg; },
+  };
+
   // -- Innesto nel DOM ------------------------------------------------------
   function innesta() {
     const app  = document.getElementById('app');
@@ -646,7 +670,11 @@
       '<div><div class="let-fascia-t">Letture aperte</div>' +
       '<div class="let-fascia-s" id="lettFasciaSub">Tocca per inserire le letture</div></div>' +
       '<div class="let-fascia-arr">›</div>';
-    fab.addEventListener('click', apriLetture);
+    fab.addEventListener('click', () => {
+      // 18/11/2026: l'app con la mappa passa la mappa ai contatori da leggere (window.lettureSuMappa);
+      // le pagine senza mappa aprono l'elenco come prima.
+      if (typeof window.lettureSuMappa === 'function') window.lettureSuMappa(); else apriLetture();
+    });
     // Slot sotto la testata (index.html nuovo); in mancanza, in fondo alla schermata
     const slot = document.getElementById('lettureSlot') || main;
     slot.appendChild(fab);
