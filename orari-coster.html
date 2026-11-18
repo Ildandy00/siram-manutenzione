@@ -215,9 +215,18 @@
   .stra-form .span-all { grid-column: 1 / -1; }
   /* 09/11/2026: richieste lette dalle mail. 10/11/2026: ogni mail e' una scheda, ogni richiesta un riquadro con la
      data a sinistra; per ogni circuito l'orario previsto in centralina quel giorno contro lo straordinario richiesto. */
-  .mail { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; }
+  /* 18/11/2026 (Davide: "separa le richieste in modo che sia ben chiaro quale e' una e quale e' l'altra"): ogni mail e' una
+     scheda col bordo azzurro, la testata colorata col numero e piu' spazio fra una e l'altra */
+  .mail { background: var(--bg3); border: 2px solid rgba(122,176,216,.6); border-radius: 12px; margin-bottom: 30px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .mail:last-child { margin-bottom: 4px; }
+  .mail.fatta { border-color: rgba(143,190,122,.6); }
+  .mail-corpo { padding: 12px 18px 16px; }
+  .mail-tit { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+  .mail-n { flex: none; font: 700 12px 'DM Mono', monospace; padding: 4px 9px; border-radius: 999px; background: #7ab0d8; color: #10202c; white-space: nowrap; margin-top: 1px; }
+  .mail.fatta .mail-n { background: #8fbe7a; color: #14240f; }
   .mail.chiusa { opacity: .55; }
-  .mail-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; }
+  .mail-testa { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; flex-wrap: wrap; padding: 12px 18px; background: rgba(122,176,216,.18); border-bottom: 1px solid rgba(122,176,216,.45); }
+  .mail.fatta .mail-testa { background: rgba(143,190,122,.18); border-bottom-color: rgba(143,190,122,.45); }
   .mail-ogg { font-size: 15px; font-weight: 600; line-height: 1.3; }
   .mail-da { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .mail-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
@@ -1850,12 +1859,16 @@
     if (!lista.length) { box.append(el('div', { class: 'muted', text: 'Nessuna richiesta nuova.' })); return; }
     const impOrd = S.catalog.impianti.slice().sort((a, b) => impiantoLabel(a).localeCompare(impiantoLabel(b)));
     const tolte = mailTolte();
+    let nMail = 0;
     for (const p of lista) {
+      nMail++;
+      const corpo = el('div', { class: 'mail-corpo' });
       const card = el('div', { class: 'mail' + (mailInVista(p) ? '' : ' chiusa') + (mailFatta(p) ? ' fatta' : ''), 'data-id': p.id });
       const mittente = String(p.da || '').replace(/<.*>/, '').replace(/"/g, '').trim();
       const ins = INS_MAIL[p.inserimento];
       card.append(el('div', { class: 'mail-testa' }, [
-        el('div', {}, [el('div', { class: 'mail-ogg', text: p.oggetto || '(senza oggetto)' }), el('div', { class: 'mail-da', text: mittente })]),
+        el('div', { class: 'mail-tit' }, [el('span', { class: 'mail-n', text: lista.length > 1 ? `${nMail} di ${lista.length}` : '1' }),
+          el('div', {}, [el('div', { class: 'mail-ogg', text: p.oggetto || '(senza oggetto)' }), el('div', { class: 'mail-da', text: mittente })])]),
         el('div', { class: 'mail-meta' }, [
           ins ? el('span', { class: 'ins ' + ins[0], text: ins[1] }) : null,
           p.nascosta && mostraTutte ? el('span', { class: 'mail-nasc', text: NASCOSTA[p.nascosta] || p.nascosta }) : null,
@@ -1867,23 +1880,24 @@
             : el('button', { type: 'button', class: 'btn ghost', text: p.stato === 'inviata' ? 'Togli dall\'elenco' : 'Scarta', onclick: () => mailStato(p, 'scartata') }),
         ]),
       ]));
-      if (p.riassunto) card.append(el('div', { class: 'mail-ries', text: p.riassunto }));
+      if (p.riassunto) corpo.append(el('div', { class: 'mail-ries', text: p.riassunto }));
       if ((p.file || []).length || (p.file_non_letti || []).length) {
-        card.append(el('div', { class: 'mail-file' }, [
+        corpo.append(el('div', { class: 'mail-file' }, [
           (p.file || []).length ? el('span', {}, ['📎 Letti anche: ', el('b', { text: p.file.join(', ') })]) : null,
           (p.file || []).length && (p.file_non_letti || []).length ? ' · ' : null,
           (p.file_non_letti || []).length ? el('span', { class: 'no', text: 'Non letti: ' + p.file_non_letti.join('; ') }) : null,
         ]));
       }
-      if (p.dubbi) card.append(el('div', { class: 'mail-dubbi', text: p.dubbi }));
+      if (p.dubbi) corpo.append(el('div', { class: 'mail-dubbi', text: p.dubbi }));
       const gruppi = mailGruppi(p).filter((g) => mostraTutte || !g.every((i) => tolte.has(p.id + '|' + i)));
-      if (!p.richieste.length) card.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
-      else if (!gruppi.length) card.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Richieste tolte dall\'elenco.' }));
+      if (!p.richieste.length) corpo.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Nessuna richiesta riconosciuta: leggi la mail.' }));
+      else if (!gruppi.length) corpo.append(el('div', { class: 'muted', style: 'margin-top:10px', text: 'Richieste tolte dall\'elenco.' }));
       else {
         const ls = el('div', { class: 'rq-lista' }, [el('div', { class: 'rq-r h' }, ['Giorno', 'Impianto', 'Cliente', 'Centralina: quel giorno diventa', ''].map((t) => el('span', { text: t })))]);
         for (const g of gruppi) ls.append(...mailVoce(p, g, impOrd));
-        card.append(ls);
+        corpo.append(ls);
       }
+      card.append(corpo);
       box.append(card);
     }
   }
