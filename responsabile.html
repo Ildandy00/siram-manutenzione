@@ -463,6 +463,8 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
 .badge-att { background: rgba(160,160,220,.14); color: #c4c4f0; }
 .ev-chiusura * { text-decoration: line-through; }
 .ev-chiusura:hover { opacity: .95; }
+.rcee-data { width: 132px; padding: 4px 6px; font-family: 'DM Mono', monospace; font-size: 12px; }
+.rcee-data:disabled { opacity: .5; }
 .rcee-tag { font-size: 8px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 3px; margin-right: 4px;
   background: #e2c97a; color: #1d1d1d; vertical-align: 1px; font-style: normal; }
 
@@ -2141,13 +2143,44 @@ function renderRcee() {
         <td style="color:var(--muted)">${s.alimentazione || '—'}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${s.potenzaImpianto ? s.potenzaImpianto + ' kW' : '—'}</td>
         <td style="text-align:center">${s.periodicita ? s.periodicita + ' anni' : '—'}</td>
-        <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${s.dataUltimo || '—'}</td>
+        <td><input class="fc rcee-data" type="date" value="${rceeIso(s.dataUltimo)}" max="${toLocaleDateStr(new Date())}" title="Data dell'ultimo controllo: cambiandola si aggiorna il foglio ScadenzeRCEE" onchange="salvaDataRcee(${realIdx}, this)"/></td>
         <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${s.prossimaScadenza || '—'}</td>
         <td style="white-space:nowrap">
           ${giaAss?`<span class="badge badge-str" title="Richiesta già creata">✓ assegnato</span>`:`<button class="btn btn-primary btn-sm" onclick="openAssegnaRcee(${realIdx})">Assegna →</button>`}
         </td>
       </tr>`;
     }).join('') + '</tbody></table>';
+}
+
+// 19/11/2026: la data dell'ultimo controllo si scrive da qui nel foglio ScadenzeRCEE (colonna
+// DataUltimoControllo, tutte le righe dell'impianto). Il server ricalcola subito scadenza e stato.
+function rceeIso(t) { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t || '').trim()); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; }
+function rceeItaliana(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+let rceeSalvataggio = false;
+async function salvaDataRcee(idx, campo) {
+  const s = rceeScadenze[idx];
+  if (!s) return;
+  const prima = rceeIso(s.dataUltimo), data = campo.value;
+  if (data === prima) return;
+  const nome = s.descrizione || s.codiceAnagrafica || s.codiceImpianto;
+  if (!data) { campo.value = prima; toast('La data non si può cancellare da qui','err'); return; }
+  if (data < '2000-01-01') return;   // anno ancora a meta' mentre lo si scrive da tastiera (0002, 0020...)
+  if (data > toLocaleDateStr(new Date())) { campo.value = prima; toast('La data non può essere nel futuro','err'); return; }
+  if (rceeSalvataggio) { campo.value = prima; return; }
+  const gen = s.nGeneratori > 1 ? ` (${s.nGeneratori} generatori)` : '';
+  if (!confirm(`${nome}${gen}\n\nUltimo controllo RCEE: ${prima ? rceeItaliana(prima) : 'nessuno'} → ${rceeItaliana(data)}\n\nLo scrivo nel foglio ScadenzeRCEE?`)) { campo.value = prima; return; }
+  rceeSalvataggio = true; campo.disabled = true;
+  try {
+    const r = await apiPost('/aggiorna-rcee', { codiceImpianto: s.codiceImpianto || '', codiceAnagrafica: s.codiceAnagrafica || '', data });
+    if (!r || !r.ok) { campo.value = prima; toast((r && r.errore) || 'Data non salvata','err'); return; }
+    // subito a video; poi si rilegge il foglio
+    s.dataUltimo = rceeItaliana(data);
+    if (r.stato) { s.stato = r.stato; s.giorni = r.giorni; s.prossimaScadenza = rceeItaliana(r.prossimaScadenza); }
+    toast(r.stato ? `Salvato: prossima scadenza ${rceeItaliana(r.prossimaScadenza)}` : 'Data salvata: scadenza non calcolabile, nel foglio manca la periodicità','ok');
+    aggiornaBadgeRcee(); renderRcee();
+    try { const d = await apiGet('/scadenze-rcee'); rceeScadenze = d.scadenze || []; aggiornaBadgeRcee(); renderRcee(); } catch (e) {}
+  } catch (e) { campo.value = prima; toast('Data non salvata: il server non risponde','err'); }
+  finally { rceeSalvataggio = false; campo.disabled = false; }
 }
 
 function openAssegnaRcee(idx) {
