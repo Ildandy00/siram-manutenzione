@@ -465,6 +465,11 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
 .ev-chiusura:hover { opacity: .95; }
 .rcee-data { width: 132px; padding: 4px 6px; font-family: 'DM Mono', monospace; font-size: 12px; }
 .rcee-data:disabled { opacity: .5; }
+.rcee-data.cambiata { border-color: #4ade80; }
+.rcee-ok { width: 22px; height: 22px; margin-left: 4px; padding: 0; border: 0; border-radius: 6px; background: #22c55e; color: #fff;
+  font-size: 13px; font-weight: 800; line-height: 22px; cursor: pointer; vertical-align: middle; }
+.rcee-ok:hover { background: #16a34a; }
+.rcee-ok:disabled { opacity: .5; cursor: default; }
 .rcee-tag { font-size: 8px; font-weight: 800; letter-spacing: .5px; padding: 0 4px; border-radius: 3px; margin-right: 4px;
   background: #e2c97a; color: #1d1d1d; vertical-align: 1px; font-style: normal; }
 
@@ -2113,9 +2118,11 @@ function esisteInterventoRcee(s) {
   return S.interventi.some(i => i.stato !== 'Chiuso' && i.codiceImpianto === cod && (i.note || '').indexOf('[RCEE]') >= 0);
 }
 
-function renderRcee() {
+function renderRcee(forza) {
   const el = document.getElementById('tblRcee');
   if (!el) return;
+  // l'aggiornamento di ogni minuto non deve togliere il campo da sotto le dita
+  if (!forza && document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('rcee-data') && el.contains(document.activeElement)) return;
   const search = document.getElementById('rceeSearch') && document.getElementById('rceeSearch').value ? document.getElementById('rceeSearch').value.toLowerCase() : '';
   let lista = [...rceeScadenze];
   if (rceeFilter === 'DA COMPLETARE') lista = lista.filter(rceeDaCompletare);
@@ -2143,7 +2150,7 @@ function renderRcee() {
         <td style="color:var(--muted)">${s.alimentazione || '—'}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${s.potenzaImpianto ? s.potenzaImpianto + ' kW' : '—'}</td>
         <td style="text-align:center">${s.periodicita ? s.periodicita + ' anni' : '—'}</td>
-        <td><input class="fc rcee-data" type="date" value="${rceeIso(s.dataUltimo)}" max="${toLocaleDateStr(new Date())}" title="Data dell'ultimo controllo: cambiandola si aggiorna il foglio ScadenzeRCEE" onchange="salvaDataRcee(${realIdx}, this)"/></td>
+        <td style="white-space:nowrap">${rceeCampoData(s, realIdx)}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${s.prossimaScadenza || '—'}</td>
         <td style="white-space:nowrap">
           ${giaAss?`<span class="badge badge-str" title="Richiesta già creata">✓ assegnato</span>`:`<button class="btn btn-primary btn-sm" onclick="openAssegnaRcee(${realIdx})">Assegna →</button>`}
@@ -2156,31 +2163,49 @@ function renderRcee() {
 // DataUltimoControllo, tutte le righe dell'impianto). Il server ricalcola subito scadenza e stato.
 function rceeIso(t) { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t || '').trim()); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; }
 function rceeItaliana(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? `${m[3]}/${m[2]}/${m[1]}` : ''; }
+// Niente pop-up: cambiando la data compare una spunta verde accanto; si scrive nel foglio solo con la
+// spunta (o Invio). Esc rimette la data di prima. Le date cambiate e non ancora salvate restano in
+// rceeBozze, cosi' non si perdono quando la tabella si ridisegna.
 let rceeSalvataggio = false;
-async function salvaDataRcee(idx, campo) {
+const rceeBozze = {};
+function rceeChiave(s) { return s.codiceImpianto || ('ANAG:' + (s.codiceAnagrafica || '')); }
+function rceeCampoData(s, idx) {
+  const bozza = rceeBozze[rceeChiave(s)] || '';
+  return `<input class="fc rcee-data${bozza ? ' cambiata' : ''}" type="date" value="${bozza || rceeIso(s.dataUltimo)}" max="${toLocaleDateStr(new Date())}" title="Data dell'ultimo controllo" oninput="rceeDataCambiata(${idx}, this)" onkeydown="rceeTastoData(event, ${idx})"/>` +
+    `<button class="rcee-ok" type="button" title="Salva la data nel foglio ScadenzeRCEE" style="${bozza ? '' : 'visibility:hidden'}" onclick="salvaDataRcee(${idx})">✓</button>`;
+}
+function rceeDataCambiata(idx, campo) {
   const s = rceeScadenze[idx];
   if (!s) return;
-  const prima = rceeIso(s.dataUltimo), data = campo.value;
-  if (data === prima) return;
-  const nome = s.descrizione || s.codiceAnagrafica || s.codiceImpianto;
-  if (!data) { campo.value = prima; toast('La data non si può cancellare da qui','err'); return; }
-  if (data < '2000-01-01') return;   // anno ancora a meta' mentre lo si scrive da tastiera (0002, 0020...)
-  if (data > toLocaleDateStr(new Date())) { campo.value = prima; toast('La data non può essere nel futuro','err'); return; }
-  if (rceeSalvataggio) { campo.value = prima; return; }
-  const gen = s.nGeneratori > 1 ? ` (${s.nGeneratori} generatori)` : '';
-  if (!confirm(`${nome}${gen}\n\nUltimo controllo RCEE: ${prima ? rceeItaliana(prima) : 'nessuno'} → ${rceeItaliana(data)}\n\nLo scrivo nel foglio ScadenzeRCEE?`)) { campo.value = prima; return; }
-  rceeSalvataggio = true; campo.disabled = true;
+  const v = campo.value;
+  const buona = !!v && v !== rceeIso(s.dataUltimo) && v >= '2000-01-01' && v <= toLocaleDateStr(new Date());
+  if (buona) rceeBozze[rceeChiave(s)] = v; else delete rceeBozze[rceeChiave(s)];
+  campo.classList.toggle('cambiata', buona);
+  const b = campo.nextElementSibling;
+  if (b) b.style.visibility = buona ? '' : 'hidden';
+}
+function rceeTastoData(ev, idx) {
+  if (ev.key === 'Enter') { ev.preventDefault(); salvaDataRcee(idx); }
+  else if (ev.key === 'Escape') { const s = rceeScadenze[idx]; if (s) { delete rceeBozze[rceeChiave(s)]; renderRcee(true); } }
+}
+async function salvaDataRcee(idx) {
+  const s = rceeScadenze[idx];
+  if (!s || rceeSalvataggio) return;
+  const chiave = rceeChiave(s), data = rceeBozze[chiave];
+  if (!data) return;
+  rceeSalvataggio = true;
+  document.querySelectorAll('#tblRcee .rcee-ok, #tblRcee .rcee-data').forEach(x => { x.disabled = true; });
   try {
     const r = await apiPost('/aggiorna-rcee', { codiceImpianto: s.codiceImpianto || '', codiceAnagrafica: s.codiceAnagrafica || '', data });
-    if (!r || !r.ok) { campo.value = prima; toast((r && r.errore) || 'Data non salvata','err'); return; }
+    if (!r || !r.ok) { toast((r && r.errore) || 'Data non salvata', 'err'); return; }
+    delete rceeBozze[chiave];
     // subito a video; poi si rilegge il foglio
     s.dataUltimo = rceeItaliana(data);
     if (r.stato) { s.stato = r.stato; s.giorni = r.giorni; s.prossimaScadenza = rceeItaliana(r.prossimaScadenza); }
-    toast(r.stato ? `Salvato: prossima scadenza ${rceeItaliana(r.prossimaScadenza)}` : 'Data salvata: scadenza non calcolabile, nel foglio manca la periodicità','ok');
-    aggiornaBadgeRcee(); renderRcee();
-    try { const d = await apiGet('/scadenze-rcee'); rceeScadenze = d.scadenze || []; aggiornaBadgeRcee(); renderRcee(); } catch (e) {}
-  } catch (e) { campo.value = prima; toast('Data non salvata: il server non risponde','err'); }
-  finally { rceeSalvataggio = false; campo.disabled = false; }
+    toast(r.stato ? `Salvato: prossima scadenza ${rceeItaliana(r.prossimaScadenza)}` : 'Data salvata: scadenza non calcolabile, nel foglio manca la periodicità', 'ok');
+    try { const d = await apiGet('/scadenze-rcee'); rceeScadenze = d.scadenze || []; } catch (e) {}
+  } catch (e) { toast('Data non salvata: il server non risponde', 'err'); }
+  finally { rceeSalvataggio = false; aggiornaBadgeRcee(); renderRcee(true); }
 }
 
 function openAssegnaRcee(idx) {
