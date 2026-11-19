@@ -727,6 +727,7 @@ tr.int-completato td.td-ore { text-decoration: none; color: var(--text) !importa
           <button class="btn btn-ghost btn-sm report-filter" data-rfilter="SCADUTO" onclick="setRceeFilter('SCADUTO')">Scadute</button>
           <button class="btn btn-ghost btn-sm report-filter" data-rfilter="IN SCADENZA" onclick="setRceeFilter('IN SCADENZA')">In scadenza</button>
           <button class="btn btn-ghost btn-sm report-filter" data-rfilter="OK" onclick="setRceeFilter('OK')">OK</button>
+          <button class="btn btn-ghost btn-sm report-filter" data-rfilter="DA COMPLETARE" onclick="setRceeFilter('DA COMPLETARE')">Da completare</button>
           <input class="fc" id="rceeSearch" type="search" placeholder="Cerca impianto..." style="flex:1;min-width:160px;max-width:300px" oninput="renderRcee()"/>
           <button class="btn btn-ghost btn-sm" onclick="caricaScadenzeRcee()">↻ Aggiorna</button>
         </div>
@@ -2081,12 +2082,29 @@ function setRceeFilter(f) {
 
 function rceeColore(commessa) { return commessaDi({ comune: commessa || '' }).color; }
 
-function rceeStatoBadge(stato, giorni) {
-  const g = isNaN(giorni) ? '' : giorni;
+// 19/11/2026: il server manda anche gli impianti senza scadenza calcolabile (prima sparivano,
+// es. le Capitanerie di Porto): 'MANCA CONTROLLO' = nel foglio manca la data dell'ultimo
+// controllo; 'DATI MANCANTI' = riga incompleta (alimentazione, generatore...).
+function rceeDaCompletare(s) { return s.stato === 'MANCA CONTROLLO' || s.stato === 'DATI MANCANTI'; }
+function rceeGiorni(s) { return (s.giorni === null || s.giorni === undefined || isNaN(s.giorni)) ? null : Number(s.giorni); }
+// Ordine: scadute e in scadenza (per giorni), poi quelle da completare, poi le OK (per giorni)
+function rceeOrdine(s) {
+  const g = rceeGiorni(s);
+  if (rceeDaCompletare(s) || g === null) return [1, 0];
+  return [s.stato === 'OK' ? 2 : 0, g];
+}
+
+function rceeStatoBadge(stato, giorni, statoFoglio) {
+  const g = (giorni === null || giorni === undefined || isNaN(giorni)) ? '' : giorni;
+  const grigio = 'background:rgba(160,160,170,.14);color:var(--muted)';
+  if (stato === 'MANCA CONTROLLO') return `<span class="badge" style="${grigio}" title="Nel foglio ScadenzeRCEE manca la data dell'ultimo controllo: la scadenza non si può calcolare">❓ Manca ultimo controllo</span>`;
+  if (stato === 'DATI MANCANTI')   return `<span class="badge" style="${grigio}" title="Foglio ScadenzeRCEE: ${escAttrRcee(statoFoglio || 'stato vuoto')}">❓ Dati mancanti</span>`;
   if (stato === 'SCADUTO')     return `<span class="badge" style="background:rgba(200,120,120,.15);color:#f0a0a0">⚠ Scaduto ${Math.abs(g)}gg fa</span>`;
   if (stato === 'IN SCADENZA') return `<span class="badge" style="background:rgba(200,180,100,.15);color:var(--yellow)">⏳ ${g}gg</span>`;
   return `<span class="badge" style="background:rgba(143,190,122,.12);color:var(--green)">✓ ${g}gg</span>`;
 }
+
+function escAttrRcee(t) { return String(t).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
 function esisteInterventoRcee(s) {
   const cod = s.codiceAnagrafica || s.codiceImpianto;
@@ -2098,14 +2116,16 @@ function renderRcee() {
   if (!el) return;
   const search = document.getElementById('rceeSearch') && document.getElementById('rceeSearch').value ? document.getElementById('rceeSearch').value.toLowerCase() : '';
   let lista = [...rceeScadenze];
-  if (rceeFilter !== 'tutti') lista = lista.filter(s => s.stato === rceeFilter);
+  if (rceeFilter === 'DA COMPLETARE') lista = lista.filter(rceeDaCompletare);
+  else if (rceeFilter !== 'tutti') lista = lista.filter(s => s.stato === rceeFilter);
   if (search) lista = lista.filter(s => ((s.descrizione||'')+(s.codiceImpianto||'')+(s.codiceAnagrafica||'')+(s.commessa||'')).toLowerCase().includes(search));
-  lista.sort((a,b) => (isNaN(a.giorni)?1e9:a.giorni) - (isNaN(b.giorni)?1e9:b.giorni));
+  lista.sort((a,b) => { const oa = rceeOrdine(a), ob = rceeOrdine(b); return (oa[0]-ob[0]) || (oa[1]-ob[1]); });
 
   const nSca = rceeScadenze.filter(s => s.stato === 'SCADUTO').length;
   const nIn  = rceeScadenze.filter(s => s.stato === 'IN SCADENZA').length;
   const sum = document.getElementById('rceeSummary');
-  if (sum) sum.textContent = `${nSca} scadute · ${nIn} in scadenza · ${rceeScadenze.length} totali`;
+  const nDa  = rceeScadenze.filter(rceeDaCompletare).length;
+  if (sum) sum.textContent = `${nSca} scadute · ${nIn} in scadenza${nDa ? ` · ${nDa} da completare` : ''} · ${rceeScadenze.length} totali`;
 
   if (!lista.length) { el.innerHTML = '<div class="empty">Nessuna scadenza</div>'; return; }
   el.innerHTML = `<table><thead><tr><th>Stato</th><th>Impianto</th><th>Commessa</th><th>Alim.</th><th>Potenza</th><th>Periodicità</th><th>Ultimo</th><th>Prossima</th><th></th></tr></thead><tbody>`+
@@ -2114,12 +2134,12 @@ function renderRcee() {
       const realIdx = rceeScadenze.indexOf(s);
       const giaAss = esisteInterventoRcee(s);
       return `<tr>
-        <td>${rceeStatoBadge(s.stato, s.giorni)}</td>
+        <td>${rceeStatoBadge(s.stato, s.giorni, s.statoFoglio)}</td>
         <td style="font-weight:600">${s.descrizione || s.codiceAnagrafica || s.codiceImpianto}
-          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">imp. ${s.codiceImpianto}${s.nGeneratori>1?` · ${s.nGeneratori} gen.`:''}</div></td>
+          <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${s.codiceImpianto ? 'imp. ' + s.codiceImpianto : (s.codiceAnagrafica || '')}${s.nGeneratori>1?` · ${s.nGeneratori} gen.`:''}</div></td>
         <td><span style="color:${col}">● ${s.commessa || '—'}</span></td>
         <td style="color:var(--muted)">${s.alimentazione || '—'}</td>
-        <td style="font-family:'DM Mono',monospace;font-size:12px">${s.potenzaImpianto || '—'} kW</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${s.potenzaImpianto ? s.potenzaImpianto + ' kW' : '—'}</td>
         <td style="text-align:center">${s.periodicita ? s.periodicita + ' anni' : '—'}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${s.dataUltimo || '—'}</td>
         <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${s.prossimaScadenza || '—'}</td>
@@ -2136,7 +2156,9 @@ function openAssegnaRcee(idx) {
   const s = rceeScadenze[idx];
   document.getElementById('rceeAssTitle').textContent = s.descrizione || s.codiceAnagrafica || s.codiceImpianto;
   document.getElementById('rceeAssInfo').innerHTML =
-    `RCEE ${s.alimentazione || ''} · ${s.potenzaImpianto || '?'} kW · periodicità ${s.periodicita || '?'} anni<br>Prossima scadenza: <strong>${s.prossimaScadenza || '?'}</strong> (${s.giorni} gg)`;
+    `RCEE ${s.alimentazione || ''} · ${s.potenzaImpianto || '?'} kW · periodicità ${s.periodicita || '?'} anni<br>` + (rceeDaCompletare(s)
+      ? `<strong>Scadenza non calcolabile</strong>: ${s.stato === 'MANCA CONTROLLO' ? "nel foglio manca la data dell'ultimo controllo" : 'riga del foglio incompleta'}`
+      : `Prossima scadenza: <strong>${s.prossimaScadenza || '?'}</strong> (${s.giorni} gg)`);
   ['Matteo','Stefano','Michele','Ezio','Aziz'].forEach(n => document.getElementById('rchip-'+n).classList.remove('selected'));
   setRceeOperaioUI();
   document.getElementById('rceeAssData').value = toLocaleDateStr(new Date());
@@ -2162,7 +2184,7 @@ async function confermaAssegnaRcee() {
   const data = document.getElementById('rceeAssData').value;
   if (!data) { toast('Seleziona una data','err'); return; }
   const cod = s.codiceAnagrafica || s.codiceImpianto;
-  const nota = `[RCEE] Controllo efficienza energetica — scad. ${s.prossimaScadenza || '?'} · ${s.alimentazione || ''} ${s.potenzaImpianto || ''}kW (imp. ${s.codiceImpianto})`;
+  const nota = `[RCEE] Controllo efficienza energetica — scad. ${s.prossimaScadenza || '?'} · ${s.alimentazione || ''} ${s.potenzaImpianto || ''}kW${s.codiceImpianto ? ` (imp. ${s.codiceImpianto})` : ''}`;
   try {
     const r = await apiPost('/crea-intervento', { codiceImpianto: cod, tipoVisita: 'Straordinaria', operaio: rceeOperaioSel, dataPrevista: data, note: nota, attivitaExtra: [] });
     if (!r.ok) { toast('Errore creazione','err'); return; }
