@@ -334,7 +334,7 @@ function dettaglio(r) {
   const barra = (v, c, lab) => `<div><i style="height:${Math.max(2, 70 * (v || 0) / maxv)}px;background:${c}"></i>${lab}<br>${fmt(v)}</div>`;
   const ggVar = r.gg && r.gg_anno_prima ? ` (${sgn(100 * (r.gg / r.gg_anno_prima - 1))}% sull'anno prima)` : '';
   const perche = [];
-  if (r.ore_accese !== null && r.ore_accese !== undefined) perche.push(kv('Generatore acceso (anche per l\'acqua calda)', fmt(r.ore_accese) + ' h' + (r.ore_accese_anno_prima ? ` · anno prima ${fmt(r.ore_accese_anno_prima)} h` : '')));
+  if (r.ore_accese !== null && r.ore_accese !== undefined) perche.push(kv('Generatore acceso (anche per l\'acqua calda)', fmt(r.ore_accese) + ' h' + (r.ore_accese_anno_prima ? ` · anno prima ${fmt(r.ore_accese_anno_prima)} h` : '') + (r.ore_accese_stimato ? ' <span class="tag" title="Centralina GPC: acceso ricavato da termostati o sonde d\'acqua">stimato</span>' : '')));
   if (r.straordinari) perche.push(kv('Straordinari dell\'agente', `${r.straordinari} (${fmt(r.ore_straordinari, 1)} h)`));
   const az = (r.azioni_aperte || []).map(a => `<div class="note">P${a.priorita} · ${esc(a.ambito || '')}: ${esc(a.azione)}</div>`).join('');
   const giu = r.giustificato ? `<div class="note" style="color:var(--green)">Giustificato il ${esc(r.giustificato.data)}: ${esc(r.giustificato.testo)}</div>` : '';
