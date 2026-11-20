@@ -296,6 +296,35 @@ function striscia(codice) {
 
 function kv(k, v) { return `<div class="kv"><span>${k}</span><span>${v}</span></div>`; }
 
+// Ore accese per circuito contro l'orario chiesto dal cliente (controllo_consumi.py v1.1, campo ore_circuiti)
+function tabellaCircuiti(r) {
+  const cc = r.ore_circuiti || [];
+  if (!cc.length) return '';
+  const h = v => (v === null || v === undefined) ? '–' : fmt(v, 1);
+  const fuoriTot = c => c.anticipo === undefined ? null : (c.anticipo || 0) + (c.dopo || 0) + (c.fuori || 0);
+  const righe = cc.map(c => {
+    const stim = c.stimato ? '<span class="tag" title="Circuito ricavato da richieste dei termostati o da sonde d\'acqua: l\'accensione è una stima">stimato</span>' : '';
+    const sola = c.segnale ? '' : '<span class="tag" title="In Coster non c\'è un point che dica se è acceso">nessun segnale</span>';
+    const p = c.prima;
+    const prima = p ? `${h(p.acceso)} h` + (p.anticipo !== undefined ? ` · fuori orario ${h(fuoriTot(p))} h` : '') +
+      (p.giorni_orario && p.giorni_orario < p.giorni ? ` (${p.giorni_orario} gg)` : '') : '';
+    return `<tr><td>${esc(c.circuito)}${stim}${sola}</td>
+      <td class="n">${h(c.acceso)}</td><td class="n">${h(c.chiesto)}</td><td class="n">${h(c.dentro)}</td>
+      <td class="n">${h(c.anticipo)}</td><td class="n">${h(c.dopo)}</td><td class="n">${h(c.fuori)}</td>
+      <td class="n" style="font-weight:600${fuoriTot(c) > 0.5 * (c.chiesto || 0) && fuoriTot(c) > 10 ? ';color:var(--l3)' : ''}">${h(fuoriTot(c))}</td>
+      <td>${esc(prima)}</td></tr>`;
+  }).join('');
+  const noti = Math.max(0, ...cc.map(c => c.giorni_orario || 0));
+  const gg = cc[0].giorni;
+  const nota = noti === 0 ? 'Orario del cliente non disponibile per questo periodo: solo le ore accese.'
+    : noti < gg ? `Orario del cliente noto per ${noti} giorni su ${gg}: le ore sono quelle di quei giorni.` : '';
+  return `<h3>Ore accese per circuito contro l'orario del cliente</h3>
+    <div style="overflow-x:auto"><table class="let"><tr><th>Circuito</th><th>Acceso</th><th>Chiesto</th><th>Acceso nell'orario</th>
+      <th>Anticipo</th><th>Dopo la fine</th><th>Altro fuori orario</th><th>Fuori orario</th><th>Anno prima</th></tr>${righe}</table></div>
+    <div class="note">Ore (h). Anticipo e dopo la fine: acceso a meno di 15 minuti dall'orario del cliente, prima o dopo; "altro" = acceso
+    lontano dall'orario o in giorni senza richiesta. Le centraline con solo termostati o sonde (GPC) sono stimate. ${esc(nota)}</div>`;
+}
+
 function dettaglio(r) {
   const let_ = (r.letture || []).map(l => `<tr><td>${esc(l.contatore)}</td><td>${esc(l.data_prec)}</td><td class="n">${fmt(l.prec)}</td>
       <td>${esc(l.data)}</td><td class="n">${fmt(l.valore)}</td><td class="n">${fmt(l.consumo)}</td><td>${esc(l.operaio || (l.fonte === 'storico' ? 'gestionale' : ''))}</td>
@@ -305,7 +334,7 @@ function dettaglio(r) {
   const barra = (v, c, lab) => `<div><i style="height:${Math.max(2, 70 * (v || 0) / maxv)}px;background:${c}"></i>${lab}<br>${fmt(v)}</div>`;
   const ggVar = r.gg && r.gg_anno_prima ? ` (${sgn(100 * (r.gg / r.gg_anno_prima - 1))}% sull'anno prima)` : '';
   const perche = [];
-  if (r.ore_accese !== null && r.ore_accese !== undefined) perche.push(kv('Ore di accensione (centrale)', fmt(r.ore_accese) + ' h' + (r.ore_accese_anno_prima ? ` · anno prima ${fmt(r.ore_accese_anno_prima)} h` : '')));
+  if (r.ore_accese !== null && r.ore_accese !== undefined) perche.push(kv('Generatore acceso (anche per l\'acqua calda)', fmt(r.ore_accese) + ' h' + (r.ore_accese_anno_prima ? ` · anno prima ${fmt(r.ore_accese_anno_prima)} h` : '')));
   if (r.straordinari) perche.push(kv('Straordinari dell\'agente', `${r.straordinari} (${fmt(r.ore_straordinari, 1)} h)`));
   const az = (r.azioni_aperte || []).map(a => `<div class="note">P${a.priorita} · ${esc(a.ambito || '')}: ${esc(a.azione)}</div>`).join('');
   const giu = r.giustificato ? `<div class="note" style="color:var(--green)">Giustificato il ${esc(r.giustificato.data)}: ${esc(r.giustificato.testo)}</div>` : '';
@@ -332,6 +361,7 @@ function dettaglio(r) {
         ${az ? '<div class="note" style="margin-top:6px">Azioni aperte del motore:</div>' + az : ''}
       </div>
     </div>
+    ${tabellaCircuiti(r)}
     <h3>Stesso periodo</h3>
     <div class="bars">${barra(r.atteso, '#6a6a6a', 'previsto')}${barra(r.smc, colore(r), r.mese.slice(0, 4))}${prima.map(p => barra(p.smc, '#555', p.mese.slice(0, 4))).join('')}</div>
     ${giu}
